@@ -1,40 +1,38 @@
-# Build Stage
-FROM lacion/alpine-golang-buildimage:1.13 AS build-stage
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM golang:1.24-alpine AS builder
 
-LABEL app="build-digimap-backend"
-LABEL REPO="https://github.com/hhung06/digimap-backend"
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
 
-ENV PROJPATH=/go/src/github.com/hhung06/digimap-backend
+RUN apk --no-cache add ca-certificates tzdata git
 
-# Because of https://github.com/docker/docker/issues/14914
-ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+WORKDIR /build
 
-ADD . /go/src/github.com/hhung06/digimap-backend
-WORKDIR /go/src/github.com/hhung06/digimap-backend
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN make build-alpine
+COPY . .
 
-# Final Stage
-FROM lacion/alpine-base-image:latest
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s \
+      -X github.com/hhung06/digimap-backend/version.GitCommit=${GIT_COMMIT} \
+      -X github.com/hhung06/digimap-backend/version.BuildDate=${BUILD_DATE}" \
+    -o bin/digimap-backend .
 
-ARG GIT_COMMIT
-ARG VERSION
-LABEL REPO="https://github.com/hhung06/digimap-backend"
-LABEL GIT_COMMIT=$GIT_COMMIT
-LABEL VERSION=$VERSION
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+FROM alpine:3.21
 
-# Because of https://github.com/docker/docker/issues/14914
-ENV PATH=$PATH:/opt/digimap-backend/bin
+RUN apk --no-cache add ca-certificates tzdata dumb-init
 
-WORKDIR /opt/digimap-backend/bin
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=build-stage /go/src/github.com/hhung06/digimap-backend/bin/digimap-backend /opt/digimap-backend/bin/
-RUN chmod +x /opt/digimap-backend/bin/digimap-backend
+WORKDIR /opt/app
+COPY --from=builder /build/bin/digimap-backend .
+COPY --from=builder /build/migrations ./migrations
 
-# Create appuser
-RUN adduser -D -g '' digimap-backend
-USER digimap-backend
+USER appuser
+
+EXPOSE 8080
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-
-CMD ["/opt/digimap-backend/bin/digimap-backend"]
+CMD ["/opt/app/digimap-backend", "serve"]

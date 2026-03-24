@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS geo_references;
+DROP TABLE IF EXISTS levels;
+DROP TABLE IF EXISTS perspectives;
+DROP TABLE IF EXISTS map_groups;

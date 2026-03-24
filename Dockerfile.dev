@@ -1,0 +1,15 @@
+FROM golang:1.24-alpine
+
+RUN apk --no-cache add ca-certificates tzdata git curl
+
+# Install air for hot-reload
+RUN go install github.com/air-verse/air@latest
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+EXPOSE 8080
+
+CMD ["air", "-c", ".air.toml"]

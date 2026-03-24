@@ -3,12 +3,11 @@ package log
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"github.com/hhung06/digimap-backend/config"
+	"github.com/sirupsen/logrus"
 )
 
-// Logger defines a set of methods for writing application logs. Derived from and
-// inspired by logrus.Entry.
+// Logger defines methods for structured application logging.
 type Logger interface {
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
@@ -30,187 +29,94 @@ type Logger interface {
 	Println(args ...interface{})
 	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
-	Warning(args ...interface{})
-	Warningf(format string, args ...interface{})
-	Warningln(args ...interface{})
 	Warnln(args ...interface{})
+	WithFields(fields Fields) Logger
 }
 
-var defaultLogger *logrus.Logger
+// Fields is a map of structured log fields.
+type Fields map[string]interface{}
 
-func init() {
-	defaultLogger = newLogrusLogger(config.Config())
+// wrappedEntry wraps a logrus.Entry to satisfy the Logger interface.
+type wrappedEntry struct {
+	entry *logrus.Entry
 }
 
-
-// NewLogger returns a configured logrus instance
-func NewLogger(cfg config.Provider) *logrus.Logger {
-	return newLogrusLogger(cfg)
+func (w *wrappedEntry) Debug(args ...interface{})                 { w.entry.Debug(args...) }
+func (w *wrappedEntry) Debugf(f string, args ...interface{})      { w.entry.Debugf(f, args...) }
+func (w *wrappedEntry) Debugln(args ...interface{})               { w.entry.Debugln(args...) }
+func (w *wrappedEntry) Error(args ...interface{})                 { w.entry.Error(args...) }
+func (w *wrappedEntry) Errorf(f string, args ...interface{})      { w.entry.Errorf(f, args...) }
+func (w *wrappedEntry) Errorln(args ...interface{})               { w.entry.Errorln(args...) }
+func (w *wrappedEntry) Fatal(args ...interface{})                 { w.entry.Fatal(args...) }
+func (w *wrappedEntry) Fatalf(f string, args ...interface{})      { w.entry.Fatalf(f, args...) }
+func (w *wrappedEntry) Fatalln(args ...interface{})               { w.entry.Fatalln(args...) }
+func (w *wrappedEntry) Info(args ...interface{})                  { w.entry.Info(args...) }
+func (w *wrappedEntry) Infof(f string, args ...interface{})       { w.entry.Infof(f, args...) }
+func (w *wrappedEntry) Infoln(args ...interface{})                { w.entry.Infoln(args...) }
+func (w *wrappedEntry) Panic(args ...interface{})                 { w.entry.Panic(args...) }
+func (w *wrappedEntry) Panicf(f string, args ...interface{})      { w.entry.Panicf(f, args...) }
+func (w *wrappedEntry) Panicln(args ...interface{})               { w.entry.Panicln(args...) }
+func (w *wrappedEntry) Print(args ...interface{})                 { w.entry.Print(args...) }
+func (w *wrappedEntry) Printf(f string, args ...interface{})      { w.entry.Printf(f, args...) }
+func (w *wrappedEntry) Println(args ...interface{})               { w.entry.Println(args...) }
+func (w *wrappedEntry) Warn(args ...interface{})                  { w.entry.Warn(args...) }
+func (w *wrappedEntry) Warnf(f string, args ...interface{})       { w.entry.Warnf(f, args...) }
+func (w *wrappedEntry) Warnln(args ...interface{})                { w.entry.Warnln(args...) }
+func (w *wrappedEntry) WithFields(fields Fields) Logger {
+	return &wrappedEntry{entry: w.entry.WithFields(logrus.Fields(fields))}
 }
 
+// logrusLogger wraps *logrus.Logger and implements Logger.
+type logrusLogger struct {
+	l *logrus.Logger
+}
 
+func (r *logrusLogger) Debug(args ...interface{})                 { r.l.Debug(args...) }
+func (r *logrusLogger) Debugf(f string, args ...interface{})      { r.l.Debugf(f, args...) }
+func (r *logrusLogger) Debugln(args ...interface{})               { r.l.Debugln(args...) }
+func (r *logrusLogger) Error(args ...interface{})                 { r.l.Error(args...) }
+func (r *logrusLogger) Errorf(f string, args ...interface{})      { r.l.Errorf(f, args...) }
+func (r *logrusLogger) Errorln(args ...interface{})               { r.l.Errorln(args...) }
+func (r *logrusLogger) Fatal(args ...interface{})                 { r.l.Fatal(args...) }
+func (r *logrusLogger) Fatalf(f string, args ...interface{})      { r.l.Fatalf(f, args...) }
+func (r *logrusLogger) Fatalln(args ...interface{})               { r.l.Fatalln(args...) }
+func (r *logrusLogger) Info(args ...interface{})                  { r.l.Info(args...) }
+func (r *logrusLogger) Infof(f string, args ...interface{})       { r.l.Infof(f, args...) }
+func (r *logrusLogger) Infoln(args ...interface{})                { r.l.Infoln(args...) }
+func (r *logrusLogger) Panic(args ...interface{})                 { r.l.Panic(args...) }
+func (r *logrusLogger) Panicf(f string, args ...interface{})      { r.l.Panicf(f, args...) }
+func (r *logrusLogger) Panicln(args ...interface{})               { r.l.Panicln(args...) }
+func (r *logrusLogger) Print(args ...interface{})                 { r.l.Print(args...) }
+func (r *logrusLogger) Printf(f string, args ...interface{})      { r.l.Printf(f, args...) }
+func (r *logrusLogger) Println(args ...interface{})               { r.l.Println(args...) }
+func (r *logrusLogger) Warn(args ...interface{})                  { r.l.Warn(args...) }
+func (r *logrusLogger) Warnf(f string, args ...interface{})       { r.l.Warnf(f, args...) }
+func (r *logrusLogger) Warnln(args ...interface{})                { r.l.Warnln(args...) }
+func (r *logrusLogger) WithFields(fields Fields) Logger {
+	return &wrappedEntry{entry: r.l.WithFields(logrus.Fields(fields))}
+}
 
-func newLogrusLogger(cfg config.Provider) *logrus.Logger {
-
+// NewLogger creates a Logger from the typed Config.
+func NewLogger(cfg *config.Config) Logger {
 	l := logrus.New()
-	
-	if cfg.GetBool("json_logs") {
-		l.Formatter = new(logrus.JSONFormatter)
-	}
 	l.Out = os.Stderr
 
-	switch cfg.GetString("loglevel") {
-	case "debug":
-		l.Level = logrus.DebugLevel
-	case "warning":
+	if cfg.App.LogFormat == "json" {
+		l.Formatter = &logrus.JSONFormatter{}
+	} else {
+		l.Formatter = &logrus.TextFormatter{FullTimestamp: true}
+	}
+
+	switch cfg.App.LogLevel {
+	case "warn", "warning":
 		l.Level = logrus.WarnLevel
 	case "info":
 		l.Level = logrus.InfoLevel
+	case "error":
+		l.Level = logrus.ErrorLevel
 	default:
 		l.Level = logrus.DebugLevel
 	}
-	
-	return l
-}
 
-// Fields is a map string interface to define fields in the structured log
-type Fields map[string]interface{}
-
-// With allow us to define fields in out structured logs
-func (f Fields) With(k string, v interface{}) Fields {
-	f[k] = v
-	return f
-}
-
-// WithFields allow us to define fields in out structured logs
-func (f Fields) WithFields(f2 Fields) Fields {
-	for k, v := range f2 {
-		f[k] = v
-	}
-	return f
-}
-
-// WithFields allow us to define fields in out structured logs
-func WithFields(fields Fields) Logger {
-	return defaultLogger.WithFields(logrus.Fields(fields))
-}
-
-// Debug package-level convenience method.
-func Debug(args ...interface{}) {
-	defaultLogger.Debug(args...)
-}
-
-// Debugf package-level convenience method.
-func Debugf(format string, args ...interface{}) {
-	defaultLogger.Debugf(format, args...)
-}
-
-// Debugln package-level convenience method.
-func Debugln(args ...interface{}) {
-	defaultLogger.Debugln(args...)
-}
-
-// Error package-level convenience method.
-func Error(args ...interface{}) {
-	defaultLogger.Error(args...)
-}
-
-// Errorf package-level convenience method.
-func Errorf(format string, args ...interface{}) {
-	defaultLogger.Errorf(format, args...)
-}
-
-// Errorln package-level convenience method.
-func Errorln(args ...interface{}) {
-	defaultLogger.Errorln(args...)
-}
-
-// Fatal package-level convenience method.
-func Fatal(args ...interface{}) {
-	defaultLogger.Fatal(args...)
-}
-
-// Fatalf package-level convenience method.
-func Fatalf(format string, args ...interface{}) {
-	defaultLogger.Fatalf(format, args...)
-}
-
-// Fatalln package-level convenience method.
-func Fatalln(args ...interface{}) {
-	defaultLogger.Fatalln(args...)
-}
-
-// Info package-level convenience method.
-func Info(args ...interface{}) {
-	defaultLogger.Info(args...)
-}
-
-// Infof package-level convenience method.
-func Infof(format string, args ...interface{}) {
-	defaultLogger.Infof(format, args...)
-}
-
-// Infoln package-level convenience method.
-func Infoln(args ...interface{}) {
-	defaultLogger.Infoln(args...)
-}
-
-// Panic package-level convenience method.
-func Panic(args ...interface{}) {
-	defaultLogger.Panic(args...)
-}
-
-// Panicf package-level convenience method.
-func Panicf(format string, args ...interface{}) {
-	defaultLogger.Panicf(format, args...)
-}
-
-// Panicln package-level convenience method.
-func Panicln(args ...interface{}) {
-	defaultLogger.Panicln(args...)
-}
-
-// Print package-level convenience method.
-func Print(args ...interface{}) {
-	defaultLogger.Print(args...)
-}
-
-// Printf package-level convenience method.
-func Printf(format string, args ...interface{}) {
-	defaultLogger.Printf(format, args...)
-}
-
-// Println package-level convenience method.
-func Println(args ...interface{}) {
-	defaultLogger.Println(args...)
-}
-
-// Warn package-level convenience method.
-func Warn(args ...interface{}) {
-	defaultLogger.Warn(args...)
-}
-
-// Warnf package-level convenience method.
-func Warnf(format string, args ...interface{}) {
-	defaultLogger.Warnf(format, args...)
-}
-
-// Warning package-level convenience method.
-func Warning(args ...interface{}) {
-	defaultLogger.Warning(args...)
-}
-
-// Warningf package-level convenience method.
-func Warningf(format string, args ...interface{}) {
-	defaultLogger.Warningf(format, args...)
-}
-
-// Warningln package-level convenience method.
-func Warningln(args ...interface{}) {
-	defaultLogger.Warningln(args...)
-}
-
-// Warnln package-level convenience method.
-func Warnln(args ...interface{}) {
-	defaultLogger.Warnln(args...)
+	return &logrusLogger{l: l}
 }

@@ -1,0 +1,264 @@
+package handler
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/hhung06/digimap-backend/config"
+	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/handler/middleware"
+	"github.com/hhung06/digimap-backend/internal/repository"
+	"github.com/hhung06/digimap-backend/internal/service"
+	applog "github.com/hhung06/digimap-backend/log"
+	"github.com/hhung06/digimap-backend/version"
+)
+
+// Dependencies holds all service and repository instances needed by handlers.
+type Dependencies struct {
+	AuthService             service.AuthService
+	CustomerService         service.CustomerService
+	VenueService            service.VenueService
+	LevelService            service.LevelService
+	LocationCategoryService service.LocationCategoryService
+	AmenityService          service.AmenityService
+	LocationService         service.LocationService
+	ProductService          service.ProductService
+	StorageService          service.StorageService
+	EventService            service.EventService
+	UserService             service.UserService
+	NotificationService     service.NotificationService
+	SurveyService           service.SurveyService
+	BeaconService           service.BeaconService
+	UserRepo                repository.UserRepository
+}
+
+// NewRouter builds and returns the configured Gin engine with all routes registered.
+func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin.Engine {
+	if cfg.App.IsProduction() {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	r := gin.New()
+
+	r.Use(middleware.Recovery(logger))
+	r.Use(middleware.RequestID())
+	r.Use(middleware.Logger(logger))
+	r.Use(middleware.CORS(cfg.App))
+
+	// Infrastructure endpoints
+	r.GET("/health", healthHandler)
+	r.GET("/version", versionHandler)
+
+	v1 := r.Group("/api/v1")
+
+	// ── Public auth routes ────────────────────────────────────────────────────
+	authH := newAuthHandler(deps.AuthService, authConfig{
+		accessExpirySeconds:  int(cfg.JWT.AccessExpiry.Seconds()),
+		refreshExpirySeconds: int(cfg.JWT.RefreshExpiry.Seconds()),
+	})
+
+	auth := v1.Group("/auth")
+	{
+		auth.POST("/login", authH.Login)
+		auth.POST("/register", authH.Register)
+		auth.POST("/refresh", authH.RefreshToken)
+		auth.POST("/password-reset", authH.RequestPasswordReset)
+		auth.POST("/password-reset/confirm", authH.ConfirmPasswordReset)
+	}
+
+	// ── JWT-protected routes ──────────────────────────────────────────────────
+	jwtAuth := middleware.AuthRequired(deps.AuthService)
+	protected := v1.Group("/", jwtAuth)
+	{
+		protected.POST("/auth/logout", authH.Logout)
+		protected.PUT("/auth/password-change", authH.ChangePassword)
+	}
+
+	// ── System admin — customers ──────────────────────────────────────────────
+	custH := newCustomerHandler(deps.CustomerService)
+	adminOnly := v1.Group("/", jwtAuth, middleware.SystemAdminRequired())
+	{
+		adminOnly.GET("/customers", custH.List)
+		adminOnly.POST("/customers", custH.Create)
+		adminOnly.GET("/customers/:id", custH.Get)
+		adminOnly.PUT("/customers/:id", custH.Update)
+		adminOnly.DELETE("/customers/:id", custH.Delete)
+	}
+
+	// ── Venue routes (JWT required; RBAC applied per action) ──────────────────
+	venueH := newVenueHandler(deps.VenueService)
+	venues := v1.Group("/venues", jwtAuth)
+	{
+		venues.GET("", venueH.List)
+		venues.POST("", venueH.Create)
+		venues.GET("/:id", venueH.Get)
+		venues.PUT("/:id", middleware.VenueAccess(deps.UserRepo, service.RoleEditor), venueH.Update)
+		venues.DELETE("/:id", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Delete)
+		venues.POST("/:id/publish", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Publish)
+		venues.POST("/:id/clone", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Clone)
+		venues.GET("/:id/key", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.GetKey)
+		venues.PUT("/:id/key", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.RegenerateKey)
+
+		// Level sub-resources
+		levelH := newLevelHandler(deps.LevelService)
+		editorAccess := middleware.VenueAccess(deps.UserRepo, service.RoleEditor)
+		viewerAccess := middleware.VenueAccess(deps.UserRepo, service.RoleViewer)
+
+		venues.GET("/:id/map-groups", viewerAccess, levelH.ListMapGroups)
+		venues.POST("/:id/map-groups", editorAccess, levelH.CreateMapGroup)
+		venues.PUT("/:id/map-groups/:mgID", editorAccess, levelH.UpdateMapGroup)
+		venues.DELETE("/:id/map-groups/:mgID", editorAccess, levelH.DeleteMapGroup)
+
+		venues.GET("/:id/levels", viewerAccess, levelH.ListLevels)
+		venues.POST("/:id/levels", editorAccess, levelH.CreateLevel)
+		venues.GET("/:id/levels/:levelID", viewerAccess, levelH.GetLevel)
+		venues.PUT("/:id/levels/:levelID", editorAccess, levelH.UpdateLevel)
+		venues.DELETE("/:id/levels/:levelID", editorAccess, levelH.DeleteLevel)
+		venues.PUT("/:id/levels/:levelID/perspective", editorAccess, levelH.UpsertPerspective)
+		venues.GET("/:id/levels/:levelID/geo-references", viewerAccess, levelH.ListGeoReferences)
+		venues.POST("/:id/levels/:levelID/geo-references", editorAccess, levelH.CreateGeoReference)
+		venues.DELETE("/:id/levels/:levelID/geo-references/:refID", editorAccess, levelH.DeleteGeoReference)
+
+		// Location sub-resources
+		locH := newLocationHandler(deps.LocationCategoryService, deps.AmenityService, deps.LocationService)
+
+		venues.GET("/:id/categories", viewerAccess, locH.ListCategories)
+		venues.POST("/:id/categories", editorAccess, locH.CreateCategory)
+		venues.GET("/:id/categories/:catID", viewerAccess, locH.GetCategory)
+		venues.PUT("/:id/categories/:catID", editorAccess, locH.UpdateCategory)
+		venues.DELETE("/:id/categories/:catID", editorAccess, locH.DeleteCategory)
+
+		venues.GET("/:id/amenities", viewerAccess, locH.ListAmenitiesByVenue)
+		venues.POST("/:id/amenities/:amenityID", editorAccess, locH.LinkAmenity)
+		venues.DELETE("/:id/amenities/:amenityID", editorAccess, locH.UnlinkAmenity)
+
+		venues.GET("/:id/locations", viewerAccess, locH.ListLocations)
+		venues.POST("/:id/locations", editorAccess, locH.CreateLocation)
+		venues.GET("/:id/locations/:locationID", viewerAccess, locH.GetLocation)
+		venues.PUT("/:id/locations/:locationID", editorAccess, locH.UpdateLocation)
+		venues.DELETE("/:id/locations/:locationID", editorAccess, locH.DeleteLocation)
+		venues.POST("/:id/locations/:locationID/duplicate", editorAccess, locH.DuplicateLocation)
+		venues.PUT("/:id/locations/:locationID/set-top", editorAccess, locH.SetTop)
+		venues.POST("/:id/locations/:locationID/images", editorAccess, locH.CreateImage)
+		venues.DELETE("/:id/locations/:locationID/images/:imageID", editorAccess, locH.DeleteImage)
+
+		venues.GET("/:id/promotions", viewerAccess, locH.ListPromotions)
+		venues.POST("/:id/promotions", editorAccess, locH.CreatePromotion)
+		venues.GET("/:id/promotions/:promoID", viewerAccess, locH.GetPromotion)
+		venues.PUT("/:id/promotions/:promoID", editorAccess, locH.UpdatePromotion)
+		venues.DELETE("/:id/promotions/:promoID", editorAccess, locH.DeletePromotion)
+
+		// Product sub-resources
+		prodH := newProductHandler(deps.ProductService, deps.StorageService)
+
+		venues.GET("/:id/product-categories", viewerAccess, prodH.ListCategories)
+		venues.POST("/:id/product-categories", editorAccess, prodH.CreateCategory)
+		venues.PUT("/:id/product-categories/:catID", editorAccess, prodH.UpdateCategory)
+		venues.DELETE("/:id/product-categories/:catID", editorAccess, prodH.DeleteCategory)
+
+		venues.GET("/:id/products", viewerAccess, prodH.List)
+		venues.POST("/:id/products", editorAccess, prodH.Create)
+		venues.GET("/:id/products/:productID", viewerAccess, prodH.Get)
+		venues.PUT("/:id/products/:productID", editorAccess, prodH.Update)
+		venues.DELETE("/:id/products/:productID", editorAccess, prodH.Delete)
+		venues.POST("/:id/products/:productID/attachments", editorAccess, prodH.CreateAttachment)
+		venues.DELETE("/:id/products/:productID/attachments/:attID", editorAccess, prodH.DeleteAttachment)
+
+		// Event sub-resources
+		eventH := newEventHandler(deps.EventService)
+
+		venues.GET("/:id/event-types", viewerAccess, eventH.ListEventTypes)
+		venues.POST("/:id/event-types", editorAccess, eventH.CreateEventType)
+		venues.PUT("/:id/event-types/:typeID", editorAccess, eventH.UpdateEventType)
+		venues.DELETE("/:id/event-types/:typeID", editorAccess, eventH.DeleteEventType)
+
+		venues.GET("/:id/events", viewerAccess, eventH.ListEvents)
+		venues.POST("/:id/events", editorAccess, eventH.CreateEvent)
+		venues.GET("/:id/events/:eventID", viewerAccess, eventH.GetEvent)
+		venues.PUT("/:id/events/:eventID", editorAccess, eventH.UpdateEvent)
+		venues.DELETE("/:id/events/:eventID", editorAccess, eventH.DeleteEvent)
+		venues.POST("/:id/events/:eventID/images", editorAccess, eventH.CreateEventImage)
+		venues.DELETE("/:id/events/:eventID/images/:imageID", editorAccess, eventH.DeleteEventImage)
+
+		// Venue users + invitations (owner only for mutations)
+		userH := newUserHandler(deps.UserService)
+		ownerAccess := middleware.VenueAccess(deps.UserRepo, service.RoleOwner)
+
+		venues.GET("/:id/users", viewerAccess, userH.ListVenueUsers)
+		venues.POST("/:id/users/invite", ownerAccess, userH.InviteUser)
+		venues.PUT("/:id/users/:userID/role", ownerAccess, userH.ChangeRole)
+		venues.DELETE("/:id/users/:userID", ownerAccess, userH.RemoveFromVenue)
+		venues.GET("/:id/invitations", ownerAccess, userH.ListInvitations)
+		venues.POST("/:id/invitations/:invitationID/cancel", ownerAccess, userH.CancelInvitation)
+
+		// Notification sub-resources
+		notifH := newNotificationHandler(deps.NotificationService)
+
+		venues.GET("/:id/notifications", viewerAccess, notifH.List)
+		venues.POST("/:id/notifications", editorAccess, notifH.Create)
+		venues.GET("/:id/notifications/:notifID", viewerAccess, notifH.Get)
+		venues.PUT("/:id/notifications/:notifID", editorAccess, notifH.Update)
+		venues.DELETE("/:id/notifications/:notifID", editorAccess, notifH.Delete)
+		venues.POST("/:id/notifications/:notifID/send", editorAccess, notifH.Send)
+
+		// Survey sub-resources
+		surveyH := newSurveyHandler(deps.SurveyService)
+
+		venues.GET("/:id/surveys", viewerAccess, surveyH.List)
+		venues.POST("/:id/surveys", editorAccess, surveyH.Create)
+		venues.GET("/:id/surveys/:surveyID", viewerAccess, surveyH.Get)
+		venues.PUT("/:id/surveys/:surveyID", editorAccess, surveyH.Update)
+		venues.DELETE("/:id/surveys/:surveyID", editorAccess, surveyH.Delete)
+		venues.POST("/:id/surveys/:surveyID/questions", editorAccess, surveyH.CreateQuestion)
+		venues.PUT("/:id/surveys/:surveyID/questions/:questionID", editorAccess, surveyH.UpdateQuestion)
+		venues.DELETE("/:id/surveys/:surveyID/questions/:questionID", editorAccess, surveyH.DeleteQuestion)
+		venues.POST("/:id/surveys/:surveyID/questions/:questionID/options", editorAccess, surveyH.CreateOption)
+		venues.PUT("/:id/surveys/:surveyID/questions/:questionID/options/:optionID", editorAccess, surveyH.UpdateOption)
+		venues.DELETE("/:id/surveys/:surveyID/questions/:questionID/options/:optionID", editorAccess, surveyH.DeleteOption)
+		venues.GET("/:id/surveys/:surveyID/responses", viewerAccess, surveyH.ListResponses)
+		venues.POST("/:id/surveys/:surveyID/responses", surveyH.SubmitResponse)
+
+		// Beacon sub-resources
+		beaconH := newBeaconHandler(deps.BeaconService)
+
+		venues.GET("/:id/beacons", viewerAccess, beaconH.List)
+		venues.POST("/:id/beacons", editorAccess, beaconH.Create)
+		venues.GET("/:id/beacons/:beaconID", viewerAccess, beaconH.Get)
+		venues.PUT("/:id/beacons/:beaconID", editorAccess, beaconH.Update)
+		venues.DELETE("/:id/beacons/:beaconID", editorAccess, beaconH.Delete)
+	}
+
+	// ── Storage (pre-signed uploads) ──────────────────────────────────────────
+	prodH := newProductHandler(deps.ProductService, deps.StorageService)
+	protected.POST("/storage/presign-upload", prodH.PresignUpload)
+
+	// ── Profile + invitation accept ────────────────────────────────────────────
+	userH := newUserHandler(deps.UserService)
+	protected.GET("/profile", userH.GetProfile)
+	protected.PUT("/profile", userH.UpdateProfile)
+	protected.POST("/invitations/accept", userH.AcceptInvitation)
+
+	// ── Global event tags ──────────────────────────────────────────────────────
+	eventH := newEventHandler(deps.EventService)
+	v1.GET("/event-tags", jwtAuth, eventH.ListTags)
+	v1.POST("/event-tags", jwtAuth, eventH.CreateTag)
+	v1.PUT("/event-tags/:tagID", jwtAuth, eventH.UpdateTag)
+	v1.DELETE("/event-tags/:tagID", jwtAuth, eventH.DeleteTag)
+
+	return r
+}
+
+func healthHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, dto.OK(gin.H{"status": "ok"}))
+}
+
+func versionHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, dto.OK(gin.H{
+		"version":    version.Version,
+		"git_commit": version.GitCommit,
+		"build_date": version.BuildDate,
+		"go_version": version.GoVersion,
+		"os_arch":    version.OsArch,
+	}))
+}

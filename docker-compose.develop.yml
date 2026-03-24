@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: develop
+      LOG_FORMAT: text
+      LOG_LEVEL: info
+      DB_HOST: postgres
+      DB_SSLMODE: disable
+      REDIS_ADDR: redis:6379
+    ports:
+      - "8080:8080"
+
+  postgres:
+    ports: []
+
+  redis:
+    ports: []

@@ -1,0 +1,89 @@
+package domain
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// Survey status constants.
+const (
+	SurveyStatusDraft    = 1
+	SurveyStatusActive   = 2
+	SurveyStatusInactive = 3
+	SurveyStatusClosed   = 4
+
+	SurveyPublishPush    = 1
+	SurveyPublishInApp   = 2
+	SurveyPublishBoth    = 3
+	SurveyPublishPromo   = 4
+
+	SurveySourceCMS    = 1
+	SurveySourceApp    = 2
+	SurveySourceImport = 3
+)
+
+// Survey is a questionnaire associated with a venue.
+type Survey struct {
+	ID             uuid.UUID
+	VenueID        *uuid.UUID
+	ExternalID     string
+	Title          string
+	Content        string
+	StartDate      *time.Time
+	EndDate        *time.Time
+	Status         int
+	PublishType    int
+	IsForced       bool
+	Source         int
+	App            string
+	SegmentFilters json.RawMessage
+	CreatedBy      *uuid.UUID
+	Questions      []*Question // eagerly loaded on Get
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Question is a single question within a Survey.
+type Question struct {
+	ID             uuid.UUID
+	SurveyID       uuid.UUID
+	QuestionNumber int
+	QuestionType   string // paragraph, single_choice, multiple_choice, rating, …
+	QuestionText   string
+	IsRequired     bool
+	IsOther        bool
+	Options        []*Option // eagerly loaded
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// Option is a selectable choice for a Question.
+type Option struct {
+	ID           uuid.UUID
+	QuestionID   uuid.UUID
+	OptionNumber int
+	OptionText   string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// SurveyResponse records that a participant submitted a survey.
+type SurveyResponse struct {
+	ID          uuid.UUID
+	SurveyID    uuid.UUID
+	SubmittedAt time.Time
+	Answers     []*SurveyAnswer
+	CreatedAt   time.Time
+}
+
+// SurveyAnswer records a single answer within a SurveyResponse.
+type SurveyAnswer struct {
+	ID         uuid.UUID
+	ResponseID uuid.UUID
+	QuestionID uuid.UUID
+	OptionID   *uuid.UUID
+	AnswerText string
+	CreatedAt  time.Time
+}

@@ -1,0 +1,307 @@
+package repository
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/hhung06/digimap-backend/internal/domain"
+)
+
+// UserRepository handles persistence for User and VenueUserRole entities.
+type UserRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	FindByEmail(ctx context.Context, email string) (*domain.User, error)
+	Create(ctx context.Context, u *domain.User) error
+	Update(ctx context.Context, u *domain.User) error
+	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+
+	// Venue roles
+	GetVenueRole(ctx context.Context, venueID, userID uuid.UUID) (*domain.VenueUserRole, error)
+	ListVenueUsers(ctx context.Context, venueID uuid.UUID) ([]*domain.User, error)
+	UpsertVenueRole(ctx context.Context, r *domain.VenueUserRole) error
+	DeleteVenueRole(ctx context.Context, venueID, userID uuid.UUID) error
+
+	// Invitations
+	CreateInvitation(ctx context.Context, inv *domain.VenueInvitation) error
+	FindInvitationByID(ctx context.Context, id uuid.UUID) (*domain.VenueInvitation, error)
+	FindInvitationByToken(ctx context.Context, token string) (*domain.VenueInvitation, error)
+	UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status domain.InvitationStatus, acceptedAt, cancelledAt *time.Time) error
+	ListInvitations(ctx context.Context, venueID uuid.UUID) ([]*domain.VenueInvitation, error)
+	DeleteInvitation(ctx context.Context, id uuid.UUID) error
+}
+
+// CustomerRepository handles persistence for Customer entities.
+type CustomerRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Customer, error)
+	List(ctx context.Context, p domain.Pagination) ([]*domain.Customer, int64, error)
+	Create(ctx context.Context, c *domain.Customer) error
+	Update(ctx context.Context, c *domain.Customer) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// VenueRepository handles persistence for Venue entities.
+type VenueRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Venue, error)
+	FindByPublicKey(ctx context.Context, publicKey string) (*domain.Venue, error)
+	List(ctx context.Context, customerID uuid.UUID, p domain.Pagination) ([]*domain.Venue, int64, error)
+	ListAll(ctx context.Context, p domain.Pagination) ([]*domain.Venue, int64, error)
+	Create(ctx context.Context, v *domain.Venue) error
+	Update(ctx context.Context, v *domain.Venue) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, privateKey string) error
+	UpdatePublished(ctx context.Context, id uuid.UUID, published bool) error
+}
+
+// LevelRepository handles persistence for Level, MapGroup, Perspective, and GeoReference.
+type LevelRepository interface {
+	// Map groups
+	FindMapGroupByID(ctx context.Context, id uuid.UUID) (*domain.MapGroup, error)
+	ListMapGroups(ctx context.Context, venueID uuid.UUID) ([]*domain.MapGroup, error)
+	CreateMapGroup(ctx context.Context, mg *domain.MapGroup) error
+	UpdateMapGroup(ctx context.Context, mg *domain.MapGroup) error
+	DeleteMapGroup(ctx context.Context, id uuid.UUID) error
+
+	// Levels
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Level, error)
+	List(ctx context.Context, venueID uuid.UUID) ([]*domain.Level, error)
+	Create(ctx context.Context, l *domain.Level) error
+	Update(ctx context.Context, l *domain.Level) error
+	Delete(ctx context.Context, id uuid.UUID) error
+
+	// Perspectives
+	UpsertPerspective(ctx context.Context, p *domain.Perspective) error
+
+	// Geo references
+	ListGeoReferences(ctx context.Context, levelID uuid.UUID) ([]*domain.GeoReference, error)
+	CreateGeoReference(ctx context.Context, g *domain.GeoReference) error
+	DeleteGeoReference(ctx context.Context, id uuid.UUID) error
+}
+
+// LocationCategoryRepository handles location categories.
+type LocationCategoryRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error)
+	List(ctx context.Context, venueID uuid.UUID) ([]*domain.LocationCategory, error)
+	Create(ctx context.Context, c *domain.LocationCategory) error
+	Update(ctx context.Context, c *domain.LocationCategory) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AmenityRepository handles amenities (location templates) and venue-amenity links.
+type AmenityRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Amenity, error)
+	List(ctx context.Context, p domain.Pagination) ([]*domain.Amenity, int64, error)
+	ListByVenue(ctx context.Context, venueID uuid.UUID) ([]*domain.Amenity, error)
+	Create(ctx context.Context, a *domain.Amenity) error
+	Update(ctx context.Context, a *domain.Amenity) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	LinkToVenue(ctx context.Context, va *domain.VenueAmenity) error
+	UnlinkFromVenue(ctx context.Context, venueID, amenityID uuid.UUID) error
+}
+
+// LocationRepository handles locations, images, and promotions.
+type LocationRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Location, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error)
+	Create(ctx context.Context, l *domain.Location) error
+	Update(ctx context.Context, l *domain.Location) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	SetCategories(ctx context.Context, locationID uuid.UUID, categoryIDs []uuid.UUID) error
+	SetTopLocation(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error
+
+	// Images
+	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
+	CreateImage(ctx context.Context, img *domain.LocationImage) error
+	DeleteImage(ctx context.Context, id uuid.UUID) error
+
+	// Promotions
+	FindPromotionByID(ctx context.Context, id uuid.UUID) (*domain.Promotion, error)
+	ListPromotions(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Promotion, int64, error)
+	CreatePromotion(ctx context.Context, p *domain.Promotion) error
+	UpdatePromotion(ctx context.Context, p *domain.Promotion) error
+	DeletePromotion(ctx context.Context, id uuid.UUID) error
+}
+
+// ProductRepository handles products, categories, and attachments.
+type ProductRepository interface {
+	// Categories
+	FindCategoryByID(ctx context.Context, id uuid.UUID) (*domain.ProductCategory, error)
+	ListCategories(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductCategory, error)
+	CreateCategory(ctx context.Context, c *domain.ProductCategory) error
+	UpdateCategory(ctx context.Context, c *domain.ProductCategory) error
+	DeleteCategory(ctx context.Context, id uuid.UUID) error
+
+	// Products
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Product, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error)
+	Create(ctx context.Context, p *domain.Product) error
+	Update(ctx context.Context, p *domain.Product) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	SetCategories(ctx context.Context, productID uuid.UUID, categoryIDs []uuid.UUID) error
+
+	// Attachments
+	ListAttachments(ctx context.Context, productID uuid.UUID) ([]*domain.ProductAttachment, error)
+	CreateAttachment(ctx context.Context, a *domain.ProductAttachment) error
+	DeleteAttachment(ctx context.Context, id uuid.UUID) error
+}
+
+// NotificationRepository handles push notification records.
+type NotificationRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Notification, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Notification, int64, error)
+	Create(ctx context.Context, n *domain.Notification) error
+	Update(ctx context.Context, n *domain.Notification) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	MarkSent(ctx context.Context, id uuid.UUID, publishedAt time.Time) error
+	MarkFailed(ctx context.Context, id uuid.UUID, errInfos []byte) error
+}
+
+// SurveyRepository handles surveys, questions, options, and responses.
+type SurveyRepository interface {
+	// Surveys
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Survey, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error)
+	Create(ctx context.Context, s *domain.Survey) error
+	Update(ctx context.Context, s *domain.Survey) error
+	Delete(ctx context.Context, id uuid.UUID) error
+
+	// Questions
+	FindQuestionByID(ctx context.Context, id uuid.UUID) (*domain.Question, error)
+	ListQuestions(ctx context.Context, surveyID uuid.UUID) ([]*domain.Question, error)
+	CreateQuestion(ctx context.Context, q *domain.Question) error
+	UpdateQuestion(ctx context.Context, q *domain.Question) error
+	DeleteQuestion(ctx context.Context, id uuid.UUID) error
+
+	// Options
+	CreateOption(ctx context.Context, o *domain.Option) error
+	UpdateOption(ctx context.Context, o *domain.Option) error
+	DeleteOption(ctx context.Context, id uuid.UUID) error
+
+	// Responses
+	ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error)
+	CreateResponse(ctx context.Context, r *domain.SurveyResponse) error
+}
+
+// BeaconRepository handles beacon CRUD.
+type BeaconRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Beacon, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Beacon, int64, error)
+	Create(ctx context.Context, b *domain.Beacon) error
+	Update(ctx context.Context, b *domain.Beacon) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// EventRepository handles events, event types, tags, and images.
+type EventRepository interface {
+	// Tags (global)
+	FindTagByID(ctx context.Context, id uuid.UUID) (*domain.EventTag, error)
+	ListTags(ctx context.Context) ([]*domain.EventTag, error)
+	CreateTag(ctx context.Context, t *domain.EventTag) error
+	UpdateTag(ctx context.Context, t *domain.EventTag) error
+	DeleteTag(ctx context.Context, id uuid.UUID) error
+
+	// Event types (per venue)
+	FindEventTypeByID(ctx context.Context, id uuid.UUID) (*domain.EventType, error)
+	ListEventTypes(ctx context.Context, venueID uuid.UUID) ([]*domain.EventType, error)
+	CreateEventType(ctx context.Context, t *domain.EventType) error
+	UpdateEventType(ctx context.Context, t *domain.EventType) error
+	DeleteEventType(ctx context.Context, id uuid.UUID) error
+
+	// Events
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Event, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Event, int64, error)
+	Create(ctx context.Context, e *domain.Event) error
+	Update(ctx context.Context, e *domain.Event) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	SetTags(ctx context.Context, eventID uuid.UUID, tagIDs []uuid.UUID) error
+	SetLocations(ctx context.Context, eventID uuid.UUID, locationIDs []uuid.UUID) error
+
+	// Images
+	CreateImage(ctx context.Context, img *domain.EventImage) error
+	DeleteImage(ctx context.Context, id uuid.UUID) error
+}
+
+// TokenRepository handles persistence for refresh and reset-password tokens.
+type TokenRepository interface {
+	// Refresh tokens
+	CreateRefreshToken(ctx context.Context, t *domain.RefreshToken) error
+	FindRefreshToken(ctx context.Context, tokenHash string) (*domain.RefreshToken, error)
+	RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
+	RevokeAllUserRefreshTokens(ctx context.Context, userID uuid.UUID) error
+
+	// Password reset tokens
+	CreateResetToken(ctx context.Context, t *domain.ResetPasswordToken) error
+	FindResetToken(ctx context.Context, tokenHash string) (*domain.ResetPasswordToken, error)
+	MarkResetTokenUsed(ctx context.Context, id uuid.UUID) error
+}
+
+// ConnectionRepository handles connections and their level links.
+type ConnectionRepository interface {
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Connection, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Connection, error)
+	Create(ctx context.Context, c *domain.Connection) error
+	Update(ctx context.Context, c *domain.Connection) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	ListLevels(ctx context.Context, connectionID uuid.UUID) ([]*domain.ConnectionLevel, error)
+	AddLevel(ctx context.Context, cl *domain.ConnectionLevel) error
+	RemoveLevel(ctx context.Context, id uuid.UUID) error
+}
+
+// QRCodeRepository handles QR codes.
+type QRCodeRepository interface {
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.QRCode, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.QRCode, error)
+	Create(ctx context.Context, q *domain.QRCode) error
+	Update(ctx context.Context, q *domain.QRCode) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AdvertisementRepository handles advertisements.
+type AdvertisementRepository interface {
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Advertisement, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Advertisement, error)
+	Create(ctx context.Context, a *domain.Advertisement) error
+	Update(ctx context.Context, a *domain.Advertisement) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// ArticleRepository handles articles and their images.
+type ArticleRepository interface {
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Article, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Article, error)
+	Create(ctx context.Context, a *domain.Article) error
+	Update(ctx context.Context, a *domain.Article) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	CreateImage(ctx context.Context, img *domain.ArticleImage) error
+	DeleteImage(ctx context.Context, id uuid.UUID) error
+}
+
+// CouponRepository handles coupons.
+type CouponRepository interface {
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Coupon, error)
+	Create(ctx context.Context, c *domain.Coupon) error
+	Update(ctx context.Context, c *domain.Coupon) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// VideoRepository handles videos.
+type VideoRepository interface {
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Video, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Video, error)
+	Create(ctx context.Context, v *domain.Video) error
+	Update(ctx context.Context, v *domain.Video) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// TagRepository handles global tags and entity-tag links.
+type TagRepository interface {
+	List(ctx context.Context, p domain.Pagination) ([]*domain.Tag, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Tag, error)
+	Create(ctx context.Context, t *domain.Tag) error
+	Update(ctx context.Context, t *domain.Tag) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	AttachTag(ctx context.Context, et *domain.EntityTag) error
+	DetachTag(ctx context.Context, tagID uuid.UUID, entityType string, entityID uuid.UUID) error
+	ListEntityTags(ctx context.Context, entityType string, entityID uuid.UUID) ([]*domain.Tag, error)
+}
