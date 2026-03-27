@@ -305,3 +305,19 @@ type TagRepository interface {
 	DetachTag(ctx context.Context, tagID uuid.UUID, entityType string, entityID uuid.UUID) error
 	ListEntityTags(ctx context.Context, entityType string, entityID uuid.UUID) ([]*domain.Tag, error)
 }
+
+// EventLogRepository handles high-volume analytics event writes.
+type EventLogRepository interface {
+	Create(ctx context.Context, e *domain.EventLog) error
+	ListByVenue(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.EventLog, int, error)
+}
+
+// SearchQueryRepository handles search term tracking and promoted keywords.
+type SearchQueryRepository interface {
+	Upsert(ctx context.Context, venueID uuid.UUID, term string) error
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.SearchQuery, error)
+	Create(ctx context.Context, q *domain.SearchQuery) error
+	Update(ctx context.Context, q *domain.SearchQuery) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}

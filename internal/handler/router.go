@@ -30,6 +30,14 @@ type Dependencies struct {
 	NotificationService     service.NotificationService
 	SurveyService           service.SurveyService
 	BeaconService           service.BeaconService
+	ConnectionService       service.ConnectionService
+	QRCodeService           service.QRCodeService
+	AdvertisementService    service.AdvertisementService
+	ArticleService          service.ArticleService
+	CouponService           service.CouponService
+	VideoService            service.VideoService
+	TagService              service.TagService
+	AnalyticsService        service.AnalyticsService
 	UserRepo                repository.UserRepository
 }
 
@@ -227,6 +235,79 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.GET("/:id/beacons/:beaconID", viewerAccess, beaconH.Get)
 		venues.PUT("/:id/beacons/:beaconID", editorAccess, beaconH.Update)
 		venues.DELETE("/:id/beacons/:beaconID", editorAccess, beaconH.Delete)
+
+		// Connection sub-resources
+		connH := newConnectionHandler(deps.ConnectionService)
+
+		venues.GET("/:id/connections", viewerAccess, connH.List)
+		venues.POST("/:id/connections", editorAccess, connH.Create)
+		venues.GET("/:id/connections/:connectionID", viewerAccess, connH.Get)
+		venues.PUT("/:id/connections/:connectionID", editorAccess, connH.Update)
+		venues.DELETE("/:id/connections/:connectionID", editorAccess, connH.Delete)
+		venues.GET("/:id/connections/:connectionID/levels", viewerAccess, connH.ListLevels)
+		venues.POST("/:id/connections/:connectionID/levels", editorAccess, connH.AddLevel)
+		venues.DELETE("/:id/connections/:connectionID/levels/:clID", editorAccess, connH.RemoveLevel)
+
+		// QR code sub-resources
+		qrH := newQRCodeHandler(deps.QRCodeService)
+
+		venues.GET("/:id/qrcodes", viewerAccess, qrH.List)
+		venues.POST("/:id/qrcodes", editorAccess, qrH.Create)
+		venues.GET("/:id/qrcodes/:qrID", viewerAccess, qrH.Get)
+		venues.PUT("/:id/qrcodes/:qrID", editorAccess, qrH.Update)
+		venues.DELETE("/:id/qrcodes/:qrID", editorAccess, qrH.Delete)
+
+		// Advertisement sub-resources
+		adH := newAdHandler(deps.AdvertisementService)
+
+		venues.GET("/:id/ads", viewerAccess, adH.List)
+		venues.POST("/:id/ads", editorAccess, adH.Create)
+		venues.GET("/:id/ads/:adID", viewerAccess, adH.Get)
+		venues.PUT("/:id/ads/:adID", editorAccess, adH.Update)
+		venues.DELETE("/:id/ads/:adID", editorAccess, adH.Delete)
+		venues.POST("/:id/ads/:adID/publish", editorAccess, adH.Publish)
+
+		// Article sub-resources
+		articleH := newArticleHandler(deps.ArticleService)
+
+		venues.GET("/:id/articles", viewerAccess, articleH.List)
+		venues.POST("/:id/articles", editorAccess, articleH.Create)
+		venues.GET("/:id/articles/:articleID", viewerAccess, articleH.Get)
+		venues.PUT("/:id/articles/:articleID", editorAccess, articleH.Update)
+		venues.DELETE("/:id/articles/:articleID", editorAccess, articleH.Delete)
+		venues.POST("/:id/articles/:articleID/images", editorAccess, articleH.CreateImage)
+		venues.DELETE("/:id/articles/:articleID/images/:imageID", editorAccess, articleH.DeleteImage)
+
+		// Coupon sub-resources
+		couponH := newCouponHandler(deps.CouponService)
+
+		venues.GET("/:id/coupons", viewerAccess, couponH.List)
+		venues.POST("/:id/coupons", editorAccess, couponH.Create)
+		venues.GET("/:id/coupons/:couponID", viewerAccess, couponH.Get)
+		venues.PUT("/:id/coupons/:couponID", editorAccess, couponH.Update)
+		venues.DELETE("/:id/coupons/:couponID", editorAccess, couponH.Delete)
+
+		// Video sub-resources
+		videoH := newVideoHandler(deps.VideoService)
+
+		venues.GET("/:id/videos", viewerAccess, videoH.List)
+		venues.POST("/:id/videos", editorAccess, videoH.Create)
+		venues.GET("/:id/videos/:videoID", viewerAccess, videoH.Get)
+		venues.PUT("/:id/videos/:videoID", editorAccess, videoH.Update)
+		venues.DELETE("/:id/videos/:videoID", editorAccess, videoH.Delete)
+
+		// Analytics (protected — viewer access)
+		analyticsH := newAnalyticsHandler(deps.AnalyticsService)
+		venues.GET("/:id/analytics/events", viewerAccess, analyticsH.ListEventLogs)
+		venues.GET("/:id/analytics/searches", viewerAccess, analyticsH.ListSearchQueries)
+	}
+
+	// ── Analytics: public (no auth required) ─────────────────────────────────
+	analyticsH := newAnalyticsHandler(deps.AnalyticsService)
+	public := v1.Group("/public")
+	{
+		public.POST("/venues/:id/events", analyticsH.TrackEvent)
+		public.POST("/venues/:id/searches", analyticsH.TrackSearch)
 	}
 
 	// ── Storage (pre-signed uploads) ──────────────────────────────────────────
@@ -245,6 +326,17 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	v1.POST("/event-tags", jwtAuth, eventH.CreateTag)
 	v1.PUT("/event-tags/:tagID", jwtAuth, eventH.UpdateTag)
 	v1.DELETE("/event-tags/:tagID", jwtAuth, eventH.DeleteTag)
+
+	// ── Global tags (polymorphic) ──────────────────────────────────────────────
+	tagH := newTagHandler(deps.TagService)
+	v1.GET("/tags", jwtAuth, tagH.List)
+	v1.POST("/tags", jwtAuth, tagH.Create)
+	v1.GET("/tags/:tagID", jwtAuth, tagH.Get)
+	v1.PUT("/tags/:tagID", jwtAuth, tagH.Update)
+	v1.DELETE("/tags/:tagID", jwtAuth, tagH.Delete)
+	v1.POST("/tags/attach", jwtAuth, tagH.AttachTag)
+	v1.DELETE("/tags/:tagID/detach", jwtAuth, tagH.DetachTag)
+	v1.GET("/tags/entity", jwtAuth, tagH.ListEntityTags)
 
 	return r
 }

@@ -70,6 +70,15 @@ func runServe(_ *cobra.Command, _ []string) error {
 	notificationRepo := postgresrepo.NewNotificationRepository(pool)
 	surveyRepo := postgresrepo.NewSurveyRepository(pool)
 	beaconRepo := postgresrepo.NewBeaconRepository(pool)
+	connectionRepo := postgresrepo.NewConnectionRepository(pool)
+	qrcodeRepo := postgresrepo.NewQRCodeRepository(pool)
+	adRepo := postgresrepo.NewAdRepository(pool)
+	articleRepo := postgresrepo.NewArticleRepository(pool)
+	couponRepo := postgresrepo.NewCouponRepository(pool)
+	videoRepo := postgresrepo.NewVideoRepository(pool)
+	tagRepo := postgresrepo.NewTagRepository(pool)
+	eventLogRepo := postgresrepo.NewEventLogRepository(pool)
+	searchQueryRepo := postgresrepo.NewSearchQueryRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
 	mailer := email.NewLogSender(logger)
@@ -91,6 +100,14 @@ func runServe(_ *cobra.Command, _ []string) error {
 	notificationSvc := service.NewNotificationService(notificationRepo, pusher)
 	surveySvc := service.NewSurveyService(surveyRepo)
 	beaconSvc := service.NewBeaconService(beaconRepo)
+	connectionSvc := service.NewConnectionService(connectionRepo)
+	qrcodeSvc := service.NewQRCodeService(qrcodeRepo)
+	adSvc := service.NewAdvertisementService(adRepo)
+	articleSvc := service.NewArticleService(articleRepo)
+	couponSvc := service.NewCouponService(couponRepo)
+	videoSvc := service.NewVideoService(videoRepo)
+	tagSvc := service.NewTagService(tagRepo)
+	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, redisClient)
 
 	// ── HTTP server ───────────────────────────────────────────────────────
 	deps := handler.Dependencies{
@@ -108,6 +125,14 @@ func runServe(_ *cobra.Command, _ []string) error {
 		NotificationService:     notificationSvc,
 		SurveyService:           surveySvc,
 		BeaconService:           beaconSvc,
+		ConnectionService:       connectionSvc,
+		QRCodeService:           qrcodeSvc,
+		AdvertisementService:    adSvc,
+		ArticleService:          articleSvc,
+		CouponService:           couponSvc,
+		VideoService:            videoSvc,
+		TagService:              tagSvc,
+		AnalyticsService:        analyticsSvc,
 		UserRepo:                userRepo,
 	}
 	router := handler.NewRouter(cfg, logger, deps)
