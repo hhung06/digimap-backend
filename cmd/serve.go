@@ -134,6 +134,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 		TagService:              tagSvc,
 		AnalyticsService:        analyticsSvc,
 		UserRepo:                userRepo,
+		RedisClient:             redisClient,
+		DB:                      pool,
 	}
 	router := handler.NewRouter(cfg, logger, deps)
 

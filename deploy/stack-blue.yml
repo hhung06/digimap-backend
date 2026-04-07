@@ -1,0 +1,83 @@
+# Blue app stack — one half of the blue-green deployment pair.
+# Managed exclusively by deploy.sh; do not deploy manually.
+#
+# Traefik routing is controlled by the traefik.enable label:
+#   true  → this slot is ACTIVE and receives 100% of traffic
+#   false → this slot is IDLE (kept warm for instant rollback)
+
+version: "3.9"
+
+services:
+  app:
+    image: ${APP_IMAGE}
+    environment:
+      APP_ENV: production
+      LOG_FORMAT: json
+      LOG_LEVEL: warn
+      DB_HOST: digimap-infra_postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: ${DB_SSLMODE:-require}
+      REDIS_ADDR: digimap-infra_redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${S3_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    networks:
+      - traefik-public
+      - digimap-infra_internal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      replicas: ${APP_REPLICAS:-2}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        # start-first: new container starts before old one stops (zero-downtime within the slot)
+        order: start-first
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+      resources:
+        limits:
+          cpus: "${APP_CPU_LIMIT:-1}"
+          memory: ${APP_MEM_LIMIT:-512M}
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+      labels:
+        # Traefik routing labels (on the SERVICE, not container — required for Swarm mode)
+        - traefik.enable=${BLUE_ACTIVE:-false}
+        - traefik.http.routers.api-blue.rule=Host(`${API_DOMAIN}`)
+        - traefik.http.routers.api-blue.entrypoints=websecure
+        - traefik.http.routers.api-blue.tls=true
+        - traefik.http.routers.api-blue.tls.certresolver=letsencrypt
+        - traefik.http.routers.api-blue.service=api-blue
+        # Priority: active slot gets higher priority — ensures no split-brain if both are briefly enabled
+        - traefik.http.routers.api-blue.priority=${BLUE_PRIORITY:-1}
+        - traefik.http.services.api-blue.loadbalancer.server.port=8080
+        - traefik.http.services.api-blue.loadbalancer.healthcheck.path=/health
+        - traefik.http.services.api-blue.loadbalancer.healthcheck.interval=10s
+        # Slot identifier — read by deploy.sh to determine active color
+        - com.digimap.slot=blue
+        - com.digimap.active=${BLUE_ACTIVE:-false}
+
+networks:
+  traefik-public:
+    external: true
+  digimap-infra_internal:
+    external: true

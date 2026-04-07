@@ -13,6 +13,7 @@ const (
 	CodeNotFound          AppCode = 1003 // Requested resource does not exist.
 	CodeConflict          AppCode = 1004 // Duplicate resource or incompatible state.
 	CodeBusinessLogic     AppCode = 1005 // Valid request but invalid in the current context.
+	CodeRateLimited       AppCode = 1006 // Too many requests; client should back off.
 	CodeInternalError     AppCode = 1007 // Unexpected server-side error.
 )
 

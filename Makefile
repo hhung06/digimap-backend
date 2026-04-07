@@ -1,6 +1,8 @@
 .PHONY: build build-alpine run serve clean test test-integration \
         migrate-up migrate-down migrate-version migrate-create \
-        docker-build docker-up docker-down help
+        docker-build docker-up docker-down \
+        swarm-init swarm-deploy-infra swarm-deploy swarm-rollback swarm-status \
+        help
 
 BIN_NAME   = digimap-backend
 VERSION   := $(shell grep "const Version " version/version.go | sed -E 's/.*"(.+)"$$/\1/')
@@ -28,6 +30,11 @@ help:
 	@echo '  make docker-up        Start local docker-compose stack'
 	@echo '  make docker-down      Stop local docker-compose stack'
 	@echo '  make docker-build     Build production Docker image'
+	@echo '  make swarm-init       One-time Swarm + network setup'
+	@echo '  make swarm-deploy-infra  Deploy Traefik + Postgres + Redis stack'
+	@echo '  make swarm-deploy TAG=x  Blue-green deploy with image tag'
+	@echo '  make swarm-rollback   Rollback to previous slot instantly'
+	@echo '  make swarm-status     Show current blue-green state'
 	@echo '  make clean            Remove build artifacts'
 
 build:
@@ -98,3 +105,46 @@ clean:
 	@test ! -e bin/$(BIN_NAME) || rm bin/$(BIN_NAME)
 	@rm -f coverage.out
 	@rm -rf tmp/
+
+# ── Docker Swarm ───────────────────────────────────────────────────────────────
+# One-time Swarm setup: creates the overlay network Traefik uses
+swarm-init:
+	docker swarm init || true
+	docker network create --driver overlay --attachable traefik-public || true
+	docker node update --label-add postgres=true $$(docker node ls -q | head -1)
+	@echo "Swarm initialised. Copy deploy/.env.deploy.example to deploy/.env.deploy and fill values."
+
+# Deploy the shared infrastructure stack (Traefik, Postgres, Redis)
+swarm-deploy-infra:
+	docker stack deploy \
+		--with-registry-auth \
+		--compose-file deploy/stack-infra.yml \
+		digimap-infra
+
+# Blue-green deploy: build + push + deploy to idle slot + cutover
+# Usage: make swarm-deploy TAG=abc1234
+swarm-deploy:
+	@[ "$(TAG)" ] || (echo "usage: make swarm-deploy TAG=<image-tag>" && exit 1)
+	$(MAKE) docker-build GIT_COMMIT=$(TAG)
+	docker push $(IMAGE_NAME):$(TAG)
+	chmod +x deploy/deploy.sh
+	deploy/deploy.sh $(IMAGE_NAME):$(TAG)
+
+# Instant rollback to previous slot
+swarm-rollback:
+	chmod +x deploy/rollback.sh
+	deploy/rollback.sh
+
+# Show current deployment state
+swarm-status:
+	@echo "=== Active slot ==="
+	@cat /var/lib/digimap/active-slot 2>/dev/null || echo "(state file not found)"
+	@echo ""
+	@echo "=== Services ==="
+	@docker service ls --filter name=digimap
+	@echo ""
+	@echo "=== Blue tasks ==="
+	@docker service ps digimap-blue_app 2>/dev/null || echo "(not deployed)"
+	@echo ""
+	@echo "=== Green tasks ==="
+	@docker service ps digimap-green_app 2>/dev/null || echo "(not deployed)"

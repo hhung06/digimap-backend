@@ -1,4 +1,5 @@
 DROP FUNCTION IF EXISTS update_updated_at_column();
+DROP EXTENSION IF EXISTS "vector";
 DROP EXTENSION IF EXISTS "btree_gist";
 DROP EXTENSION IF EXISTS "pg_trgm";
 DROP EXTENSION IF EXISTS "pgcrypto";

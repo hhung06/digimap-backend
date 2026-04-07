@@ -1,0 +1,379 @@
+// Package mocks provides testify/mock implementations of all repository interfaces.
+// Import this package in service unit tests — never in production code.
+package mocks
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/hhung06/digimap-backend/internal/domain"
+)
+
+// ── UserRepository ────────────────────────────────────────────────────────────
+
+// UserRepository is a mock implementation of repository.UserRepository.
+type UserRepository struct{ mock.Mock }
+
+func (m *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	args := m.Called(ctx, id)
+	if u, ok := args.Get(0).(*domain.User); ok {
+		return u, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
+	args := m.Called(ctx, email)
+	if u, ok := args.Get(0).(*domain.User); ok {
+		return u, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) Create(ctx context.Context, u *domain.User) error {
+	return m.Called(ctx, u).Error(0)
+}
+
+func (m *UserRepository) Update(ctx context.Context, u *domain.User) error {
+	return m.Called(ctx, u).Error(0)
+}
+
+func (m *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *UserRepository) GetVenueRole(ctx context.Context, venueID, userID uuid.UUID) (*domain.VenueUserRole, error) {
+	args := m.Called(ctx, venueID, userID)
+	if r, ok := args.Get(0).(*domain.VenueUserRole); ok {
+		return r, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) ListVenueUsers(ctx context.Context, venueID uuid.UUID) ([]*domain.User, error) {
+	args := m.Called(ctx, venueID)
+	if users, ok := args.Get(0).([]*domain.User); ok {
+		return users, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) UpsertVenueRole(ctx context.Context, r *domain.VenueUserRole) error {
+	return m.Called(ctx, r).Error(0)
+}
+
+func (m *UserRepository) DeleteVenueRole(ctx context.Context, venueID, userID uuid.UUID) error {
+	return m.Called(ctx, venueID, userID).Error(0)
+}
+
+func (m *UserRepository) CreateInvitation(ctx context.Context, inv *domain.VenueInvitation) error {
+	return m.Called(ctx, inv).Error(0)
+}
+
+func (m *UserRepository) FindInvitationByID(ctx context.Context, id uuid.UUID) (*domain.VenueInvitation, error) {
+	args := m.Called(ctx, id)
+	if inv, ok := args.Get(0).(*domain.VenueInvitation); ok {
+		return inv, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) FindInvitationByToken(ctx context.Context, token string) (*domain.VenueInvitation, error) {
+	args := m.Called(ctx, token)
+	if inv, ok := args.Get(0).(*domain.VenueInvitation); ok {
+		return inv, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) UpdateInvitationStatus(ctx context.Context, id uuid.UUID, status domain.InvitationStatus, acceptedAt, cancelledAt *time.Time) error {
+	return m.Called(ctx, id, status, acceptedAt, cancelledAt).Error(0)
+}
+
+func (m *UserRepository) ListInvitations(ctx context.Context, venueID uuid.UUID) ([]*domain.VenueInvitation, error) {
+	args := m.Called(ctx, venueID)
+	if invs, ok := args.Get(0).([]*domain.VenueInvitation); ok {
+		return invs, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *UserRepository) DeleteInvitation(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── TokenRepository ───────────────────────────────────────────────────────────
+
+// TokenRepository is a mock implementation of repository.TokenRepository.
+type TokenRepository struct{ mock.Mock }
+
+func (m *TokenRepository) CreateRefreshToken(ctx context.Context, t *domain.RefreshToken) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *TokenRepository) FindRefreshToken(ctx context.Context, tokenHash string) (*domain.RefreshToken, error) {
+	args := m.Called(ctx, tokenHash)
+	if t, ok := args.Get(0).(*domain.RefreshToken); ok {
+		return t, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *TokenRepository) RevokeRefreshToken(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *TokenRepository) RevokeAllUserRefreshTokens(ctx context.Context, userID uuid.UUID) error {
+	return m.Called(ctx, userID).Error(0)
+}
+
+func (m *TokenRepository) CreateResetToken(ctx context.Context, t *domain.ResetPasswordToken) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *TokenRepository) FindResetToken(ctx context.Context, tokenHash string) (*domain.ResetPasswordToken, error) {
+	args := m.Called(ctx, tokenHash)
+	if t, ok := args.Get(0).(*domain.ResetPasswordToken); ok {
+		return t, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *TokenRepository) MarkResetTokenUsed(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── EventLogRepository ────────────────────────────────────────────────────────
+
+// EventLogRepository is a mock implementation of repository.EventLogRepository.
+type EventLogRepository struct{ mock.Mock }
+
+func (m *EventLogRepository) Create(ctx context.Context, e *domain.EventLog) error {
+	return m.Called(ctx, e).Error(0)
+}
+
+func (m *EventLogRepository) ListByVenue(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.EventLog, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if logs, ok := args.Get(0).([]*domain.EventLog); ok {
+		return logs, args.Int(1), args.Error(2)
+	}
+	return nil, args.Int(1), args.Error(2)
+}
+
+// ── SearchQueryRepository ─────────────────────────────────────────────────────
+
+// SearchQueryRepository is a mock implementation of repository.SearchQueryRepository.
+type SearchQueryRepository struct{ mock.Mock }
+
+func (m *SearchQueryRepository) Upsert(ctx context.Context, venueID uuid.UUID, term string) error {
+	return m.Called(ctx, venueID, term).Error(0)
+}
+
+func (m *SearchQueryRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if qs, ok := args.Get(0).([]*domain.SearchQuery); ok {
+		return qs, args.Int(1), args.Error(2)
+	}
+	return nil, args.Int(1), args.Error(2)
+}
+
+func (m *SearchQueryRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.SearchQuery, error) {
+	args := m.Called(ctx, id)
+	if q, ok := args.Get(0).(*domain.SearchQuery); ok {
+		return q, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SearchQueryRepository) Create(ctx context.Context, q *domain.SearchQuery) error {
+	return m.Called(ctx, q).Error(0)
+}
+
+func (m *SearchQueryRepository) Update(ctx context.Context, q *domain.SearchQuery) error {
+	return m.Called(ctx, q).Error(0)
+}
+
+func (m *SearchQueryRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── BeaconRepository ──────────────────────────────────────────────────────────
+
+// BeaconRepository is a mock implementation of repository.BeaconRepository.
+type BeaconRepository struct{ mock.Mock }
+
+func (m *BeaconRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Beacon, error) {
+	args := m.Called(ctx, id)
+	if b, ok := args.Get(0).(*domain.Beacon); ok {
+		return b, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *BeaconRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Beacon, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if bs, ok := args.Get(0).([]*domain.Beacon); ok {
+		return bs, int64(args.Int(1)), args.Error(2)
+	}
+	return nil, int64(args.Int(1)), args.Error(2)
+}
+
+func (m *BeaconRepository) Create(ctx context.Context, b *domain.Beacon) error {
+	return m.Called(ctx, b).Error(0)
+}
+
+func (m *BeaconRepository) Update(ctx context.Context, b *domain.Beacon) error {
+	return m.Called(ctx, b).Error(0)
+}
+
+func (m *BeaconRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── CustomerRepository ────────────────────────────────────────────────────────
+
+// CustomerRepository is a mock implementation of repository.CustomerRepository.
+type CustomerRepository struct{ mock.Mock }
+
+func (m *CustomerRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Customer, error) {
+	args := m.Called(ctx, id)
+	if c, ok := args.Get(0).(*domain.Customer); ok {
+		return c, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *CustomerRepository) List(ctx context.Context, p domain.Pagination) ([]*domain.Customer, int64, error) {
+	args := m.Called(ctx, p)
+	if cs, ok := args.Get(0).([]*domain.Customer); ok {
+		return cs, int64(args.Int(1)), args.Error(2)
+	}
+	return nil, int64(args.Int(1)), args.Error(2)
+}
+
+func (m *CustomerRepository) Create(ctx context.Context, c *domain.Customer) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *CustomerRepository) Update(ctx context.Context, c *domain.Customer) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *CustomerRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── AdvertisementRepository ───────────────────────────────────────────────────
+
+// AdvertisementRepository is a mock implementation of repository.AdvertisementRepository.
+type AdvertisementRepository struct{ mock.Mock }
+
+func (m *AdvertisementRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Advertisement, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if ads, ok := args.Get(0).([]*domain.Advertisement); ok {
+		return ads, args.Int(1), args.Error(2)
+	}
+	return nil, args.Int(1), args.Error(2)
+}
+
+func (m *AdvertisementRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Advertisement, error) {
+	args := m.Called(ctx, id)
+	if a, ok := args.Get(0).(*domain.Advertisement); ok {
+		return a, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *AdvertisementRepository) Create(ctx context.Context, a *domain.Advertisement) error {
+	return m.Called(ctx, a).Error(0)
+}
+
+func (m *AdvertisementRepository) Update(ctx context.Context, a *domain.Advertisement) error {
+	return m.Called(ctx, a).Error(0)
+}
+
+func (m *AdvertisementRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── CouponRepository ──────────────────────────────────────────────────────────
+
+// CouponRepository is a mock implementation of repository.CouponRepository.
+type CouponRepository struct{ mock.Mock }
+
+func (m *CouponRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if cs, ok := args.Get(0).([]*domain.Coupon); ok {
+		return cs, args.Int(1), args.Error(2)
+	}
+	return nil, args.Int(1), args.Error(2)
+}
+
+func (m *CouponRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Coupon, error) {
+	args := m.Called(ctx, id)
+	if c, ok := args.Get(0).(*domain.Coupon); ok {
+		return c, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *CouponRepository) Create(ctx context.Context, c *domain.Coupon) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *CouponRepository) Update(ctx context.Context, c *domain.Coupon) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *CouponRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── VideoRepository ───────────────────────────────────────────────────────────
+
+// VideoRepository is a mock implementation of repository.VideoRepository.
+type VideoRepository struct{ mock.Mock }
+
+func (m *VideoRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Video, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if vs, ok := args.Get(0).([]*domain.Video); ok {
+		return vs, args.Int(1), args.Error(2)
+	}
+	return nil, args.Int(1), args.Error(2)
+}
+
+func (m *VideoRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Video, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Video); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *VideoRepository) Create(ctx context.Context, v *domain.Video) error {
+	return m.Called(ctx, v).Error(0)
+}
+
+func (m *VideoRepository) Update(ctx context.Context, v *domain.Video) error {
+	return m.Called(ctx, v).Error(0)
+}
+
+func (m *VideoRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── EmailSender ───────────────────────────────────────────────────────────────
+
+// EmailSender is a mock implementation of email.Sender.
+type EmailSender struct{ mock.Mock }
+
+func (m *EmailSender) SendPasswordReset(ctx context.Context, toEmail, resetToken string) error {
+	return m.Called(ctx, toEmail, resetToken).Error(0)
+}
+
+func (m *EmailSender) SendInvitation(ctx context.Context, toEmail, venueName, inviteToken string) error {
+	return m.Called(ctx, toEmail, venueName, inviteToken).Error(0)
+}

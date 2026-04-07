@@ -20,7 +20,8 @@ services:
       REDIS_ADDR: redis:6379
 
   postgres:
-    image: postgres:16-alpine
+    # pgvector/pgvector bundles the vector extension on top of the official postgres image
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_DB: digimap
       POSTGRES_USER: digimap

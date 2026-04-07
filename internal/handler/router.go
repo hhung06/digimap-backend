@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/hhung06/digimap-backend/config"
 	"github.com/hhung06/digimap-backend/internal/dto"
@@ -39,6 +41,8 @@ type Dependencies struct {
 	TagService              service.TagService
 	AnalyticsService        service.AnalyticsService
 	UserRepo                repository.UserRepository
+	RedisClient             *redis.Client
+	DB                      *pgxpool.Pool
 }
 
 // NewRouter builds and returns the configured Gin engine with all routes registered.
@@ -53,12 +57,18 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Logger(logger))
 	r.Use(middleware.CORS(cfg.App))
+	r.Use(middleware.SecurityHeaders(cfg.App))
 
 	// Infrastructure endpoints
-	r.GET("/health", healthHandler)
+	r.GET("/health", newHealthHandler(deps.DB, deps.RedisClient))
 	r.GET("/version", versionHandler)
 
 	v1 := r.Group("/api/v1")
+
+	// Rate limiters (Redis-backed, shared across replicas)
+	publicRL := middleware.RateLimitByIP(deps.RedisClient, "120-M")  // 120 req/min per IP for public endpoints
+	authRL := middleware.RateLimitByIP(deps.RedisClient, "10-M")     // 10 req/min per IP for auth endpoints
+	apiRL := middleware.RateLimitByUser(deps.RedisClient, "600-M")   // 600 req/min per user for API endpoints
 
 	// ── Public auth routes ────────────────────────────────────────────────────
 	authH := newAuthHandler(deps.AuthService, authConfig{
@@ -66,7 +76,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		refreshExpirySeconds: int(cfg.JWT.RefreshExpiry.Seconds()),
 	})
 
-	auth := v1.Group("/auth")
+	auth := v1.Group("/auth", authRL)
 	{
 		auth.POST("/login", authH.Login)
 		auth.POST("/register", authH.Register)
@@ -96,7 +106,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 	// ── Venue routes (JWT required; RBAC applied per action) ──────────────────
 	venueH := newVenueHandler(deps.VenueService)
-	venues := v1.Group("/venues", jwtAuth)
+	venues := v1.Group("/venues", jwtAuth, apiRL)
 	{
 		venues.GET("", venueH.List)
 		venues.POST("", venueH.Create)
@@ -304,7 +314,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 	// ── Analytics: public (no auth required) ─────────────────────────────────
 	analyticsH := newAnalyticsHandler(deps.AnalyticsService)
-	public := v1.Group("/public")
+	public := v1.Group("/public", publicRL)
 	{
 		public.POST("/venues/:id/events", analyticsH.TrackEvent)
 		public.POST("/venues/:id/searches", analyticsH.TrackSearch)
@@ -341,9 +351,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	return r
 }
 
-func healthHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, dto.OK(gin.H{"status": "ok"}))
-}
 
 func versionHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(gin.H{

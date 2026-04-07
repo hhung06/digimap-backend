@@ -1,0 +1,128 @@
+# Infrastructure stack — deployed ONCE; never touched during blue-green deploys.
+# Manages: Traefik ingress, PostgreSQL, Redis.
+#
+# Deploy:
+#   docker stack deploy -c deploy/stack-infra.yml digimap-infra
+#
+# Prerequisites:
+#   docker network create --driver overlay --attachable traefik-public
+
+version: "3.9"
+
+services:
+
+  # ── Traefik (ingress + SSL termination) ─────────────────────────────────────
+  traefik:
+    image: traefik:v3.3
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    volumes:
+      # Docker socket: read-only; Traefik watches Swarm services
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Static config (bind-mount from repo)
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      # ACME certificate storage (persisted volume)
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - traefik-public
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL}
+    deploy:
+      replicas: 1
+      placement:
+        # Traefik must run on a manager so it can query the Swarm API
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      labels:
+        # Expose the Traefik dashboard behind basic auth
+        - traefik.enable=true
+        - traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)
+        - traefik.http.routers.traefik-dashboard.entrypoints=websecure
+        - traefik.http.routers.traefik-dashboard.tls=true
+        - traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt
+        - traefik.http.routers.traefik-dashboard.service=api@internal
+        - traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth
+        - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}
+        - traefik.http.services.traefik-noop.loadbalancer.server.port=8080
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.postgres == true
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+        order: stop-first   # postgres must stop cleanly before new version starts
+
+  # ── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+networks:
+  traefik-public:
+    external: true
+  internal:
+    driver: overlay
+    # attachable: allow non-Swarm containers to join (useful for one-off migration runs)
+    attachable: true
+
+volumes:
+  pg_data:
+  redis_data:
+  traefik_letsencrypt:
