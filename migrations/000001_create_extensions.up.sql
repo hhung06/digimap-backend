@@ -1,5 +1,5 @@
 -- Required PostgreSQL extensions
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_bytes() and other crypto helpers (uuidv7 is native in PG18+)
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";    -- trigram similarity for fuzzy text search
 CREATE EXTENSION IF NOT EXISTS "btree_gist"; -- exclusion constraints with ranges
 CREATE EXTENSION IF NOT EXISTS "vector";     -- pgvector: dense vector similarity search (RAG / embeddings)
