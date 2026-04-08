@@ -100,12 +100,3 @@ type QRCodeRequest struct {
 	Angle      *float64   `json:"angle"`
 	Link       string     `json:"link"`
 }
-
-func QRCodeToResponse(q *domain.QRCode) QRCodeResponse {
-	return QRCodeResponse{
-		ID: q.ID, VenueID: q.VenueID, LevelID: q.LevelID, LocationID: q.LocationID,
-		Lat: q.Lat, Lng: q.Lng, Angle: q.Angle,
-		Link: q.Link, Base64Image: q.Base64Image,
-		CreatedAt: q.CreatedAt, UpdatedAt: q.UpdatedAt,
-	}
-}

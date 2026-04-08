@@ -50,61 +50,6 @@ func (s *locationCategoryService) Delete(ctx context.Context, id uuid.UUID) erro
 	return s.repo.Delete(ctx, id)
 }
 
-// ── Amenity service ───────────────────────────────────────────────────────────
-
-type AmenityService interface {
-	Get(ctx context.Context, id uuid.UUID) (*domain.Amenity, error)
-	List(ctx context.Context, p domain.Pagination) ([]*domain.Amenity, int64, error)
-	ListByVenue(ctx context.Context, venueID uuid.UUID) ([]*domain.Amenity, error)
-	Create(ctx context.Context, a *domain.Amenity) error
-	Update(ctx context.Context, a *domain.Amenity) error
-	Delete(ctx context.Context, id uuid.UUID) error
-	LinkToVenue(ctx context.Context, venueID, amenityID uuid.UUID) error
-	UnlinkFromVenue(ctx context.Context, venueID, amenityID uuid.UUID) error
-}
-
-type amenityService struct {
-	repo repository.AmenityRepository
-}
-
-func NewAmenityService(repo repository.AmenityRepository) AmenityService {
-	return &amenityService{repo: repo}
-}
-
-func (s *amenityService) Get(ctx context.Context, id uuid.UUID) (*domain.Amenity, error) {
-	return s.repo.FindByID(ctx, id)
-}
-
-func (s *amenityService) List(ctx context.Context, p domain.Pagination) ([]*domain.Amenity, int64, error) {
-	p.Normalize()
-	return s.repo.List(ctx, p)
-}
-
-func (s *amenityService) ListByVenue(ctx context.Context, venueID uuid.UUID) ([]*domain.Amenity, error) {
-	return s.repo.ListByVenue(ctx, venueID)
-}
-
-func (s *amenityService) Create(ctx context.Context, a *domain.Amenity) error {
-	return s.repo.Create(ctx, a)
-}
-
-func (s *amenityService) Update(ctx context.Context, a *domain.Amenity) error {
-	return s.repo.Update(ctx, a)
-}
-
-func (s *amenityService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.repo.Delete(ctx, id)
-}
-
-func (s *amenityService) LinkToVenue(ctx context.Context, venueID, amenityID uuid.UUID) error {
-	va := &domain.VenueAmenity{VenueID: venueID, AmenityID: amenityID}
-	return s.repo.LinkToVenue(ctx, va)
-}
-
-func (s *amenityService) UnlinkFromVenue(ctx context.Context, venueID, amenityID uuid.UUID) error {
-	return s.repo.UnlinkFromVenue(ctx, venueID, amenityID)
-}
-
 // ── Location service ──────────────────────────────────────────────────────────
 
 type LocationService interface {
@@ -120,13 +65,6 @@ type LocationService interface {
 	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
 	CreateImage(ctx context.Context, img *domain.LocationImage) error
 	DeleteImage(ctx context.Context, locationID, imageID uuid.UUID) error
-
-	// Promotions
-	GetPromotion(ctx context.Context, id uuid.UUID) (*domain.Promotion, error)
-	ListPromotions(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Promotion, int64, error)
-	CreatePromotion(ctx context.Context, p *domain.Promotion) error
-	UpdatePromotion(ctx context.Context, p *domain.Promotion) error
-	DeletePromotion(ctx context.Context, id uuid.UUID) error
 }
 
 type locationService struct {
@@ -232,28 +170,4 @@ func (s *locationService) DeleteImage(ctx context.Context, locationID, imageID u
 		}
 	}
 	return domain.NewNotFound("image not found")
-}
-
-func (s *locationService) GetPromotion(ctx context.Context, id uuid.UUID) (*domain.Promotion, error) {
-	return s.repo.FindPromotionByID(ctx, id)
-}
-
-func (s *locationService) ListPromotions(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Promotion, int64, error) {
-	p.Normalize()
-	return s.repo.ListPromotions(ctx, venueID, p)
-}
-
-func (s *locationService) CreatePromotion(ctx context.Context, p *domain.Promotion) error {
-	if p.DisplayType == "" {
-		p.DisplayType = "random"
-	}
-	return s.repo.CreatePromotion(ctx, p)
-}
-
-func (s *locationService) UpdatePromotion(ctx context.Context, p *domain.Promotion) error {
-	return s.repo.UpdatePromotion(ctx, p)
-}
-
-func (s *locationService) DeletePromotion(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeletePromotion(ctx, id)
 }

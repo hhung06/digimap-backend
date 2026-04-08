@@ -43,34 +43,34 @@ type ProductAttachmentRequest struct {
 }
 
 type ProductResponse struct {
-	ID              uuid.UUID                   `json:"id"`
-	VenueID         uuid.UUID                   `json:"venue_id"`
-	LocationID      *uuid.UUID                  `json:"location_id,omitempty"`
-	MainCategoryID  *uuid.UUID                  `json:"main_category_id,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	Name            string                      `json:"name,omitempty"`
-	Code            string                      `json:"code,omitempty"`
-	Size            string                      `json:"size,omitempty"`
-	Price           string                      `json:"price,omitempty"`
-	OriginCountry   string                      `json:"origin_country,omitempty"`
-	Expiration      string                      `json:"expiration,omitempty"`
-	Description     string                      `json:"description,omitempty"`
-	Custom          json.RawMessage             `json:"custom,omitempty"`
-	Localization    json.RawMessage             `json:"localization,omitempty"`
-	Source          string                      `json:"source"`
-	Categories      []ProductCategoryResponse   `json:"categories,omitempty"`
-	Attachments     []ProductAttachmentResponse `json:"attachments,omitempty"`
-	CreatedAt       time.Time                   `json:"created_at"`
-	UpdatedAt       time.Time                   `json:"updated_at"`
+	ID             uuid.UUID                   `json:"id"`
+	VenueID        uuid.UUID                   `json:"venue_id"`
+	LocationID     *uuid.UUID                  `json:"location_id,omitempty"`
+	MainCategoryID *uuid.UUID                  `json:"main_category_id,omitempty"`
+	ExternalID     string                      `json:"external_id,omitempty"`
+	Image          string                      `json:"image,omitempty"`
+	Name           string                      `json:"name,omitempty"`
+	Size           string                      `json:"size,omitempty"`
+	Price          string                      `json:"price,omitempty"`
+	OriginCountry  string                      `json:"origin_country,omitempty"`
+	Expiration     string                      `json:"expiration,omitempty"`
+	Description    string                      `json:"description,omitempty"`
+	Custom         json.RawMessage             `json:"custom,omitempty"`
+	Localization   json.RawMessage             `json:"localization,omitempty"`
+	Source         string                      `json:"source"`
+	Categories     []ProductCategoryResponse   `json:"categories,omitempty"`
+	Attachments    []ProductAttachmentResponse `json:"attachments,omitempty"`
+	CreatedAt      time.Time                   `json:"created_at"`
+	UpdatedAt      time.Time                   `json:"updated_at"`
 }
 
 type CreateProductRequest struct {
 	LocationID     *uuid.UUID      `json:"location_id"`
 	MainCategoryID *uuid.UUID      `json:"main_category_id"`
 	CategoryIDs    []uuid.UUID     `json:"category_ids"`
+	ExternalID     string          `json:"external_id"`
 	Image          string          `json:"image"`
 	Name           string          `json:"name"`
-	Code           string          `json:"code"`
 	Size           string          `json:"size"`
 	Price          string          `json:"price"`
 	OriginCountry  string          `json:"origin_country"`
@@ -87,7 +87,7 @@ type UpdateProductRequest struct {
 	CategoryIDs    []uuid.UUID     `json:"category_ids"`
 	Image          string          `json:"image"`
 	Name           string          `json:"name"`
-	Code           string          `json:"code"`
+	ExternalID     string          `json:"external_id"`
 	Size           string          `json:"size"`
 	Price          string          `json:"price"`
 	OriginCountry  string          `json:"origin_country"`
@@ -121,8 +121,8 @@ func ProductToResponse(p *domain.Product) ProductResponse {
 	r := ProductResponse{
 		ID: p.ID, VenueID: p.VenueID, LocationID: p.LocationID,
 		MainCategoryID: p.MainCategoryID, Image: p.Image, Name: p.Name,
-		Code: p.Code, Size: p.Size, Price: p.Price,
-		OriginCountry: p.OriginCountry, Expiration: p.Expiration,
+		ExternalID: p.ExternalID, Size: p.Size, Price: p.Price,
+		OriginCountry: p.Country, Expiration: p.Expiration,
 		Description: p.Description, Custom: p.Custom,
 		Localization: p.Localization, Source: p.Source,
 		CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,

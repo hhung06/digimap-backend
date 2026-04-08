@@ -8,15 +8,16 @@ import (
 )
 
 type Coupon struct {
-	ID          uuid.UUID
-	VenueID     *uuid.UUID
-	ExternalID  string
-	CouponName  string
-	CouponCode  string
-	Status      string
-	IssuedAt    *time.Time
-	ExpiredAt   *time.Time
+	ID           uuid.UUID
+	VenueID      *uuid.UUID
+	ExternalID   string
+	CouponName   string
+	CouponCode   string
+	Status       string
+	IssuedAt     *time.Time
+	ExpiredAt    *time.Time
 	Localization json.RawMessage
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    *time.Time
 }

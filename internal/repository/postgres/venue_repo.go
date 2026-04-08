@@ -100,7 +100,7 @@ func (r *venueRepo) Create(ctx context.Context, v *domain.Venue) error {
 	}
 	const q = `
 		INSERT INTO venues (
-			id, customer_id, name, slug, external_id, type, public_key, private_key,
+			id, customer_id, name,  external_id, type, public_key, private_key,
 			address, city, state, country, postal, lat, lng, timezone, telephone, work_hours,
 			description, is_published,
 			theme, plugins, translations, localization, custom_data, app_configs, app_domains,
@@ -112,13 +112,13 @@ func (r *venueRepo) Create(ctx context.Context, v *domain.Venue) error {
 		) RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
-		v.ID, v.CustomerID, v.Name, nullStr(v.Slug), nullStr(v.ExternalID), v.Type,
+		v.ID, v.CustomerID, v.Name, nullStr(v.ExternalID), v.Type,
 		v.PublicKey, v.PrivateKey,
 		nullStr(v.Address), nullStr(v.City), nullStr(v.State), nullStr(v.Country),
 		nullStr(v.Postal), v.Lat, v.Lng, v.Timezone,
-		nullStr(v.Telephone), nullStr(v.WorkHours), nullStr(v.Description), v.IsPublished,
-		jsonOrNil(v.Theme), jsonOrNil(v.Plugins), jsonOrNil(v.Translations),
-		jsonOrNil(v.Localization), jsonOrNil(v.CustomData), jsonOrNil(v.AppConfigs),
+		nullStr(v.Telephone), nullStr(v.Description),
+		jsonOrNil(v.Theme), jsonOrNil(v.Plugins),
+		jsonOrNil(v.Localization), jsonOrNil(v.AppConfigs),
 		jsonOrNil(v.AppDomains), nullStr(v.SubDomains),
 		nullStr(v.SEOTitle), nullStr(v.SEODescription), nullStr(v.SEOKeywords),
 		nullStr(v.HeadTag), nullStr(v.BodyTag),
@@ -142,12 +142,12 @@ func (r *venueRepo) Update(ctx context.Context, v *domain.Venue) error {
 		RETURNING updated_at`
 
 	err := r.pool.QueryRow(ctx, q,
-		v.ID, v.Name, nullStr(v.Slug), nullStr(v.ExternalID), v.Type,
+		v.ID, v.Name, nullStr(v.ExternalID), v.Type,
 		nullStr(v.Address), nullStr(v.City), nullStr(v.State), nullStr(v.Country),
 		nullStr(v.Postal), v.Lat, v.Lng, v.Timezone,
-		nullStr(v.Telephone), nullStr(v.WorkHours), nullStr(v.Description), v.IsPublished,
-		jsonOrNil(v.Theme), jsonOrNil(v.Plugins), jsonOrNil(v.Translations),
-		jsonOrNil(v.Localization), jsonOrNil(v.CustomData), jsonOrNil(v.AppConfigs),
+		nullStr(v.Telephone), nullStr(v.Description),
+		jsonOrNil(v.Theme), jsonOrNil(v.Plugins),
+		jsonOrNil(v.Localization), jsonOrNil(v.AppConfigs),
 		jsonOrNil(v.AppDomains), nullStr(v.SubDomains),
 		nullStr(v.SEOTitle), nullStr(v.SEODescription), nullStr(v.SEOKeywords),
 		nullStr(v.HeadTag), nullStr(v.BodyTag),
@@ -197,21 +197,21 @@ func (r *venueRepo) UpdatePublished(ctx context.Context, id uuid.UUID, published
 func scanVenue(row pgx.Row) (*domain.Venue, error) {
 	var v domain.Venue
 	var (
-		slug, externalID                                                    *string
-		address, city, state, country, postal, timezone, telephone         *string
-		workHours, description                                              *string
-		theme, plugins, translations, localization, customData             []byte
-		appConfigs, appDomains                                              []byte
-		subDomains, seoTitle, seoDesc, seoKeywords, headTag, bodyTag       *string
-		origLogo, smallLogo, mediumLogo, largeLogo                         *string
-		startAt, endAt, deletedAt                                          *time.Time
+		externalID                                                   *string
+		address, city, state, country, postal, timezone, telephone   *string
+		workHours, description                                       *string
+		theme, plugins, translations, localization, customData       []byte
+		appConfigs, appDomains                                       []byte
+		subDomains, seoTitle, seoDesc, seoKeywords, headTag, bodyTag *string
+		origLogo, smallLogo, mediumLogo, largeLogo                   *string
+		startAt, endAt, deletedAt                                    *time.Time
 	)
 
 	err := row.Scan(
-		&v.ID, &v.CustomerID, &v.Name, &slug, &externalID, &v.Type,
+		&v.ID, &v.CustomerID, &v.Name, &externalID, &v.Type,
 		&v.PublicKey, &v.PrivateKey,
 		&address, &city, &state, &country, &postal, &v.Lat, &v.Lng,
-		&timezone, &telephone, &workHours, &description, &v.IsPublished,
+		&timezone, &telephone, &workHours, &description,
 		&theme, &plugins, &translations, &localization, &customData,
 		&appConfigs, &appDomains,
 		&subDomains, &seoTitle, &seoDesc, &seoKeywords, &headTag, &bodyTag,
@@ -222,7 +222,6 @@ func scanVenue(row pgx.Row) (*domain.Venue, error) {
 		return nil, err
 	}
 
-	derefStr(&v.Slug, slug)
 	derefStr(&v.ExternalID, externalID)
 	derefStr(&v.Address, address)
 	derefStr(&v.City, city)
@@ -231,7 +230,6 @@ func scanVenue(row pgx.Row) (*domain.Venue, error) {
 	derefStr(&v.Postal, postal)
 	derefStr(&v.Timezone, timezone)
 	derefStr(&v.Telephone, telephone)
-	derefStr(&v.WorkHours, workHours)
 	derefStr(&v.Description, description)
 	derefStr(&v.SubDomains, subDomains)
 	derefStr(&v.SEOTitle, seoTitle)
@@ -246,9 +244,7 @@ func scanVenue(row pgx.Row) (*domain.Venue, error) {
 
 	v.Theme = json.RawMessage(theme)
 	v.Plugins = json.RawMessage(plugins)
-	v.Translations = json.RawMessage(translations)
 	v.Localization = json.RawMessage(localization)
-	v.CustomData = json.RawMessage(customData)
 	v.AppConfigs = json.RawMessage(appConfigs)
 	v.AppDomains = json.RawMessage(appDomains)
 	v.StartAt = startAt

@@ -157,15 +157,15 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 	}
 	const q = `
 		INSERT INTO products (
-			id, venue_id, location_id, main_category_id, image, name, code, size, price,
+			id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
 			origin_country, expiration, description, custom, localization, source
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
 		p.ID, uuidOrNil(p.VenueID), p.LocationID, p.MainCategoryID,
-		nullStr(p.Image), nullStr(p.Name), nullStr(p.Code), nullStr(p.Size),
-		nullStr(p.Price), nullStr(p.OriginCountry), nullStr(p.Expiration),
+		nullStr(p.Image), nullStr(p.Name), nullStr(p.ExternalID), nullStr(p.Size),
+		nullStr(p.Price), nullStr(p.Country), nullStr(p.Expiration),
 		nullStr(p.Description), jsonOrNil(p.Custom), jsonOrNil(p.Localization), p.Source,
 	).Scan(&p.CreatedAt, &p.UpdatedAt)
 }
@@ -173,7 +173,7 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 func (r *productRepo) Update(ctx context.Context, p *domain.Product) error {
 	const q = `
 		UPDATE products SET
-			location_id=$2, main_category_id=$3, image=$4, name=$5, code=$6, size=$7,
+			location_id=$2, main_category_id=$3, image=$4, name=$5, external_id=$6, size=$7,
 			price=$8, origin_country=$9, expiration=$10, description=$11,
 			custom=$12, localization=$13, source=$14
 		WHERE id=$1 AND deleted_at IS NULL
@@ -181,8 +181,8 @@ func (r *productRepo) Update(ctx context.Context, p *domain.Product) error {
 
 	err := r.pool.QueryRow(ctx, q,
 		p.ID, p.LocationID, p.MainCategoryID,
-		nullStr(p.Image), nullStr(p.Name), nullStr(p.Code), nullStr(p.Size),
-		nullStr(p.Price), nullStr(p.OriginCountry), nullStr(p.Expiration),
+		nullStr(p.Image), nullStr(p.Name), nullStr(p.ExternalID), nullStr(p.Size),
+		nullStr(p.Price), nullStr(p.Country), nullStr(p.Expiration),
 		nullStr(p.Description), jsonOrNil(p.Custom), jsonOrNil(p.Localization), p.Source,
 	).Scan(&p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -300,13 +300,13 @@ func scanProductCategory(row pgx.Row) (*domain.ProductCategory, error) {
 
 func scanProduct(row pgx.Row) (*domain.Product, error) {
 	var p domain.Product
-	var image, name, code, size, price, originCountry, expiration, desc *string
+	var image, name, externalId, size, price, country, expiration, desc *string
 	var custom, localization []byte
 	var deletedAt *time.Time
 	err := row.Scan(
 		&p.ID, &p.VenueID, &p.LocationID, &p.MainCategoryID,
-		&image, &name, &code, &size, &price,
-		&originCountry, &expiration, &desc, &custom, &localization, &p.Source,
+		&image, &name, &externalId, &size, &price,
+		&country, &expiration, &desc, &custom, &localization, &p.Source,
 		&p.CreatedAt, &p.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
@@ -314,10 +314,10 @@ func scanProduct(row pgx.Row) (*domain.Product, error) {
 	}
 	derefStr(&p.Image, image)
 	derefStr(&p.Name, name)
-	derefStr(&p.Code, code)
+	derefStr(&p.ExternalID, externalId)
 	derefStr(&p.Size, size)
 	derefStr(&p.Price, price)
-	derefStr(&p.OriginCountry, originCountry)
+	derefStr(&p.Country, country)
 	derefStr(&p.Expiration, expiration)
 	derefStr(&p.Description, desc)
 	p.Custom = json.RawMessage(custom)

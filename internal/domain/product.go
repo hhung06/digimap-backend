@@ -20,21 +20,21 @@ type ProductCategory struct {
 }
 
 type Product struct {
-	ID              uuid.UUID
-	VenueID         uuid.UUID
-	LocationID      *uuid.UUID
-	MainCategoryID  *uuid.UUID
-	Image           string
-	Name            string
-	Code            string
-	Size            string
-	Price           string
-	OriginCountry   string
-	Expiration      string
-	Description     string
-	Custom          json.RawMessage
-	Localization    json.RawMessage
-	Source          string
+	ID             uuid.UUID
+	VenueID        uuid.UUID
+	LocationID     *uuid.UUID
+	MainCategoryID *uuid.UUID
+	ExternalID     string
+	Image          string
+	Name           string
+	Size           string
+	Price          string
+	Country        string
+	Expiration     string
+	Description    string
+	Custom         json.RawMessage
+	Localization   json.RawMessage
+	Source         string
 	// Eagerly loaded
 	Categories  []*ProductCategory
 	Attachments []*ProductAttachment

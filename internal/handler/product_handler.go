@@ -145,8 +145,8 @@ func (h *productHandler) Create(c *gin.Context) {
 	}
 	prod := &domain.Product{
 		VenueID: venueID, LocationID: req.LocationID, MainCategoryID: req.MainCategoryID,
-		Image: req.Image, Name: req.Name, Code: req.Code, Size: req.Size,
-		Price: req.Price, OriginCountry: req.OriginCountry, Expiration: req.Expiration,
+		Image: req.Image, Name: req.Name, ExternalID: req.ExternalID, Size: req.Size,
+		Price: req.Price, Country: req.OriginCountry, Expiration: req.Expiration,
 		Description: req.Description, Custom: req.Custom, Localization: req.Localization,
 		Source: req.Source,
 	}
@@ -170,8 +170,8 @@ func (h *productHandler) Update(c *gin.Context) {
 	}
 	prod := &domain.Product{
 		ID: id, LocationID: req.LocationID, MainCategoryID: req.MainCategoryID,
-		Image: req.Image, Name: req.Name, Code: req.Code, Size: req.Size,
-		Price: req.Price, OriginCountry: req.OriginCountry, Expiration: req.Expiration,
+		Image: req.Image, Name: req.Name, ExternalID: req.ExternalID, Size: req.Size,
+		Price: req.Price, Country: req.OriginCountry, Expiration: req.Expiration,
 		Description: req.Description, Custom: req.Custom, Localization: req.Localization,
 		Source: req.Source,
 	}

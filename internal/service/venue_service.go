@@ -163,7 +163,6 @@ func (s *venueService) Clone(ctx context.Context, sourceID uuid.UUID) (*domain.V
 		clone.ID = uuid.Nil // will be assigned by newID() in Create
 		clone.PublicKey = pub
 		clone.PrivateKey = priv
-		clone.IsPublished = false
 		clone.Name = source.Name + " (copy)"
 
 		if err := s.repo.Create(ctx, &clone); err != nil {

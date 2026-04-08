@@ -13,16 +13,14 @@ import (
 
 type locationHandler struct {
 	categorySvc service.LocationCategoryService
-	amenitySvc  service.AmenityService
 	locationSvc service.LocationService
 }
 
 func newLocationHandler(
 	categorySvc service.LocationCategoryService,
-	amenitySvc service.AmenityService,
 	locationSvc service.LocationService,
 ) *locationHandler {
-	return &locationHandler{categorySvc: categorySvc, amenitySvc: amenitySvc, locationSvc: locationSvc}
+	return &locationHandler{categorySvc: categorySvc, locationSvc: locationSvc}
 }
 
 // ── Location categories ───────────────────────────────────────────────────────
@@ -118,62 +116,6 @@ func (h *locationHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 	if err := h.categorySvc.Delete(c.Request.Context(), id); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusNoContent, nil)
-}
-
-// ── Amenities ─────────────────────────────────────────────────────────────────
-
-func (h *locationHandler) ListAmenitiesByVenue(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
-		return
-	}
-	amenities, err := h.amenitySvc.ListByVenue(c.Request.Context(), venueID)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	items := make([]dto.AmenityResponse, len(amenities))
-	for i, a := range amenities {
-		items[i] = dto.AmenityToResponse(a)
-	}
-	c.JSON(http.StatusOK, dto.OK(items))
-}
-
-func (h *locationHandler) LinkAmenity(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
-		return
-	}
-	amenityID, err := uuid.Parse(c.Param("amenityID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid amenity id"))
-		return
-	}
-	if err := h.amenitySvc.LinkToVenue(c.Request.Context(), venueID, amenityID); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, dto.OK(gin.H{"linked": true}))
-}
-
-func (h *locationHandler) UnlinkAmenity(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
-		return
-	}
-	amenityID, err := uuid.Parse(c.Param("amenityID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid amenity id"))
-		return
-	}
-	if err := h.amenitySvc.UnlinkFromVenue(c.Request.Context(), venueID, amenityID); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -344,106 +286,6 @@ func (h *locationHandler) DeleteImage(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-// ── Promotions ────────────────────────────────────────────────────────────────
-
-func (h *locationHandler) ListPromotions(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
-		return
-	}
-	p := paginationFromQuery(c)
-	promos, total, err := h.locationSvc.ListPromotions(c.Request.Context(), venueID, p)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	items := make([]dto.PromotionResponse, len(promos))
-	for i, promo := range promos {
-		items[i] = dto.PromotionToResponse(promo)
-	}
-	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
-}
-
-func (h *locationHandler) GetPromotion(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("promoID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid promotion id"))
-		return
-	}
-	promo, err := h.locationSvc.GetPromotion(c.Request.Context(), id)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, dto.OK(dto.PromotionToResponse(promo)))
-}
-
-func (h *locationHandler) CreatePromotion(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
-		return
-	}
-	var req dto.PromotionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
-		return
-	}
-	promo := &domain.Promotion{
-		VenueID: venueID, LocationID: req.LocationID, ExternalID: req.ExternalID,
-		PromoImage: req.PromoImage, Introduction: req.Introduction,
-		GiftContent: req.GiftContent, DetailURL: req.DetailURL,
-		BoothNumber: req.BoothNumber, ExpectedGiftCount: req.ExpectedGiftCount,
-		DistributionStart: req.DistributionStart, DistributionEnd: req.DistributionEnd,
-		DisplayType: req.DisplayType, Localization: req.Localization,
-	}
-	if err := h.locationSvc.CreatePromotion(c.Request.Context(), promo); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, dto.OK(dto.PromotionToResponse(promo)))
-}
-
-func (h *locationHandler) UpdatePromotion(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("promoID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid promotion id"))
-		return
-	}
-	var req dto.PromotionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
-		return
-	}
-	promo := &domain.Promotion{
-		ID: id, LocationID: req.LocationID, ExternalID: req.ExternalID,
-		PromoImage: req.PromoImage, Introduction: req.Introduction,
-		GiftContent: req.GiftContent, DetailURL: req.DetailURL,
-		BoothNumber: req.BoothNumber, ExpectedGiftCount: req.ExpectedGiftCount,
-		DistributionStart: req.DistributionStart, DistributionEnd: req.DistributionEnd,
-		DisplayType: req.DisplayType, Localization: req.Localization,
-	}
-	if err := h.locationSvc.UpdatePromotion(c.Request.Context(), promo); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, dto.OK(dto.PromotionToResponse(promo)))
-}
-
-func (h *locationHandler) DeletePromotion(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("promoID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid promotion id"))
-		return
-	}
-	if err := h.locationSvc.DeletePromotion(c.Request.Context(), id); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusNoContent, nil)
-}
-
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func parseVenueID(c *gin.Context) (uuid.UUID, error) {
@@ -458,7 +300,7 @@ func locationFromCreateRequest(venueID uuid.UUID, req dto.CreateLocationRequest)
 		CommonDescription: req.CommonDescription, CommonColor: req.CommonColor,
 		CommonLocationType: req.CommonLocationType, CommonSubType: req.CommonSubType,
 		CommonLatitude: req.CommonLatitude, CommonLongitude: req.CommonLongitude,
-		CommonAddress: req.CommonAddress,
+		CommonAddress:      req.CommonAddress,
 		CommonContactEmail: req.CommonContactEmail, CommonContactPhone: req.CommonContactPhone,
 		PlaceWorkHours: req.PlaceWorkHours, Custom: req.Custom, Localization: req.Localization,
 		Source: req.Source, StartTime: req.StartTime, EndTime: req.EndTime,

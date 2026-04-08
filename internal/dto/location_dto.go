@@ -11,39 +11,39 @@ import (
 // ── Location category ─────────────────────────────────────────────────────────
 
 type LocationCategoryResponse struct {
-	ID          uuid.UUID       `json:"id"`
-	VenueID     uuid.UUID       `json:"venue_id"`
-	ExternalID  string          `json:"external_id,omitempty"`
-	Name        string          `json:"name,omitempty"`
-	ShortName   string          `json:"short_name,omitempty"`
-	Color       string          `json:"color,omitempty"`
-	Icon        string          `json:"icon,omitempty"`
-	IconDefault string          `json:"icon_default,omitempty"`
-	SortIndex   int             `json:"sort_index"`
-	Visible     bool            `json:"visible"`
-	Description string          `json:"description,omitempty"`
-	Type        string          `json:"type,omitempty"`
-	Image       string          `json:"image,omitempty"`
+	ID           uuid.UUID       `json:"id"`
+	VenueID      uuid.UUID       `json:"venue_id"`
+	ExternalID   string          `json:"external_id,omitempty"`
+	Name         string          `json:"name,omitempty"`
+	ShortName    string          `json:"short_name,omitempty"`
+	Color        string          `json:"color,omitempty"`
+	Icon         string          `json:"icon,omitempty"`
+	IconDefault  string          `json:"icon_default,omitempty"`
+	SortIndex    int             `json:"sort_index"`
+	Visible      bool            `json:"visible"`
+	Description  string          `json:"description,omitempty"`
+	Type         string          `json:"type,omitempty"`
+	Image        string          `json:"image,omitempty"`
 	Localization json.RawMessage `json:"localization,omitempty"`
-	Source      string          `json:"source"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	Source       string          `json:"source"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 type LocationCategoryRequest struct {
-	ExternalID  string          `json:"external_id"`
-	Name        string          `json:"name"`
-	ShortName   string          `json:"short_name"`
-	Color       string          `json:"color"`
-	Icon        string          `json:"icon"`
-	IconDefault string          `json:"icon_default"`
-	SortIndex   int             `json:"sort_index"`
-	Visible     bool            `json:"visible"`
-	Description string          `json:"description"`
-	Type        string          `json:"type"`
-	Image       string          `json:"image"`
+	ExternalID   string          `json:"external_id"`
+	Name         string          `json:"name"`
+	ShortName    string          `json:"short_name"`
+	Color        string          `json:"color"`
+	Icon         string          `json:"icon"`
+	IconDefault  string          `json:"icon_default"`
+	SortIndex    int             `json:"sort_index"`
+	Visible      bool            `json:"visible"`
+	Description  string          `json:"description"`
+	Type         string          `json:"type"`
+	Image        string          `json:"image"`
 	Localization json.RawMessage `json:"localization"`
-	Source      string          `json:"source"`
+	Source       string          `json:"source"`
 }
 
 func LocationCategoryToResponse(c *domain.LocationCategory) LocationCategoryResponse {
@@ -60,64 +60,48 @@ func LocationCategoryToResponse(c *domain.LocationCategory) LocationCategoryResp
 // ── Amenity ───────────────────────────────────────────────────────────────────
 
 type AmenityResponse struct {
-	ID                           uuid.UUID       `json:"id"`
-	CommonName                   string          `json:"common_name"`
-	CommonShortName              string          `json:"common_short_name,omitempty"`
-	CommonDescription            string          `json:"common_description,omitempty"`
-	CommonColor                  string          `json:"common_color,omitempty"`
-	CommonLocationType           int             `json:"common_location_type"`
-	CommonLatitude               float64         `json:"common_latitude"`
-	CommonLongitude              float64         `json:"common_longitude"`
-	CommonAddress                string          `json:"common_address,omitempty"`
-	CommonLogo                   string          `json:"common_logo,omitempty"`
-	CommonSocialWebsite          string          `json:"common_social_website,omitempty"`
-	CommonSocialTwitter          string          `json:"common_social_twitter,omitempty"`
-	CommonSocialTiktok           string          `json:"common_social_tiktok,omitempty"`
-	CommonSocialFacebook         string          `json:"common_social_facebook,omitempty"`
-	CommonSocialInstagram        string          `json:"common_social_instagram,omitempty"`
-	CommonContactEmail           string          `json:"common_contact_email,omitempty"`
-	CommonContactPhone           string          `json:"common_contact_phone,omitempty"`
-	PlaceWorkHours               json.RawMessage `json:"place_work_hours,omitempty"`
-	Localization                 json.RawMessage `json:"localization,omitempty"`
-	CreatedAt                    time.Time       `json:"created_at"`
-	UpdatedAt                    time.Time       `json:"updated_at"`
+	ID                    uuid.UUID       `json:"id"`
+	CommonName            string          `json:"common_name"`
+	CommonShortName       string          `json:"common_short_name,omitempty"`
+	CommonDescription     string          `json:"common_description,omitempty"`
+	CommonColor           string          `json:"common_color,omitempty"`
+	CommonLocationType    int             `json:"common_location_type"`
+	CommonLatitude        float64         `json:"common_latitude"`
+	CommonLongitude       float64         `json:"common_longitude"`
+	CommonAddress         string          `json:"common_address,omitempty"`
+	CommonLogo            string          `json:"common_logo,omitempty"`
+	CommonSocialWebsite   string          `json:"common_social_website,omitempty"`
+	CommonSocialTwitter   string          `json:"common_social_twitter,omitempty"`
+	CommonSocialTiktok    string          `json:"common_social_tiktok,omitempty"`
+	CommonSocialFacebook  string          `json:"common_social_facebook,omitempty"`
+	CommonSocialInstagram string          `json:"common_social_instagram,omitempty"`
+	CommonContactEmail    string          `json:"common_contact_email,omitempty"`
+	CommonContactPhone    string          `json:"common_contact_phone,omitempty"`
+	PlaceWorkHours        json.RawMessage `json:"place_work_hours,omitempty"`
+	Localization          json.RawMessage `json:"localization,omitempty"`
+	CreatedAt             time.Time       `json:"created_at"`
+	UpdatedAt             time.Time       `json:"updated_at"`
 }
 
 type AmenityRequest struct {
-	CommonName                   string          `json:"common_name" binding:"required"`
-	CommonShortName              string          `json:"common_short_name"`
-	CommonDescription            string          `json:"common_description"`
-	CommonColor                  string          `json:"common_color"`
-	CommonLocationType           int             `json:"common_location_type"`
-	CommonLatitude               float64         `json:"common_latitude"`
-	CommonLongitude              float64         `json:"common_longitude"`
-	CommonAddress                string          `json:"common_address"`
-	CommonLogo                   string          `json:"common_logo"`
-	CommonSocialWebsite          string          `json:"common_social_website"`
-	CommonSocialTwitter          string          `json:"common_social_twitter"`
-	CommonSocialTiktok           string          `json:"common_social_tiktok"`
-	CommonSocialFacebook         string          `json:"common_social_facebook"`
-	CommonSocialInstagram        string          `json:"common_social_instagram"`
-	CommonContactEmail           string          `json:"common_contact_email"`
-	CommonContactPhone           string          `json:"common_contact_phone"`
-	PlaceWorkHours               json.RawMessage `json:"place_work_hours"`
-	Localization                 json.RawMessage `json:"localization"`
-}
-
-func AmenityToResponse(a *domain.Amenity) AmenityResponse {
-	return AmenityResponse{
-		ID: a.ID, CommonName: a.CommonName, CommonShortName: a.CommonShortName,
-		CommonDescription: a.CommonDescription, CommonColor: a.CommonColor,
-		CommonLocationType: a.CommonLocationType,
-		CommonLatitude: a.CommonLatitude, CommonLongitude: a.CommonLongitude,
-		CommonAddress: a.CommonAddress, CommonLogo: a.CommonLogo,
-		CommonSocialWebsite: a.CommonSocialWebsite, CommonSocialTwitter: a.CommonSocialTwitter,
-		CommonSocialTiktok: a.CommonSocialTiktok, CommonSocialFacebook: a.CommonSocialFacebook,
-		CommonSocialInstagram: a.CommonSocialInstagram,
-		CommonContactEmail: a.CommonContactEmail, CommonContactPhone: a.CommonContactPhone,
-		PlaceWorkHours: a.PlaceWorkHours, Localization: a.Localization,
-		CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
-	}
+	CommonName            string          `json:"common_name" binding:"required"`
+	CommonShortName       string          `json:"common_short_name"`
+	CommonDescription     string          `json:"common_description"`
+	CommonColor           string          `json:"common_color"`
+	CommonLocationType    int             `json:"common_location_type"`
+	CommonLatitude        float64         `json:"common_latitude"`
+	CommonLongitude       float64         `json:"common_longitude"`
+	CommonAddress         string          `json:"common_address"`
+	CommonLogo            string          `json:"common_logo"`
+	CommonSocialWebsite   string          `json:"common_social_website"`
+	CommonSocialTwitter   string          `json:"common_social_twitter"`
+	CommonSocialTiktok    string          `json:"common_social_tiktok"`
+	CommonSocialFacebook  string          `json:"common_social_facebook"`
+	CommonSocialInstagram string          `json:"common_social_instagram"`
+	CommonContactEmail    string          `json:"common_contact_email"`
+	CommonContactPhone    string          `json:"common_contact_phone"`
+	PlaceWorkHours        json.RawMessage `json:"place_work_hours"`
+	Localization          json.RawMessage `json:"localization"`
 }
 
 // ── Location ──────────────────────────────────────────────────────────────────
@@ -236,37 +220,37 @@ type LocationImageRequest struct {
 // ── Promotion ─────────────────────────────────────────────────────────────────
 
 type PromotionResponse struct {
-	ID                  uuid.UUID       `json:"id"`
-	VenueID             uuid.UUID       `json:"venue_id"`
-	LocationID          *uuid.UUID      `json:"location_id,omitempty"`
-	ExternalID          string          `json:"external_id,omitempty"`
-	PromoImage          string          `json:"promo_image,omitempty"`
-	Introduction        string          `json:"introduction,omitempty"`
-	GiftContent         string          `json:"gift_content,omitempty"`
-	DetailURL           string          `json:"detail_url,omitempty"`
-	BoothNumber         string          `json:"booth_number,omitempty"`
-	ExpectedGiftCount   *int            `json:"expected_gift_count,omitempty"`
-	DistributionStart   *time.Time      `json:"distribution_start,omitempty"`
-	DistributionEnd     *time.Time      `json:"distribution_end,omitempty"`
-	DisplayType         string          `json:"display_type"`
-	Localization        json.RawMessage `json:"localization,omitempty"`
-	CreatedAt           time.Time       `json:"created_at"`
-	UpdatedAt           time.Time       `json:"updated_at"`
+	ID                uuid.UUID       `json:"id"`
+	VenueID           uuid.UUID       `json:"venue_id"`
+	LocationID        *uuid.UUID      `json:"location_id,omitempty"`
+	ExternalID        string          `json:"external_id,omitempty"`
+	PromoImage        string          `json:"promo_image,omitempty"`
+	Introduction      string          `json:"introduction,omitempty"`
+	GiftContent       string          `json:"gift_content,omitempty"`
+	DetailURL         string          `json:"detail_url,omitempty"`
+	BoothNumber       string          `json:"booth_number,omitempty"`
+	ExpectedGiftCount *int            `json:"expected_gift_count,omitempty"`
+	DistributionStart *time.Time      `json:"distribution_start,omitempty"`
+	DistributionEnd   *time.Time      `json:"distribution_end,omitempty"`
+	DisplayType       string          `json:"display_type"`
+	Localization      json.RawMessage `json:"localization,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
 type PromotionRequest struct {
-	LocationID          *uuid.UUID      `json:"location_id"`
-	ExternalID          string          `json:"external_id"`
-	PromoImage          string          `json:"promo_image"`
-	Introduction        string          `json:"introduction"`
-	GiftContent         string          `json:"gift_content"`
-	DetailURL           string          `json:"detail_url"`
-	BoothNumber         string          `json:"booth_number"`
-	ExpectedGiftCount   *int            `json:"expected_gift_count"`
-	DistributionStart   *time.Time      `json:"distribution_start"`
-	DistributionEnd     *time.Time      `json:"distribution_end"`
-	DisplayType         string          `json:"display_type"`
-	Localization        json.RawMessage `json:"localization"`
+	LocationID        *uuid.UUID      `json:"location_id"`
+	ExternalID        string          `json:"external_id"`
+	PromoImage        string          `json:"promo_image"`
+	Introduction      string          `json:"introduction"`
+	GiftContent       string          `json:"gift_content"`
+	DetailURL         string          `json:"detail_url"`
+	BoothNumber       string          `json:"booth_number"`
+	ExpectedGiftCount *int            `json:"expected_gift_count"`
+	DistributionStart *time.Time      `json:"distribution_start"`
+	DistributionEnd   *time.Time      `json:"distribution_end"`
+	DisplayType       string          `json:"display_type"`
+	Localization      json.RawMessage `json:"localization"`
 }
 
 func LocationToResponse(l *domain.Location) LocationResponse {
@@ -298,17 +282,4 @@ func LocationToResponse(l *domain.Location) LocationResponse {
 		})
 	}
 	return r
-}
-
-func PromotionToResponse(p *domain.Promotion) PromotionResponse {
-	return PromotionResponse{
-		ID: p.ID, VenueID: p.VenueID, LocationID: p.LocationID,
-		ExternalID: p.ExternalID, PromoImage: p.PromoImage,
-		Introduction: p.Introduction, GiftContent: p.GiftContent,
-		DetailURL: p.DetailURL, BoothNumber: p.BoothNumber,
-		ExpectedGiftCount: p.ExpectedGiftCount,
-		DistributionStart: p.DistributionStart, DistributionEnd: p.DistributionEnd,
-		DisplayType: p.DisplayType, Localization: p.Localization,
-		CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
-	}
 }

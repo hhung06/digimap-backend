@@ -23,7 +23,6 @@ type Dependencies struct {
 	VenueService            service.VenueService
 	LevelService            service.LevelService
 	LocationCategoryService service.LocationCategoryService
-	AmenityService          service.AmenityService
 	LocationService         service.LocationService
 	ProductService          service.ProductService
 	StorageService          service.StorageService
@@ -33,7 +32,6 @@ type Dependencies struct {
 	SurveyService           service.SurveyService
 	BeaconService           service.BeaconService
 	ConnectionService       service.ConnectionService
-	QRCodeService           service.QRCodeService
 	AdvertisementService    service.AdvertisementService
 	ArticleService          service.ArticleService
 	CouponService           service.CouponService
@@ -66,9 +64,9 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	v1 := r.Group("/api/v1")
 
 	// Rate limiters (Redis-backed, shared across replicas)
-	publicRL := middleware.RateLimitByIP(deps.RedisClient, "120-M")  // 120 req/min per IP for public endpoints
-	authRL := middleware.RateLimitByIP(deps.RedisClient, "10-M")     // 10 req/min per IP for auth endpoints
-	apiRL := middleware.RateLimitByUser(deps.RedisClient, "600-M")   // 600 req/min per user for API endpoints
+	publicRL := middleware.RateLimitByIP(deps.RedisClient, "120-M") // 120 req/min per IP for public endpoints
+	authRL := middleware.RateLimitByIP(deps.RedisClient, "10-M")    // 10 req/min per IP for auth endpoints
+	apiRL := middleware.RateLimitByUser(deps.RedisClient, "600-M")  // 600 req/min per user for API endpoints
 
 	// ── Public auth routes ────────────────────────────────────────────────────
 	authH := newAuthHandler(deps.AuthService, authConfig{
@@ -139,17 +137,13 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/levels/:levelID/geo-references/:refID", editorAccess, levelH.DeleteGeoReference)
 
 		// Location sub-resources
-		locH := newLocationHandler(deps.LocationCategoryService, deps.AmenityService, deps.LocationService)
+		locH := newLocationHandler(deps.LocationCategoryService, deps.LocationService)
 
 		venues.GET("/:id/categories", viewerAccess, locH.ListCategories)
 		venues.POST("/:id/categories", editorAccess, locH.CreateCategory)
 		venues.GET("/:id/categories/:catID", viewerAccess, locH.GetCategory)
 		venues.PUT("/:id/categories/:catID", editorAccess, locH.UpdateCategory)
 		venues.DELETE("/:id/categories/:catID", editorAccess, locH.DeleteCategory)
-
-		venues.GET("/:id/amenities", viewerAccess, locH.ListAmenitiesByVenue)
-		venues.POST("/:id/amenities/:amenityID", editorAccess, locH.LinkAmenity)
-		venues.DELETE("/:id/amenities/:amenityID", editorAccess, locH.UnlinkAmenity)
 
 		venues.GET("/:id/locations", viewerAccess, locH.ListLocations)
 		venues.POST("/:id/locations", editorAccess, locH.CreateLocation)
@@ -160,12 +154,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.PUT("/:id/locations/:locationID/set-top", editorAccess, locH.SetTop)
 		venues.POST("/:id/locations/:locationID/images", editorAccess, locH.CreateImage)
 		venues.DELETE("/:id/locations/:locationID/images/:imageID", editorAccess, locH.DeleteImage)
-
-		venues.GET("/:id/promotions", viewerAccess, locH.ListPromotions)
-		venues.POST("/:id/promotions", editorAccess, locH.CreatePromotion)
-		venues.GET("/:id/promotions/:promoID", viewerAccess, locH.GetPromotion)
-		venues.PUT("/:id/promotions/:promoID", editorAccess, locH.UpdatePromotion)
-		venues.DELETE("/:id/promotions/:promoID", editorAccess, locH.DeletePromotion)
 
 		// Product sub-resources
 		prodH := newProductHandler(deps.ProductService, deps.StorageService)
@@ -258,15 +246,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.POST("/:id/connections/:connectionID/levels", editorAccess, connH.AddLevel)
 		venues.DELETE("/:id/connections/:connectionID/levels/:clID", editorAccess, connH.RemoveLevel)
 
-		// QR code sub-resources
-		qrH := newQRCodeHandler(deps.QRCodeService)
-
-		venues.GET("/:id/qrcodes", viewerAccess, qrH.List)
-		venues.POST("/:id/qrcodes", editorAccess, qrH.Create)
-		venues.GET("/:id/qrcodes/:qrID", viewerAccess, qrH.Get)
-		venues.PUT("/:id/qrcodes/:qrID", editorAccess, qrH.Update)
-		venues.DELETE("/:id/qrcodes/:qrID", editorAccess, qrH.Delete)
-
 		// Advertisement sub-resources
 		adH := newAdHandler(deps.AdvertisementService)
 
@@ -350,7 +329,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 	return r
 }
-
 
 func versionHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(gin.H{

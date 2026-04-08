@@ -268,99 +268,6 @@ func (r *locationRepo) DeleteImage(ctx context.Context, id uuid.UUID) error {
 	return softDelete(ctx, r.pool, "location_images", id.String())
 }
 
-// ── Promotions ────────────────────────────────────────────────────────────────
-
-func (r *locationRepo) FindPromotionByID(ctx context.Context, id uuid.UUID) (*domain.Promotion, error) {
-	const q = `
-		SELECT id, venue_id, location_id, external_id, promo_image, introduction, gift_content,
-		       detail_url, booth_number, expected_gift_count, distribution_start, distribution_end,
-		       display_type, localization, created_at, updated_at, deleted_at
-		FROM promotions WHERE id = $1 AND deleted_at IS NULL`
-
-	p, err := scanPromotion(r.pool.QueryRow(ctx, q, id))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, domain.NewNotFound("promotion not found")
-	}
-	return p, err
-}
-
-func (r *locationRepo) ListPromotions(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Promotion, int64, error) {
-	const countQ = `SELECT COUNT(*) FROM promotions WHERE venue_id = $1 AND deleted_at IS NULL`
-	const q = `
-		SELECT id, venue_id, location_id, external_id, promo_image, introduction, gift_content,
-		       detail_url, booth_number, expected_gift_count, distribution_start, distribution_end,
-		       display_type, localization, created_at, updated_at, deleted_at
-		FROM promotions WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
-
-	var total int64
-	if err := r.pool.QueryRow(ctx, countQ, venueID).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-
-	rows, err := r.pool.Query(ctx, q, venueID, p.PageSize, p.Offset())
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
-
-	var promos []*domain.Promotion
-	for rows.Next() {
-		promo, err := scanPromotion(rows)
-		if err != nil {
-			return nil, 0, err
-		}
-		promos = append(promos, promo)
-	}
-	return promos, total, rows.Err()
-}
-
-func (r *locationRepo) CreatePromotion(ctx context.Context, p *domain.Promotion) error {
-	if p.ID == uuid.Nil {
-		p.ID = newID()
-	}
-	const q = `
-		INSERT INTO promotions (
-			id, venue_id, location_id, external_id, promo_image, introduction, gift_content,
-			detail_url, booth_number, expected_gift_count, distribution_start, distribution_end,
-			display_type, localization
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-		RETURNING created_at, updated_at`
-
-	return r.pool.QueryRow(ctx, q,
-		p.ID, uuidOrNil(p.VenueID), p.LocationID, nullStr(p.ExternalID),
-		nullStr(p.PromoImage), nullStr(p.Introduction), nullStr(p.GiftContent),
-		nullStr(p.DetailURL), nullStr(p.BoothNumber),
-		p.ExpectedGiftCount, p.DistributionStart, p.DistributionEnd,
-		p.DisplayType, jsonOrNil(p.Localization),
-	).Scan(&p.CreatedAt, &p.UpdatedAt)
-}
-
-func (r *locationRepo) UpdatePromotion(ctx context.Context, p *domain.Promotion) error {
-	const q = `
-		UPDATE promotions SET
-			location_id=$2, external_id=$3, promo_image=$4, introduction=$5, gift_content=$6,
-			detail_url=$7, booth_number=$8, expected_gift_count=$9,
-			distribution_start=$10, distribution_end=$11, display_type=$12, localization=$13
-		WHERE id=$1 AND deleted_at IS NULL
-		RETURNING updated_at`
-
-	err := r.pool.QueryRow(ctx, q,
-		p.ID, p.LocationID, nullStr(p.ExternalID),
-		nullStr(p.PromoImage), nullStr(p.Introduction), nullStr(p.GiftContent),
-		nullStr(p.DetailURL), nullStr(p.BoothNumber),
-		p.ExpectedGiftCount, p.DistributionStart, p.DistributionEnd,
-		p.DisplayType, jsonOrNil(p.Localization),
-	).Scan(&p.UpdatedAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.NewNotFound("promotion not found")
-	}
-	return err
-}
-
-func (r *locationRepo) DeletePromotion(ctx context.Context, id uuid.UUID) error {
-	return softDelete(ctx, r.pool, "promotions", id.String())
-}
-
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func (r *locationRepo) loadCategories(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationCategory, error) {
@@ -393,14 +300,14 @@ func (r *locationRepo) loadCategories(ctx context.Context, locationID uuid.UUID)
 func scanLocation(row pgx.Row) (*domain.Location, error) {
 	var l domain.Location
 	var (
-		extID, shortName, desc, color                                         *string
-		addr, logo, largeLogo, medLogo, smallLogo                            *string
-		socWeb, socTw, socTk, socFb, socIg, contactEmail, contactPhone       *string
-		topLogo, topLogoType, boothNum, boothSize, boothSvcs, boothProds     *string
-		personName, personTitle, roomNum, roomDept, roomEquip                *string
-		iconDefault, source                                                   *string
-		workHours, custom, localization                                       []byte
-		deletedAt                                                             *time.Time
+		extID, shortName, desc, color                                    *string
+		addr, logo, largeLogo, medLogo, smallLogo                        *string
+		socWeb, socTw, socTk, socFb, socIg, contactEmail, contactPhone   *string
+		topLogo, topLogoType, boothNum, boothSize, boothSvcs, boothProds *string
+		personName, personTitle, roomNum, roomDept, roomEquip            *string
+		iconDefault, source                                              *string
+		workHours, custom, localization                                  []byte
+		deletedAt                                                        *time.Time
 	)
 	err := row.Scan(
 		&l.ID, &l.VenueID, &l.LevelID, &l.MainCategoryID, &extID,
@@ -475,28 +382,4 @@ func scanLocationImage(row pgx.Row) (*domain.LocationImage, error) {
 	derefStr(&img.Large, large)
 	img.DeletedAt = deletedAt
 	return &img, nil
-}
-
-func scanPromotion(row pgx.Row) (*domain.Promotion, error) {
-	var p domain.Promotion
-	var extID, promoImg, intro, gift, detailURL, boothNum *string
-	var localization []byte
-	var deletedAt *time.Time
-	err := row.Scan(
-		&p.ID, &p.VenueID, &p.LocationID, &extID, &promoImg, &intro, &gift,
-		&detailURL, &boothNum, &p.ExpectedGiftCount, &p.DistributionStart, &p.DistributionEnd,
-		&p.DisplayType, &localization, &p.CreatedAt, &p.UpdatedAt, &deletedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	derefStr(&p.ExternalID, extID)
-	derefStr(&p.PromoImage, promoImg)
-	derefStr(&p.Introduction, intro)
-	derefStr(&p.GiftContent, gift)
-	derefStr(&p.DetailURL, detailURL)
-	derefStr(&p.BoothNumber, boothNum)
-	p.Localization = json.RawMessage(localization)
-	p.DeletedAt = deletedAt
-	return &p, nil
 }

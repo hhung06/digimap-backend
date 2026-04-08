@@ -32,17 +32,3 @@ type ConnectionLevel struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
-
-type QRCode struct {
-	ID          uuid.UUID
-	VenueID     *uuid.UUID
-	LevelID     *uuid.UUID
-	LocationID  *uuid.UUID
-	Lat         *float64
-	Lng         *float64
-	Angle       *float64
-	Link        string
-	Base64Image string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}

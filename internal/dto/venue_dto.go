@@ -11,16 +11,16 @@ import (
 // ── Customer ──────────────────────────────────────────────────────────────────
 
 type CustomerResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	Name        string     `json:"name"`
-	Image       string     `json:"image,omitempty"`
-	Phone       string     `json:"phone,omitempty"`
-	Email       string     `json:"email,omitempty"`
-	Address     string     `json:"address,omitempty"`
-	URL         string     `json:"url,omitempty"`
-	Description string     `json:"description,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Image       string    `json:"image,omitempty"`
+	Phone       string    `json:"phone,omitempty"`
+	Email       string    `json:"email,omitempty"`
+	Address     string    `json:"address,omitempty"`
+	URL         string    `json:"url,omitempty"`
+	Description string    `json:"description,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type CustomerRequest struct {
@@ -173,15 +173,14 @@ type UpdateVenueRequest struct {
 func VenueToResponse(v *domain.Venue) VenueResponse {
 	return VenueResponse{
 		ID: v.ID, CustomerID: v.CustomerID, Name: v.Name,
-		Slug: v.Slug, ExternalID: v.ExternalID, Type: v.Type,
+		ExternalID: v.ExternalID, Type: v.Type,
 		PublicKey: v.PublicKey,
-		Address: v.Address, City: v.City, State: v.State, Country: v.Country,
+		Address:   v.Address, City: v.City, State: v.State, Country: v.Country,
 		Postal: v.Postal, Lat: v.Lat, Lng: v.Lng, Timezone: v.Timezone,
-		Telephone: v.Telephone, WorkHours: v.WorkHours, Description: v.Description,
-		IsPublished: v.IsPublished,
-		Theme: v.Theme, Plugins: v.Plugins, Translations: v.Translations,
-		Localization: v.Localization, CustomData: v.CustomData,
-		AppConfigs: v.AppConfigs, AppDomains: v.AppDomains, SubDomains: v.SubDomains,
+		Telephone: v.Telephone, Description: v.Description,
+		Theme: v.Theme, Plugins: v.Plugins,
+		Localization: v.Localization,
+		AppConfigs:   v.AppConfigs, AppDomains: v.AppDomains, SubDomains: v.SubDomains,
 		SEOTitle: v.SEOTitle, SEODescription: v.SEODescription, SEOKeywords: v.SEOKeywords,
 		HeadTag: v.HeadTag, BodyTag: v.BodyTag,
 		OriginalLogo: v.OriginalLogo, SmallLogo: v.SmallLogo,
@@ -344,9 +343,9 @@ func LevelToResponse(l *domain.Level) LevelResponse {
 			CameraMaxZoom: l.Perspective.CameraMaxZoom, CameraMinZoom: l.Perspective.CameraMinZoom,
 			CameraTargetCenterLng: l.Perspective.CameraTargetCenterLng,
 			CameraTargetCenterLat: l.Perspective.CameraTargetCenterLat,
-			CameraTargetZoom: l.Perspective.CameraTargetZoom,
-			CameraTargetBearing: l.Perspective.CameraTargetBearing,
-			CameraTargetPitch: l.Perspective.CameraTargetPitch,
+			CameraTargetZoom:      l.Perspective.CameraTargetZoom,
+			CameraTargetBearing:   l.Perspective.CameraTargetBearing,
+			CameraTargetPitch:     l.Perspective.CameraTargetPitch,
 		}
 		r.Perspective = &p
 	}

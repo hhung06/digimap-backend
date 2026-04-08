@@ -28,9 +28,8 @@ type Customer struct {
 type Venue struct {
 	ID             uuid.UUID
 	CustomerID     uuid.UUID
-	Name           string
-	Slug           string
 	ExternalID     string
+	Name           string
 	Type           int
 	PublicKey      string
 	PrivateKey     string
@@ -43,14 +42,10 @@ type Venue struct {
 	Lng            float64
 	Timezone       string
 	Telephone      string
-	WorkHours      string
 	Description    string
-	IsPublished    bool
 	Theme          json.RawMessage
 	Plugins        json.RawMessage
-	Translations   json.RawMessage
 	Localization   json.RawMessage
-	CustomData     json.RawMessage
 	AppConfigs     json.RawMessage
 	AppDomains     json.RawMessage
 	SubDomains     string

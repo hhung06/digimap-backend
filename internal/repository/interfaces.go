@@ -87,18 +87,6 @@ type LocationCategoryRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-// AmenityRepository handles amenities (location templates) and venue-amenity links.
-type AmenityRepository interface {
-	FindByID(ctx context.Context, id uuid.UUID) (*domain.Amenity, error)
-	List(ctx context.Context, p domain.Pagination) ([]*domain.Amenity, int64, error)
-	ListByVenue(ctx context.Context, venueID uuid.UUID) ([]*domain.Amenity, error)
-	Create(ctx context.Context, a *domain.Amenity) error
-	Update(ctx context.Context, a *domain.Amenity) error
-	Delete(ctx context.Context, id uuid.UUID) error
-	LinkToVenue(ctx context.Context, va *domain.VenueAmenity) error
-	UnlinkFromVenue(ctx context.Context, venueID, amenityID uuid.UUID) error
-}
-
 // LocationRepository handles locations, images, and promotions.
 type LocationRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Location, error)
@@ -113,13 +101,6 @@ type LocationRepository interface {
 	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
 	CreateImage(ctx context.Context, img *domain.LocationImage) error
 	DeleteImage(ctx context.Context, id uuid.UUID) error
-
-	// Promotions
-	FindPromotionByID(ctx context.Context, id uuid.UUID) (*domain.Promotion, error)
-	ListPromotions(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Promotion, int64, error)
-	CreatePromotion(ctx context.Context, p *domain.Promotion) error
-	UpdatePromotion(ctx context.Context, p *domain.Promotion) error
-	DeletePromotion(ctx context.Context, id uuid.UUID) error
 }
 
 // ProductRepository handles products, categories, and attachments.
@@ -245,15 +226,6 @@ type ConnectionRepository interface {
 	ListLevels(ctx context.Context, connectionID uuid.UUID) ([]*domain.ConnectionLevel, error)
 	AddLevel(ctx context.Context, cl *domain.ConnectionLevel) error
 	RemoveLevel(ctx context.Context, id uuid.UUID) error
-}
-
-// QRCodeRepository handles QR codes.
-type QRCodeRepository interface {
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.QRCode, int, error)
-	FindByID(ctx context.Context, id uuid.UUID) (*domain.QRCode, error)
-	Create(ctx context.Context, q *domain.QRCode) error
-	Update(ctx context.Context, q *domain.QRCode) error
-	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // AdvertisementRepository handles advertisements.
