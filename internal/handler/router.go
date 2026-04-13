@@ -38,6 +38,8 @@ type Dependencies struct {
 	VideoService            service.VideoService
 	TagService              service.TagService
 	AnalyticsService        service.AnalyticsService
+	SnapshotService         service.SnapshotService
+	LevelBundleService      service.LevelBundleService
 	UserRepo                repository.UserRepository
 	RedisClient             *redis.Client
 	DB                      *pgxpool.Pool
@@ -100,6 +102,20 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.GET("/customers/:id", custH.Get)
 		adminOnly.PUT("/customers/:id", custH.Update)
 		adminOnly.DELETE("/customers/:id", custH.Delete)
+
+		// Snapshot sub-resources (system admin only)
+		snapshotH := newSnapshotHandler(deps.SnapshotService)
+		bundleH := newLevelBundleHandler(deps.LevelBundleService)
+
+		adminOnly.GET("/venues/:id/snapshots", snapshotH.List)
+		adminOnly.POST("/venues/:id/snapshots", snapshotH.CreateDraft)
+		adminOnly.GET("/venues/:id/snapshots/recent", snapshotH.LatestPublished)
+		adminOnly.GET("/venues/:id/snapshots/:snapshotID", snapshotH.Get)
+		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID", snapshotH.Delete)
+
+		adminOnly.POST("/venues/:id/snapshots/:snapshotID/bundles", bundleH.Create)
+		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles", bundleH.List)
+		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/bundles/:bundleID", bundleH.Delete)
 	}
 
 	// ── Venue routes (JWT required; RBAC applied per action) ──────────────────

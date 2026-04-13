@@ -63,7 +63,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 	venueRepo := postgresrepo.NewVenueRepository(pool)
 	levelRepo := postgresrepo.NewLevelRepository(pool)
 	locationCategoryRepo := postgresrepo.NewLocationCategoryRepository(pool)
-	amenityRepo := postgresrepo.NewAmenityRepository(pool)
 	locationRepo := postgresrepo.NewLocationRepository(pool)
 	productRepo := postgresrepo.NewProductRepository(pool)
 	eventRepo := postgresrepo.NewEventRepository(pool)
@@ -71,7 +70,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 	surveyRepo := postgresrepo.NewSurveyRepository(pool)
 	beaconRepo := postgresrepo.NewBeaconRepository(pool)
 	connectionRepo := postgresrepo.NewConnectionRepository(pool)
-	qrcodeRepo := postgresrepo.NewQRCodeRepository(pool)
 	adRepo := postgresrepo.NewAdRepository(pool)
 	articleRepo := postgresrepo.NewArticleRepository(pool)
 	couponRepo := postgresrepo.NewCouponRepository(pool)
@@ -79,6 +77,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 	tagRepo := postgresrepo.NewTagRepository(pool)
 	eventLogRepo := postgresrepo.NewEventLogRepository(pool)
 	searchQueryRepo := postgresrepo.NewSearchQueryRepository(pool)
+	snapshotRepo := postgresrepo.NewSnapshotRepository(pool)
+	levelBundleRepo := postgresrepo.NewLevelBundleRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
 	mailer := email.NewLogSender(logger)
@@ -91,7 +91,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 	venueSvc := service.NewVenueService(venueRepo, levelRepo, pool)
 	levelSvc := service.NewLevelService(levelRepo)
 	locationCategorySvc := service.NewLocationCategoryService(locationCategoryRepo)
-	amenitySvc := service.NewAmenityService(amenityRepo)
 	locationSvc := service.NewLocationService(locationRepo)
 	productSvc := service.NewProductService(productRepo)
 	storageSvc := service.NewStorageService(storer)
@@ -101,13 +100,14 @@ func runServe(_ *cobra.Command, _ []string) error {
 	surveySvc := service.NewSurveyService(surveyRepo)
 	beaconSvc := service.NewBeaconService(beaconRepo)
 	connectionSvc := service.NewConnectionService(connectionRepo)
-	qrcodeSvc := service.NewQRCodeService(qrcodeRepo)
 	adSvc := service.NewAdvertisementService(adRepo)
 	articleSvc := service.NewArticleService(articleRepo)
 	couponSvc := service.NewCouponService(couponRepo)
 	videoSvc := service.NewVideoService(videoRepo)
 	tagSvc := service.NewTagService(tagRepo)
 	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, redisClient)
+	snapshotSvc := service.NewSnapshotService(snapshotRepo, storer, cfg.App.Environment)
+	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, storer, cfg.App.Environment)
 
 	// ── HTTP server ───────────────────────────────────────────────────────
 	deps := handler.Dependencies{
@@ -116,7 +116,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 		VenueService:            venueSvc,
 		LevelService:            levelSvc,
 		LocationCategoryService: locationCategorySvc,
-		AmenityService:          amenitySvc,
 		LocationService:         locationSvc,
 		ProductService:          productSvc,
 		StorageService:          storageSvc,
@@ -126,13 +125,14 @@ func runServe(_ *cobra.Command, _ []string) error {
 		SurveyService:           surveySvc,
 		BeaconService:           beaconSvc,
 		ConnectionService:       connectionSvc,
-		QRCodeService:           qrcodeSvc,
 		AdvertisementService:    adSvc,
 		ArticleService:          articleSvc,
 		CouponService:           couponSvc,
 		VideoService:            videoSvc,
 		TagService:              tagSvc,
 		AnalyticsService:        analyticsSvc,
+		SnapshotService:         snapshotSvc,
+		LevelBundleService:      levelBundleSvc,
 		UserRepo:                userRepo,
 		RedisClient:             redisClient,
 		DB:                      pool,
