@@ -68,6 +68,8 @@ func (s *snapshotService) CreateDraft(ctx context.Context, venueID, createdBy uu
 		return nil, fmt.Errorf("create snapshot record: %w", err)
 	}
 
+	// Count is post-insert: if count == MaxSnapshotVersions, the oldest draft is pruned
+	// so the total stays at MaxSnapshotVersions. The new snapshot is included in the count.
 	count, err := s.repo.CountDraftsByVenue(ctx, venueID)
 	if err != nil {
 		return snap, nil // non-fatal: version control best-effort

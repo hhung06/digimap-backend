@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ type LevelBundleResponse struct {
 
 type CreateLevelBundleRequest struct {
 	LevelID uuid.UUID `json:"level_id" binding:"required"`
-	Bundle  []byte    `json:"bundle" binding:"required"`
+	Bundle  json.RawMessage `json:"bundle" binding:"required"`
 }
 
 func LevelBundleToResponse(b *domain.LevelBundle) LevelBundleResponse {

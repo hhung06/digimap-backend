@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ type SnapshotResponse struct {
 }
 
 type CreateSnapshotRequest struct {
-	Bundle []byte `json:"bundle" binding:"required"`
+	Bundle json.RawMessage `json:"bundle" binding:"required"`
 }
 
 func SnapshotToResponse(s *domain.Snapshot) SnapshotResponse {

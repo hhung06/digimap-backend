@@ -95,7 +95,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 	// ── System admin — customers ──────────────────────────────────────────────
 	custH := newCustomerHandler(deps.CustomerService)
-	adminOnly := v1.Group("/", jwtAuth, middleware.SystemAdminRequired())
+	adminOnly := v1.Group("/", jwtAuth, middleware.SystemAdminRequired(), apiRL)
 	{
 		adminOnly.GET("/customers", custH.List)
 		adminOnly.POST("/customers", custH.Create)
