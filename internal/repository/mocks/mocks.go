@@ -377,3 +377,110 @@ func (m *EmailSender) SendPasswordReset(ctx context.Context, toEmail, resetToken
 func (m *EmailSender) SendInvitation(ctx context.Context, toEmail, venueName, inviteToken string) error {
 	return m.Called(ctx, toEmail, venueName, inviteToken).Error(0)
 }
+
+// ── SnapshotRepository ────────────────────────────────────────────────────────
+
+// SnapshotRepository is a mock implementation of repository.SnapshotRepository.
+type SnapshotRepository struct{ mock.Mock }
+
+func (m *SnapshotRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error) {
+	args := m.Called(ctx, id)
+	if s, ok := args.Get(0).(*domain.Snapshot); ok {
+		return s, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SnapshotRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Snapshot, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if s, ok := args.Get(0).([]*domain.Snapshot); ok {
+		return s, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *SnapshotRepository) LatestPublished(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error) {
+	args := m.Called(ctx, venueID)
+	if s, ok := args.Get(0).(*domain.Snapshot); ok {
+		return s, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SnapshotRepository) Create(ctx context.Context, s *domain.Snapshot) error {
+	return m.Called(ctx, s).Error(0)
+}
+
+func (m *SnapshotRepository) UpdateState(ctx context.Context, id uuid.UUID, state int, publishAt *time.Time) error {
+	return m.Called(ctx, id, state, publishAt).Error(0)
+}
+
+func (m *SnapshotRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *SnapshotRepository) CountDraftsByVenue(ctx context.Context, venueID uuid.UUID) (int64, error) {
+	args := m.Called(ctx, venueID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *SnapshotRepository) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error {
+	return m.Called(ctx, venueID).Error(0)
+}
+
+// ── LevelBundleRepository ─────────────────────────────────────────────────────
+
+// LevelBundleRepository is a mock implementation of repository.LevelBundleRepository.
+type LevelBundleRepository struct{ mock.Mock }
+
+func (m *LevelBundleRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelBundle, error) {
+	args := m.Called(ctx, id)
+	if b, ok := args.Get(0).(*domain.LevelBundle); ok {
+		return b, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelBundleRepository) ListBySnapshot(ctx context.Context, snapshotID uuid.UUID) ([]*domain.LevelBundle, error) {
+	args := m.Called(ctx, snapshotID)
+	if b, ok := args.Get(0).([]*domain.LevelBundle); ok {
+		return b, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelBundleRepository) Create(ctx context.Context, b *domain.LevelBundle) error {
+	return m.Called(ctx, b).Error(0)
+}
+
+func (m *LevelBundleRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── StorerMock ────────────────────────────────────────────────────────────────
+
+// StorerMock is a testify/mock implementation of storage.Storer.
+// Place it here so service tests can use it without importing the platform package.
+type StorerMock struct{ mock.Mock }
+
+func (m *StorerMock) PresignUpload(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
+	args := m.Called(ctx, key, contentType, ttl)
+	return args.String(0), args.Error(1)
+}
+
+func (m *StorerMock) PresignDownload(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	args := m.Called(ctx, key, ttl)
+	return args.String(0), args.Error(1)
+}
+
+func (m *StorerMock) PutObject(ctx context.Context, key string, data []byte) error {
+	return m.Called(ctx, key, data).Error(0)
+}
+
+func (m *StorerMock) GetObject(ctx context.Context, key string) ([]byte, error) {
+	args := m.Called(ctx, key)
+	if b, ok := args.Get(0).([]byte); ok {
+		return b, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
