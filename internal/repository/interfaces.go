@@ -293,3 +293,26 @@ type SearchQueryRepository interface {
 	Update(ctx context.Context, q *domain.SearchQuery) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
+// SnapshotRepository handles snapshot metadata persistence.
+type SnapshotRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Snapshot, int64, error)
+	LatestPublished(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error)
+	Create(ctx context.Context, s *domain.Snapshot) error
+	UpdateState(ctx context.Context, id uuid.UUID, state int, publishAt *time.Time) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	CountDraftsByVenue(ctx context.Context, venueID uuid.UUID) (int64, error)
+	// DeleteOldestDraft hard-deletes (not soft-delete) the draft snapshot with
+	// the oldest created_at for the given venue, triggering ON DELETE CASCADE
+	// to remove its associated LevelBundle rows.
+	DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error
+}
+
+// LevelBundleRepository handles per-level bundle data persistence.
+type LevelBundleRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelBundle, error)
+	ListBySnapshot(ctx context.Context, snapshotID uuid.UUID) ([]*domain.LevelBundle, error)
+	Create(ctx context.Context, b *domain.LevelBundle) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
