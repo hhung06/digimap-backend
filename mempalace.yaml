@@ -1,0 +1,16 @@
+wing: digimap_backend
+rooms:
+- name: cmd
+  description: Files from cmd/
+- name: log
+  description: Files from log/
+- name: version
+  description: Files from version/
+- name: configuration
+  description: Files from config/
+- name: migrations
+  description: Files from migrations/
+- name: internal
+  description: Files from internal/
+- name: general
+  description: Files that don't fit other rooms
