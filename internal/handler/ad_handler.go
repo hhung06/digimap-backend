@@ -8,15 +8,17 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 type adHandler struct {
-	svc service.AdvertisementService
+	svc      service.AdvertisementService
+	enrichers *enricher.Registry
 }
 
-func newAdHandler(svc service.AdvertisementService) *adHandler {
-	return &adHandler{svc: svc}
+func newAdHandler(svc service.AdvertisementService, enrichers *enricher.Registry) *adHandler {
+	return &adHandler{svc: svc, enrichers: enrichers}
 }
 
 func (h *adHandler) List(c *gin.Context) {
@@ -31,14 +33,20 @@ func (h *adHandler) List(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.AdvertisementResponse, len(ads))
+	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceAd)
+	items := make([]any, len(ads))
 	for i, a := range ads {
-		items[i] = dto.AdvertisementToResponse(a)
+		items[i] = enricher.MergeInto(dto.AdvertisementToResponse(a), extras)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
 func (h *adHandler) Get(c *gin.Context) {
+	venueID, err := parseVenueID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
+		return
+	}
 	id, err := uuid.Parse(c.Param("adID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid ad id"))
@@ -49,7 +57,8 @@ func (h *adHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.AdvertisementToResponse(a)))
+	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceAd)
+	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.AdvertisementToResponse(a), extras)))
 }
 
 func (h *adHandler) Create(c *gin.Context) {

@@ -265,7 +265,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/connections/:connectionID/levels/:clID", editorAccess, connH.RemoveLevel)
 
 		// Advertisement sub-resources
-		adH := newAdHandler(deps.AdvertisementService)
+		adH := newAdHandler(deps.AdvertisementService, deps.EnricherRegistry)
 
 		venues.GET("/:id/ads", viewerAccess, adH.List)
 		venues.POST("/:id/ads", editorAccess, adH.Create)
