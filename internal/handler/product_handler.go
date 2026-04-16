@@ -8,16 +8,18 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 type productHandler struct {
 	svc        service.ProductService
 	storageSvc service.StorageService
+	enrichers  *enricher.Registry
 }
 
-func newProductHandler(svc service.ProductService, storageSvc service.StorageService) *productHandler {
-	return &productHandler{svc: svc, storageSvc: storageSvc}
+func newProductHandler(svc service.ProductService, storageSvc service.StorageService, enrichers *enricher.Registry) *productHandler {
+	return &productHandler{svc: svc, storageSvc: storageSvc, enrichers: enrichers}
 }
 
 // ── Product categories ────────────────────────────────────────────────────────
@@ -111,14 +113,21 @@ func (h *productHandler) List(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.ProductResponse, len(products))
+	ctx := c.Request.Context()
+	extras, _ := h.enrichers.EnrichForVenue(ctx, venueID, enricher.ResourceProduct)
+	items := make([]any, len(products))
 	for i, prod := range products {
-		items[i] = dto.ProductToResponse(prod)
+		items[i] = enricher.MergeInto(dto.ProductToResponse(prod), extras)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
 func (h *productHandler) Get(c *gin.Context) {
+	venueID, err := parseVenueID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
+		return
+	}
 	id, err := uuid.Parse(c.Param("productID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid product id"))
@@ -129,7 +138,9 @@ func (h *productHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.ProductToResponse(prod)))
+	ctx := c.Request.Context()
+	extras, _ := h.enrichers.EnrichForVenue(ctx, venueID, enricher.ResourceProduct)
+	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.ProductToResponse(prod), extras)))
 }
 
 func (h *productHandler) Create(c *gin.Context) {

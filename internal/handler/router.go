@@ -174,7 +174,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/locations/:locationID/images/:imageID", editorAccess, locH.DeleteImage)
 
 		// Product sub-resources
-		prodH := newProductHandler(deps.ProductService, deps.StorageService)
+		prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
 
 		venues.GET("/:id/product-categories", viewerAccess, prodH.ListCategories)
 		venues.POST("/:id/product-categories", editorAccess, prodH.CreateCategory)
@@ -318,7 +318,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	}
 
 	// ── Storage (pre-signed uploads) ──────────────────────────────────────────
-	prodH := newProductHandler(deps.ProductService, deps.StorageService)
+	prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
 	protected.POST("/storage/presign-upload", prodH.PresignUpload)
 
 	// ── Profile + invitation accept ────────────────────────────────────────────
