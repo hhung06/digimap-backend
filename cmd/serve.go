@@ -11,7 +11,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/hhung06/digimap-backend/cmd/tenants"
 	"github.com/hhung06/digimap-backend/config"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler"
 	"github.com/hhung06/digimap-backend/internal/platform/cache"
 	"github.com/hhung06/digimap-backend/internal/platform/database"
@@ -109,6 +111,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 	snapshotSvc := service.NewSnapshotService(snapshotRepo, storer, cfg.App.Environment)
 	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, storer, cfg.App.Environment)
 
+	enricherRegistry := enricher.NewRegistry(venueRepo)
+	tenants.RegisterAll(enricherRegistry)
+
 	// ── HTTP server ───────────────────────────────────────────────────────
 	deps := handler.Dependencies{
 		AuthService:             authSvc,
@@ -133,6 +138,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		AnalyticsService:        analyticsSvc,
 		SnapshotService:         snapshotSvc,
 		LevelBundleService:      levelBundleSvc,
+		EnricherRegistry:        enricherRegistry,
 		UserRepo:                userRepo,
 		RedisClient:             redisClient,
 		DB:                      pool,

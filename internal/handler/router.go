@@ -9,6 +9,7 @@ import (
 
 	"github.com/hhung06/digimap-backend/config"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
 	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
@@ -40,6 +41,7 @@ type Dependencies struct {
 	AnalyticsService        service.AnalyticsService
 	SnapshotService         service.SnapshotService
 	LevelBundleService      service.LevelBundleService
+	EnricherRegistry        *enricher.Registry
 	UserRepo                repository.UserRepository
 	RedisClient             *redis.Client
 	DB                      *pgxpool.Pool
