@@ -8,16 +8,18 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 type notificationHandler struct {
-	svc service.NotificationService
+	svc      service.NotificationService
+	enrichers *enricher.Registry
 }
 
-func newNotificationHandler(svc service.NotificationService) *notificationHandler {
-	return &notificationHandler{svc: svc}
+func newNotificationHandler(svc service.NotificationService, enrichers *enricher.Registry) *notificationHandler {
+	return &notificationHandler{svc: svc, enrichers: enrichers}
 }
 
 func (h *notificationHandler) List(c *gin.Context) {
@@ -32,14 +34,20 @@ func (h *notificationHandler) List(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.NotificationResponse, len(ns))
+	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceNotification)
+	items := make([]any, len(ns))
 	for i, n := range ns {
-		items[i] = dto.NotificationToResponse(n)
+		items[i] = enricher.MergeInto(dto.NotificationToResponse(n), extras)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
 func (h *notificationHandler) Get(c *gin.Context) {
+	venueID, err := parseVenueID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
+		return
+	}
 	id, err := uuid.Parse(c.Param("notifID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid notification id"))
@@ -50,7 +58,8 @@ func (h *notificationHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.NotificationToResponse(n)))
+	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceNotification)
+	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.NotificationToResponse(n), extras)))
 }
 
 func (h *notificationHandler) Create(c *gin.Context) {

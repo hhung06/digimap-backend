@@ -217,7 +217,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.POST("/:id/invitations/:invitationID/cancel", ownerAccess, userH.CancelInvitation)
 
 		// Notification sub-resources
-		notifH := newNotificationHandler(deps.NotificationService)
+		notifH := newNotificationHandler(deps.NotificationService, deps.EnricherRegistry)
 
 		venues.GET("/:id/notifications", viewerAccess, notifH.List)
 		venues.POST("/:id/notifications", editorAccess, notifH.Create)
