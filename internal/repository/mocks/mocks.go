@@ -457,6 +457,16 @@ func (m *LevelBundleRepository) Delete(ctx context.Context, id uuid.UUID) error 
 	return m.Called(ctx, id).Error(0)
 }
 
+// ── VenueRepository ───────────────────────────────────────────────────────────
+
+// VenueRepository is a mock implementation of repository.VenueRepository.
+type VenueRepository struct{ mock.Mock }
+
+func (m *VenueRepository) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
+	args := m.Called(ctx, venueID)
+	return args.Get(0).(uuid.UUID), args.Error(1)
+}
+
 // ── StorerMock ────────────────────────────────────────────────────────────────
 
 // StorerMock is a testify/mock implementation of storage.Storer.

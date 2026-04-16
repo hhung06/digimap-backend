@@ -51,6 +51,7 @@ type VenueRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, privateKey string) error
 	UpdatePublished(ctx context.Context, id uuid.UUID, published bool) error
+	GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error)
 }
 
 // LevelRepository handles persistence for Level, MapGroup, Perspective, and GeoReference.

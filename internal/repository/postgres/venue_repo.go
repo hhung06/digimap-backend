@@ -192,6 +192,18 @@ func (r *venueRepo) UpdatePublished(ctx context.Context, id uuid.UUID, published
 	return nil
 }
 
+func (r *venueRepo) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
+	var customerID uuid.UUID
+	err := r.pool.QueryRow(ctx,
+		`SELECT customer_id FROM venues WHERE id = $1 AND deleted_at IS NULL`,
+		venueID,
+	).Scan(&customerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, domain.NewNotFound("venue not found")
+	}
+	return customerID, err
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func scanVenue(row pgx.Row) (*domain.Venue, error) {
