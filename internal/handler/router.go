@@ -227,7 +227,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.POST("/:id/notifications/:notifID/send", editorAccess, notifH.Send)
 
 		// Survey sub-resources
-		surveyH := newSurveyHandler(deps.SurveyService)
+		surveyH := newSurveyHandler(deps.SurveyService, deps.EnricherRegistry)
 
 		venues.GET("/:id/surveys", viewerAccess, surveyH.List)
 		venues.POST("/:id/surveys", editorAccess, surveyH.Create)

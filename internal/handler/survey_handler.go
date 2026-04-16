@@ -8,16 +8,18 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 type surveyHandler struct {
-	svc service.SurveyService
+	svc      service.SurveyService
+	enrichers *enricher.Registry
 }
 
-func newSurveyHandler(svc service.SurveyService) *surveyHandler {
-	return &surveyHandler{svc: svc}
+func newSurveyHandler(svc service.SurveyService, enrichers *enricher.Registry) *surveyHandler {
+	return &surveyHandler{svc: svc, enrichers: enrichers}
 }
 
 func (h *surveyHandler) List(c *gin.Context) {
@@ -32,9 +34,10 @@ func (h *surveyHandler) List(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.SurveyResponse, len(surveys))
+	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceSurvey)
+	items := make([]any, len(surveys))
 	for i, s := range surveys {
-		items[i] = dto.SurveyToResponse(s)
+		items[i] = enricher.MergeInto(dto.SurveyToResponse(s), extras)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
@@ -45,12 +48,18 @@ func (h *surveyHandler) Get(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
 		return
 	}
+	venueID, err := parseVenueID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
+		return
+	}
 	s, err := h.svc.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.SurveyToResponse(s)))
+	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceSurvey)
+	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.SurveyToResponse(s), extras)))
 }
 
 func (h *surveyHandler) Create(c *gin.Context) {
