@@ -2,6 +2,7 @@ package enricher
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 )
@@ -63,11 +64,17 @@ func (r *Registry) EnrichForVenue(ctx context.Context, venueID uuid.UUID, resour
 	}
 	customerID, err := r.venueRepo.GetCustomerID(ctx, venueID)
 	if err != nil {
+		slog.Error("enricher: failed to resolve customer for venue", "venue_id", venueID, "error", err)
 		return nil, nil
 	}
 	fn, ok := r.m[enricherKey{customerID, resource}]
 	if !ok {
 		return nil, nil
 	}
-	return fn(ctx, venueID)
+	extras, err := fn(ctx, venueID)
+	if err != nil {
+		slog.Error("enricher: enricher func returned error", "venue_id", venueID, "resource", resource, "error", err)
+		return nil, nil
+	}
+	return extras, nil
 }

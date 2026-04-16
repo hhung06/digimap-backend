@@ -82,6 +82,20 @@ func TestRegistry_EnrichForVenue_RepoError(t *testing.T) {
 	assert.Nil(t, extras)
 }
 
+func TestRegistry_EnrichForVenue_EnricherFuncError(t *testing.T) {
+	customerID := uuid.New()
+	venueID := uuid.New()
+
+	reg := enricher.NewRegistry(&stubVenueRepo{customerID: customerID})
+	reg.Register(customerID, enricher.ResourceLocation, func(_ context.Context, _ uuid.UUID) (map[string]any, error) {
+		return nil, errors.New("enricher func error")
+	})
+
+	extras, err := reg.EnrichForVenue(context.Background(), venueID, enricher.ResourceLocation)
+	require.NoError(t, err) // enricher func errors are swallowed — base response unaffected
+	assert.Nil(t, extras)
+}
+
 func TestMergeInto_NoExtras(t *testing.T) {
 	type base struct {
 		Name string `json:"name"`
