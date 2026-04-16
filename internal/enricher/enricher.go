@@ -3,6 +3,7 @@ package enricher
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -27,6 +28,7 @@ type VenueCustomerResolver interface {
 // EnricherFunc computes extra fields for a tenant+venue combination.
 // The same extras map is applied to every item in a list response (one call per request).
 // Return nil, nil when no extras are needed.
+// Errors returned by EnricherFunc are logged and discarded by the registry — they are not propagated to callers.
 type EnricherFunc func(ctx context.Context, venueID uuid.UUID) (map[string]any, error)
 
 type enricherKey struct {
@@ -37,6 +39,7 @@ type enricherKey struct {
 // Registry maps (customerID, resource) → EnricherFunc.
 // Register all enrichers at startup before the server begins serving requests.
 type Registry struct {
+	mu        sync.RWMutex
 	m         map[enricherKey]EnricherFunc
 	venueRepo VenueCustomerResolver
 }
@@ -51,6 +54,8 @@ func NewRegistry(venueRepo VenueCustomerResolver) *Registry {
 
 // Register associates fn with the given customer and resource.
 func (r *Registry) Register(customerID uuid.UUID, resource Resource, fn EnricherFunc) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.m[enricherKey{customerID, resource}] = fn
 }
 
@@ -59,7 +64,12 @@ func (r *Registry) Register(customerID uuid.UUID, resource Resource, fn Enricher
 // Also returns nil, nil when no enrichers are registered (zero DB cost) or no enricher
 // matches the resolved customer+resource pair.
 func (r *Registry) EnrichForVenue(ctx context.Context, venueID uuid.UUID, resource Resource) (map[string]any, error) {
-	if r == nil || len(r.m) == 0 {
+	if r == nil {
+		return nil, nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.m) == 0 {
 		return nil, nil
 	}
 	customerID, err := r.venueRepo.GetCustomerID(ctx, venueID)

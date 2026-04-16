@@ -125,6 +125,18 @@ func TestMergeInto_WithExtras(t *testing.T) {
 	assert.Equal(t, "Gate", m["custom_label"])
 }
 
+func TestMergeInto_CollisionSkipped(t *testing.T) {
+	type base struct {
+		Name string `json:"name"`
+	}
+	result := enricher.MergeInto(base{Name: "original"}, map[string]any{"name": "overwrite", "extra_field": "value"})
+
+	m, ok := result.(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "original", m["name"], "base value must not be overwritten by extras")
+	assert.Equal(t, "value", m["extra_field"])
+}
+
 // trackingRepo records whether GetCustomerID was called.
 type trackingRepo struct {
 	called *bool
