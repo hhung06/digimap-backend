@@ -68,8 +68,9 @@ func (r *Registry) EnrichForVenue(ctx context.Context, venueID uuid.UUID, resour
 		return nil, nil
 	}
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-	if len(r.m) == 0 {
+	empty := len(r.m) == 0
+	r.mu.RUnlock()
+	if empty {
 		return nil, nil
 	}
 	customerID, err := r.venueRepo.GetCustomerID(ctx, venueID)
@@ -77,7 +78,9 @@ func (r *Registry) EnrichForVenue(ctx context.Context, venueID uuid.UUID, resour
 		slog.Error("enricher: failed to resolve customer for venue", "venue_id", venueID, "error", err)
 		return nil, nil
 	}
+	r.mu.RLock()
 	fn, ok := r.m[enricherKey{customerID, resource}]
+	r.mu.RUnlock()
 	if !ok {
 		return nil, nil
 	}
