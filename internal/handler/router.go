@@ -155,7 +155,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/levels/:levelID/geo-references/:refID", editorAccess, levelH.DeleteGeoReference)
 
 		// Location sub-resources
-		locH := newLocationHandler(deps.LocationCategoryService, deps.LocationService)
+		locH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry)
 
 		venues.GET("/:id/categories", viewerAccess, locH.ListCategories)
 		venues.POST("/:id/categories", editorAccess, locH.CreateCategory)

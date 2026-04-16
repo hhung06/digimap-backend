@@ -8,19 +8,22 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 type locationHandler struct {
 	categorySvc service.LocationCategoryService
 	locationSvc service.LocationService
+	enrichers   *enricher.Registry
 }
 
 func newLocationHandler(
 	categorySvc service.LocationCategoryService,
 	locationSvc service.LocationService,
+	enrichers *enricher.Registry,
 ) *locationHandler {
-	return &locationHandler{categorySvc: categorySvc, locationSvc: locationSvc}
+	return &locationHandler{categorySvc: categorySvc, locationSvc: locationSvc, enrichers: enrichers}
 }
 
 // ── Location categories ───────────────────────────────────────────────────────
@@ -131,30 +134,39 @@ func (h *locationHandler) ListLocations(c *gin.Context) {
 		return
 	}
 	p := paginationFromQuery(c)
-	locations, total, err := h.locationSvc.List(c.Request.Context(), venueID, p)
+	ctx := c.Request.Context()
+	locations, total, err := h.locationSvc.List(ctx, venueID, p)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.LocationResponse, len(locations))
-	for i, l := range locations {
-		items[i] = dto.LocationToResponse(l)
+	extras, _ := h.enrichers.EnrichForVenue(ctx, venueID, enricher.ResourceLocation)
+	items := make([]any, len(locations))
+	for i, loc := range locations {
+		items[i] = enricher.MergeInto(dto.LocationToResponse(loc), extras)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
 func (h *locationHandler) GetLocation(c *gin.Context) {
+	venueID, err := parseVenueID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
+		return
+	}
 	id, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid location id"))
 		return
 	}
-	l, err := h.locationSvc.Get(c.Request.Context(), id)
+	ctx := c.Request.Context()
+	l, err := h.locationSvc.Get(ctx, id)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.LocationToResponse(l)))
+	extras, _ := h.enrichers.EnrichForVenue(ctx, venueID, enricher.ResourceLocation)
+	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.LocationToResponse(l), extras)))
 }
 
 func (h *locationHandler) CreateLocation(c *gin.Context) {
