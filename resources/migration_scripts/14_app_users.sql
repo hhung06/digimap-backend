@@ -44,7 +44,7 @@ SELECT
                substring(venue_id::text,21,12))::uuid
          ELSE NULL END,
     'visitor',
-    COALESCE(visitor_type::smallint, 0::smallint),
+    0::smallint,
     full_name, email,
     encode(phone_number, 'escape'),
     visitor_type::smallint,
