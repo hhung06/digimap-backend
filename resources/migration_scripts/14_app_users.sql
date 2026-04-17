@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Migrate staff users from indoormap_api_appuser
 INSERT INTO app_users (
     id, venue_id, external_id, source, type,
@@ -8,7 +10,7 @@ INSERT INTO app_users (
     created_at, updated_at, deleted_at
 )
 SELECT
-    gen_random_uuid(),
+    uuidv7(),
     NULL,
     external_id,
     'staff',
@@ -61,3 +63,5 @@ FROM indoormap_api_visitor;
 -- Drop source tables
 DROP TABLE IF EXISTS indoormap_api_appuser;
 DROP TABLE IF EXISTS indoormap_api_visitor;
+
+COMMIT;

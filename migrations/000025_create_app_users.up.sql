@@ -37,7 +37,7 @@ CREATE TABLE app_users (
     deleted_at          TIMESTAMPTZ
 );
 
-CREATE INDEX app_users_venue_id_idx    ON app_users(venue_id);
-CREATE INDEX app_users_external_id_idx ON app_users(external_id) WHERE external_id IS NOT NULL;
-CREATE INDEX app_users_email_idx       ON app_users(email)       WHERE email IS NOT NULL;
+CREATE INDEX app_users_venue_id_idx    ON app_users(venue_id)    WHERE deleted_at IS NULL;
+CREATE INDEX app_users_external_id_idx ON app_users(external_id) WHERE external_id IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX app_users_email_idx       ON app_users(email)       WHERE email IS NOT NULL AND deleted_at IS NULL;
 SELECT create_updated_at_trigger('app_users');
