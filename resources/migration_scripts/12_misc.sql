@@ -25,13 +25,18 @@ UPDATE snapshots SET state_new = CASE state
     ELSE 0
 END;
 ALTER TABLE snapshots DROP COLUMN state;
-ALTER TABLE snapshots RENAME COLUMN state_new TO state;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='snapshots' AND column_name='state_new') THEN
+    ALTER TABLE snapshots RENAME COLUMN state_new TO state;
+  END IF;
+END $$;
 ALTER TABLE snapshots ALTER COLUMN state SET NOT NULL;
 
--- Remap publish_by_id (old integer) → publish_by (UUID) using _user_id_map
-ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS publish_by UUID;
+-- Remap publish_by_id (old integer) → created_by (UUID) using _user_id_map
+ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS created_by UUID;
 UPDATE snapshots s
-SET publish_by = m.new_id
+SET created_by = m.new_id
 FROM _user_id_map m
 WHERE s.publish_by_id = m.old_id;
 ALTER TABLE snapshots DROP COLUMN IF EXISTS publish_by_id;

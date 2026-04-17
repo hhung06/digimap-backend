@@ -14,7 +14,12 @@ ALTER TABLE products DROP COLUMN IF EXISTS transaction_id;
 
 -- ── product_category_links ───────────────────────────────────────────────────
 -- Actual columns: id (bigserial PK), product_id, productcategory_id
-ALTER TABLE product_category_links RENAME COLUMN productcategory_id TO category_id;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='product_category_links' AND column_name='productcategory_id') THEN
+    ALTER TABLE product_category_links RENAME COLUMN productcategory_id TO category_id;
+  END IF;
+END $$;
 ALTER TABLE product_category_links DROP COLUMN IF EXISTS id;
 ALTER TABLE product_category_links ADD PRIMARY KEY (product_id, category_id);
 

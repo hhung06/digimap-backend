@@ -6,7 +6,12 @@
 --                 displayduration, location_id, placement, reward_amount, reward_type,
 --                 size_height, size_width, restored_at, transaction_id, published_at,
 --                 start_at, status, navigate, article_id
-ALTER TABLE advertisements RENAME COLUMN displayduration TO display_duration;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='advertisements' AND column_name='displayduration') THEN
+    ALTER TABLE advertisements RENAME COLUMN displayduration TO display_duration;
+  END IF;
+END $$;
 ALTER TABLE advertisements DROP COLUMN IF EXISTS article_id;
 ALTER TABLE advertisements DROP COLUMN IF EXISTS restored_at;
 ALTER TABLE advertisements DROP COLUMN IF EXISTS transaction_id;
@@ -31,7 +36,12 @@ ALTER TABLE articles DROP COLUMN IF EXISTS transaction_id;
 
 -- ── article_images ───────────────────────────────────────────────────────────
 -- Actual columns: image, "order" (bigint), article_id, deleted_at, restored_at, transaction_id
-ALTER TABLE article_images RENAME COLUMN "order" TO sort_order;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='article_images' AND column_name='order') THEN
+    ALTER TABLE article_images RENAME COLUMN "order" TO sort_order;
+  END IF;
+END $$;
 ALTER TABLE article_images DROP COLUMN IF EXISTS restored_at;
 ALTER TABLE article_images DROP COLUMN IF EXISTS transaction_id;
 
@@ -47,14 +57,54 @@ ALTER TABLE coupons DROP COLUMN IF EXISTS transaction_id;
 -- Actual columns: hwid, vendorkey, lotkey, uuid, mac, radius, battery, name,
 --                 positionx, positiony, level (integer), isenable, major, minor,
 --                 voltage, txpower, venue_id, level_id, element_id, restored_at, transaction_id
-ALTER TABLE beacons RENAME COLUMN hwid      TO hw_id;
-ALTER TABLE beacons RENAME COLUMN vendorkey TO vendor_key;
-ALTER TABLE beacons RENAME COLUMN lotkey    TO lot_key;
-ALTER TABLE beacons RENAME COLUMN uuid      TO uuid_val;
-ALTER TABLE beacons RENAME COLUMN positionx TO position_x;
-ALTER TABLE beacons RENAME COLUMN positiony TO position_y;
-ALTER TABLE beacons RENAME COLUMN isenable  TO is_enable;
-ALTER TABLE beacons RENAME COLUMN txpower   TO tx_power;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='hwid') THEN
+    ALTER TABLE beacons RENAME COLUMN hwid TO hw_id;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='vendorkey') THEN
+    ALTER TABLE beacons RENAME COLUMN vendorkey TO vendor_key;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='lotkey') THEN
+    ALTER TABLE beacons RENAME COLUMN lotkey TO lot_key;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='uuid') THEN
+    ALTER TABLE beacons RENAME COLUMN uuid TO uuid_val;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='positionx') THEN
+    ALTER TABLE beacons RENAME COLUMN positionx TO position_x;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='positiony') THEN
+    ALTER TABLE beacons RENAME COLUMN positiony TO position_y;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='isenable') THEN
+    ALTER TABLE beacons RENAME COLUMN isenable TO is_enable;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='beacons' AND column_name='txpower') THEN
+    ALTER TABLE beacons RENAME COLUMN txpower TO tx_power;
+  END IF;
+END $$;
 -- Drop redundant integer 'level' column (level_id FK is the proper reference)
 ALTER TABLE beacons DROP COLUMN IF EXISTS level;
 ALTER TABLE beacons DROP COLUMN IF EXISTS restored_at;
@@ -63,7 +113,12 @@ ALTER TABLE beacons DROP COLUMN IF EXISTS transaction_id;
 -- ── connections ──────────────────────────────────────────────────────────────
 -- Actual columns: name, type, accessible, venue_id, state, status, x, y,
 --                 active, externalid, restored_at, transaction_id
-ALTER TABLE connections RENAME COLUMN externalid TO external_id;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='connections' AND column_name='externalid') THEN
+    ALTER TABLE connections RENAME COLUMN externalid TO external_id;
+  END IF;
+END $$;
 ALTER TABLE connections DROP COLUMN IF EXISTS restored_at;
 ALTER TABLE connections DROP COLUMN IF EXISTS transaction_id;
 

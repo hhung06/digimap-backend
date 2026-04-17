@@ -1,25 +1,120 @@
 -- Script 05: Transform venues table
 
 -- Rename camelCase/concatenated columns to snake_case
-ALTER TABLE venues RENAME COLUMN largelogo      TO large_logo;
-ALTER TABLE venues RENAME COLUMN mediumlogo     TO medium_logo;
-ALTER TABLE venues RENAME COLUMN originallogo   TO original_logo;
-ALTER TABLE venues RENAME COLUMN smalllogo      TO small_logo;
-ALTER TABLE venues RENAME COLUMN publish        TO is_published;
-ALTER TABLE venues RENAME COLUMN externalid     TO external_id;
-ALTER TABLE venues RENAME COLUMN workhours      TO work_hours;
-ALTER TABLE venues RENAME COLUMN seodescription TO seo_description;
-ALTER TABLE venues RENAME COLUMN seokeywords    TO seo_keywords;
-ALTER TABLE venues RENAME COLUMN seotitle       TO seo_title;
-ALTER TABLE venues RENAME COLUMN subdomains     TO sub_domains;
-ALTER TABLE venues RENAME COLUMN appconfigs     TO app_configs;
-ALTER TABLE venues RENAME COLUMN appdomains     TO app_domains;
-ALTER TABLE venues RENAME COLUMN bodytag        TO body_tag;
-ALTER TABLE venues RENAME COLUMN headtag        TO head_tag;
-ALTER TABLE venues RENAME COLUMN endat          TO end_at;
-ALTER TABLE venues RENAME COLUMN startat        TO start_at;
-ALTER TABLE venues RENAME COLUMN latitude       TO lat;
-ALTER TABLE venues RENAME COLUMN longitude      TO lng;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='largelogo') THEN
+    ALTER TABLE venues RENAME COLUMN largelogo TO large_logo;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='mediumlogo') THEN
+    ALTER TABLE venues RENAME COLUMN mediumlogo TO medium_logo;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='originallogo') THEN
+    ALTER TABLE venues RENAME COLUMN originallogo TO original_logo;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='smalllogo') THEN
+    ALTER TABLE venues RENAME COLUMN smalllogo TO small_logo;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='publish') THEN
+    ALTER TABLE venues RENAME COLUMN publish TO is_published;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='externalid') THEN
+    ALTER TABLE venues RENAME COLUMN externalid TO external_id;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='workhours') THEN
+    ALTER TABLE venues RENAME COLUMN workhours TO work_hours;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='seodescription') THEN
+    ALTER TABLE venues RENAME COLUMN seodescription TO seo_description;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='seokeywords') THEN
+    ALTER TABLE venues RENAME COLUMN seokeywords TO seo_keywords;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='seotitle') THEN
+    ALTER TABLE venues RENAME COLUMN seotitle TO seo_title;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='subdomains') THEN
+    ALTER TABLE venues RENAME COLUMN subdomains TO sub_domains;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='appconfigs') THEN
+    ALTER TABLE venues RENAME COLUMN appconfigs TO app_configs;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='appdomains') THEN
+    ALTER TABLE venues RENAME COLUMN appdomains TO app_domains;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='bodytag') THEN
+    ALTER TABLE venues RENAME COLUMN bodytag TO body_tag;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='headtag') THEN
+    ALTER TABLE venues RENAME COLUMN headtag TO head_tag;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='endat') THEN
+    ALTER TABLE venues RENAME COLUMN endat TO end_at;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='startat') THEN
+    ALTER TABLE venues RENAME COLUMN startat TO start_at;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='latitude') THEN
+    ALTER TABLE venues RENAME COLUMN latitude TO lat;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='venues' AND column_name='longitude') THEN
+    ALTER TABLE venues RENAME COLUMN longitude TO lng;
+  END IF;
+END $$;
 
 -- Drop unused columns
 ALTER TABLE venues DROP COLUMN IF EXISTS countrycode;
