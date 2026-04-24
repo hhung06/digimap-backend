@@ -33,6 +33,12 @@ build-errors.log
 .env
 *.env
 
+# macOS
+.DS_Store
+
+# Superpowers
+docs/superpowers/
+
 # Editor/IDE
 # .idea/
 # .vscode/
