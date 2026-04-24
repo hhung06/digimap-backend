@@ -70,7 +70,7 @@ type AWSConfig struct {
 // DSN builds the PostgreSQL connection string.
 func (d DatabaseConfig) DSN() string {
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s&search_path=digimap_db,public",
 		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode,
 	)
 }

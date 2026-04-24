@@ -1,16 +1,14 @@
 -- Script 01: Prerequisites — extensions, functions, framework cleanup
+SET search_path TO digimap_db, public;
 
 -- =============================================================================
 -- Extensions & functions
 -- =============================================================================
 
--- Required PostgreSQL extensions
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_bytes() and other crypto helpers (uuidv7 is native in PG18+)
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";    -- trigram similarity for fuzzy text search
-CREATE EXTENSION IF NOT EXISTS "btree_gist"; -- exclusion constraints with ranges
-CREATE EXTENSION IF NOT EXISTS "vector";     -- pgvector: dense vector similarity search (RAG / embeddings)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "btree_gist";
 
--- Reusable trigger: auto-update updated_at on every UPDATE
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -18,6 +16,15 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION create_updated_at_trigger(tbl TEXT)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  EXECUTE format(
+    'CREATE TRIGGER set_updated_at BEFORE UPDATE ON %I
+     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', tbl);
+END;
+$$;
 
 -- =============================================================================
 -- Drop Django framework tables
@@ -78,3 +85,5 @@ DROP TABLE IF EXISTS indoormap_api_tagtranslation CASCADE;
 DROP TABLE IF EXISTS indoormap_api_usercoupon CASCADE;
 DROP TABLE IF EXISTS indoormap_api_templatecategory CASCADE;
 DROP TABLE IF EXISTS indoormap_api_templatecategorytranslation CASCADE;
+-- NOTE: indoormap_api_appuser and indoormap_api_visitor are kept here;
+-- their data is migrated in script 14 before they are dropped.

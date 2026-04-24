@@ -1,4 +1,5 @@
 -- Script 12: Transform tags, search_queries, snapshots
+SET search_path TO digimap_db, public;
 
 -- ── tags ─────────────────────────────────────────────────────────────────────
 -- Actual columns: name, localization, restored_at, transaction_id

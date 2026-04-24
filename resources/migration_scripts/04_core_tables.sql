@@ -1,4 +1,5 @@
 -- Script 04: Transform customers, users, venue_user_roles, venue_invitations
+SET search_path TO digimap_db, public;
 
 -- ── customers ────────────────────────────────────────────────────────────────
 DO $$ BEGIN
@@ -77,6 +78,8 @@ DO $$ BEGIN
 END $$;
 ALTER TABLE users ADD PRIMARY KEY (id);
 ALTER TABLE users ALTER COLUMN email TYPE TEXT;
+-- Legacy admin/staff users may have empty email; give them a unique placeholder
+UPDATE users SET email = 'legacy_' || id::text || '@placeholder.invalid' WHERE email = '' OR email IS NULL;
 ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);
 
 -- ── venue_user_roles ─────────────────────────────────────────────────────────

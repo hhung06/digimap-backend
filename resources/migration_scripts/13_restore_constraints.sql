@@ -1,6 +1,19 @@
 -- =============================================================================
+SET search_path TO digimap_db, public;
 -- Script 13: Restore FK constraints, updated_at triggers, uuidv7() defaults
 -- =============================================================================
+
+-- =============================================================================
+-- SECTION 0: Fix missing column renames from earlier scripts
+-- =============================================================================
+
+-- levels.mapgroup_id was never renamed to map_group_id in script 06
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema = current_schema() AND table_name = 'levels' AND column_name = 'mapgroup_id') THEN
+    ALTER TABLE levels RENAME COLUMN mapgroup_id TO map_group_id;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- SECTION 1: Re-add FK constraints

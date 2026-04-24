@@ -1,4 +1,5 @@
 -- Script 09: Transform event_types, event_tags, events, event_tag_links, event_location_links, event_images
+SET search_path TO digimap_db, public;
 
 -- ── event_types ──────────────────────────────────────────────────────────────
 -- Actual columns: name, venue_id, localization, restored_at, transaction_id

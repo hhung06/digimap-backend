@@ -1,4 +1,5 @@
 -- Script 06: Transform map_groups, perspectives, levels, geo_references
+SET search_path TO digimap_db, public;
 
 -- ── map_groups ───────────────────────────────────────────────────────────────
 -- Actual columns: type, name, shortname, sortindex (bigint), venue_id, restored_at, transaction_id
@@ -99,6 +100,12 @@ DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns
              WHERE table_name='levels' AND column_name='publish') THEN
     ALTER TABLE levels RENAME COLUMN publish TO is_published;
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name='levels' AND column_name='mapgroup_id') THEN
+    ALTER TABLE levels RENAME COLUMN mapgroup_id TO map_group_id;
   END IF;
 END $$;
 ALTER TABLE levels DROP COLUMN IF EXISTS type_id;

@@ -27,9 +27,9 @@ services:
       POSTGRES_USER: digimap
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U digimap -d digimap"]
       interval: 5s
@@ -49,12 +49,12 @@ services:
       retries: 5
 
   migrate:
-    image: migrate/migrate:v4
+    image: migrate/migrate:v4.18.1
     volumes:
       - ./migrations:/migrations
     command:
       - "-path=/migrations"
-      - "-database=postgres://digimap:password@postgres:5432/digimap?sslmode=disable"
+      - "-database=postgres://digimap:password@postgres:5432/digimap?sslmode=disable&search_path=digimap_db,public"
       - "up"
     depends_on:
       postgres:

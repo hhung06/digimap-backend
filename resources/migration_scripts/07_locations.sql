@@ -1,4 +1,5 @@
 -- Script 07: Transform location_categories, locations, location_category_links, location_images
+SET search_path TO digimap_db, public;
 
 -- ── location_categories ──────────────────────────────────────────────────────
 -- Actual columns: name, icon, color, sortindex, icondefault, visible, localization,

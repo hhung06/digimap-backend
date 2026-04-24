@@ -1,4 +1,5 @@
 -- Script 10: Transform surveys, questions, options, survey_responses, survey_answers
+SET search_path TO digimap_db, public;
 
 -- ── surveys ──────────────────────────────────────────────────────────────────
 -- Actual columns: created_by_id (bigint FK to indoormap_api_appuser), end_date, is_forced,

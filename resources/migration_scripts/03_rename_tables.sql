@@ -1,4 +1,5 @@
 -- Script 03: Rename all indoormap_api_* tables to new schema names
+SET search_path TO digimap_db, public;
 ALTER TABLE indoormap_api_customer               RENAME TO customers;
 ALTER TABLE auth_user                            RENAME TO users;
 ALTER TABLE indoormap_api_venue                  RENAME TO venues;

@@ -1,4 +1,5 @@
 -- Script 08: Transform product_categories, products, product_category_links, product_attachments
+SET search_path TO digimap_db, public;
 
 -- ── product_categories ───────────────────────────────────────────────────────
 -- Actual columns: name, venue_id, localization, source, externalid, restored_at, transaction_id

@@ -1,4 +1,5 @@
 -- Script 11: Transform advertisements, articles, article_images, coupons,
+SET search_path TO digimap_db, public;
 --             beacons, connections, connection_levels
 
 -- ── advertisements ───────────────────────────────────────────────────────────

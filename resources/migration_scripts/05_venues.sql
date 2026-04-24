@@ -1,4 +1,5 @@
 -- Script 05: Transform venues table
+SET search_path TO digimap_db, public;
 
 -- Rename camelCase/concatenated columns to snake_case
 DO $$ BEGIN
