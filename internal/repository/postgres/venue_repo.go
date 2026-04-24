@@ -24,9 +24,9 @@ func NewVenueRepository(pool *pgxpool.Pool) repository.VenueRepository {
 }
 
 const venueSelectCols = `
-	id, customer_id, name, slug, external_id, type, public_key, private_key,
+	id, customer_id, name, external_id, type, public_key, private_key,
 	address, city, state, country, postal, lat, lng, timezone, telephone, work_hours,
-	description, is_published,
+	description,
 	theme, plugins, translations, localization, custom_data, app_configs, app_domains,
 	sub_domains, seo_title, seo_description, seo_keywords, head_tag, body_tag,
 	original_logo, small_logo, medium_logo, large_logo,
@@ -69,7 +69,7 @@ func (r *venueRepo) ListAll(ctx context.Context, p domain.Pagination) ([]*domain
 	if err := r.pool.QueryRow(ctx, countQ).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	return r.queryVenues(ctx, q, nil, p.PageSize, p.Offset(), total)
+	return r.queryVenues(ctx, q, p.PageSize, p.Offset(), total)
 }
 
 func (r *venueRepo) queryVenues(ctx context.Context, q string, args ...any) ([]*domain.Venue, int64, error) {
@@ -100,15 +100,15 @@ func (r *venueRepo) Create(ctx context.Context, v *domain.Venue) error {
 	}
 	const q = `
 		INSERT INTO venues (
-			id, customer_id, name,  external_id, type, public_key, private_key,
-			address, city, state, country, postal, lat, lng, timezone, telephone, work_hours,
-			description, is_published,
-			theme, plugins, translations, localization, custom_data, app_configs, app_domains,
+			id, customer_id, name, external_id, type, public_key, private_key,
+			address, city, state, country, postal, lat, lng, timezone, telephone,
+			description,
+			theme, plugins, localization, app_configs, app_domains,
 			sub_domains, seo_title, seo_description, seo_keywords, head_tag, body_tag,
 			original_logo, small_logo, medium_logo, large_logo, start_at, end_at
 		) VALUES (
-			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-			$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39
+			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,
+			$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34
 		) RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
@@ -130,14 +130,14 @@ func (r *venueRepo) Create(ctx context.Context, v *domain.Venue) error {
 func (r *venueRepo) Update(ctx context.Context, v *domain.Venue) error {
 	const q = `
 		UPDATE venues SET
-			name=$2, slug=$3, external_id=$4, type=$5,
-			address=$6, city=$7, state=$8, country=$9, postal=$10, lat=$11, lng=$12,
-			timezone=$13, telephone=$14, work_hours=$15, description=$16, is_published=$17,
-			theme=$18, plugins=$19, translations=$20, localization=$21, custom_data=$22,
-			app_configs=$23, app_domains=$24, sub_domains=$25,
-			seo_title=$26, seo_description=$27, seo_keywords=$28, head_tag=$29, body_tag=$30,
-			original_logo=$31, small_logo=$32, medium_logo=$33, large_logo=$34,
-			start_at=$35, end_at=$36
+			name=$2, external_id=$3, type=$4,
+			address=$5, city=$6, state=$7, country=$8, postal=$9, lat=$10, lng=$11,
+			timezone=$12, telephone=$13, description=$14,
+			theme=$15, plugins=$16, localization=$17,
+			app_configs=$18, app_domains=$19, sub_domains=$20,
+			seo_title=$21, seo_description=$22, seo_keywords=$23, head_tag=$24, body_tag=$25,
+			original_logo=$26, small_logo=$27, medium_logo=$28, large_logo=$29,
+			start_at=$30, end_at=$31
 		WHERE id=$1 AND deleted_at IS NULL
 		RETURNING updated_at`
 
@@ -178,17 +178,7 @@ func (r *venueRepo) UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, pri
 	return nil
 }
 
-func (r *venueRepo) UpdatePublished(ctx context.Context, id uuid.UUID, published bool) error {
-	tag, err := r.pool.Exec(ctx,
-		`UPDATE venues SET is_published = $2 WHERE id = $1 AND deleted_at IS NULL`,
-		id, published,
-	)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return domain.NewNotFound("venue not found")
-	}
+func (r *venueRepo) UpdatePublished(_ context.Context, _ uuid.UUID, _ bool) error {
 	return nil
 }
 

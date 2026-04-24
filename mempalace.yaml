@@ -2,15 +2,54 @@ wing: digimap_backend
 rooms:
 - name: cmd
   description: Files from cmd/
-- name: log
-  description: Files from log/
-- name: version
-  description: Files from version/
-- name: configuration
-  description: Files from config/
+  keywords:
+  - cmd
+  - cmd
 - name: migrations
   description: Files from migrations/
+  keywords:
+  - migrations
+  - migrations
+- name: bin
+  description: Files from bin/
+  keywords:
+  - bin
+  - bin
+- name: configuration
+  description: Files from config/
+  keywords:
+  - configuration
+  - config
+- name: resources
+  description: Files from resources/
+  keywords:
+  - resources
+  - resources
 - name: internal
   description: Files from internal/
+  keywords:
+  - internal
+  - internal
+- name: documentation
+  description: Files from docs/
+  keywords:
+  - documentation
+  - docs
+- name: version
+  description: Files from version/
+  keywords:
+  - version
+  - version
+- name: log
+  description: Files from log/
+  keywords:
+  - log
+  - log
+- name: tmp
+  description: Files from tmp/
+  keywords:
+  - tmp
+  - tmp
 - name: general
   description: Files that don't fit other rooms
+  keywords: []

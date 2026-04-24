@@ -1,0 +1,3 @@
+ALTER TABLE venues
+    ADD COLUMN IF NOT EXISTS slug         TEXT,
+    ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT false;

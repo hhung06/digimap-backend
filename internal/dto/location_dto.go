@@ -117,12 +117,12 @@ type LocationResponse struct {
 	CommonShortName    string                     `json:"common_short_name,omitempty"`
 	CommonDescription  string                     `json:"common_description,omitempty"`
 	CommonColor        string                     `json:"common_color,omitempty"`
-	CommonLocationType int                        `json:"common_location_type"`
-	CommonSubType      int                        `json:"common_sub_type"`
-	CommonLatitude     float64                    `json:"common_latitude"`
-	CommonLongitude    float64                    `json:"common_longitude"`
-	CommonAddress      string                     `json:"common_address,omitempty"`
-	CommonLogo         string                     `json:"common_logo,omitempty"`
+	CommonLocationType    int                        `json:"common_location_type"`
+	CommonLocationSubType int                        `json:"common_location_sub_type"`
+	CommonLatitude        float64                    `json:"common_latitude"`
+	CommonLongitude       float64                    `json:"common_longitude"`
+	CommonAddress         string                     `json:"common_address,omitempty"`
+	CommonLogo            string                     `json:"common_logo,omitempty"`
 	CommonLargeLogo    string                     `json:"common_large_logo,omitempty"`
 	CommonMediumLogo   string                     `json:"common_medium_logo,omitempty"`
 	CommonSmallLogo    string                     `json:"common_small_logo,omitempty"`
@@ -162,20 +162,20 @@ type CreateLocationRequest struct {
 	CommonShortName    string          `json:"common_short_name"`
 	CommonDescription  string          `json:"common_description"`
 	CommonColor        string          `json:"common_color"`
-	CommonLocationType int             `json:"common_location_type"`
-	CommonSubType      int             `json:"common_sub_type"`
-	CommonLatitude     float64         `json:"common_latitude"`
-	CommonLongitude    float64         `json:"common_longitude"`
-	CommonAddress      string          `json:"common_address"`
-	CommonContactEmail string          `json:"common_contact_email"`
-	CommonContactPhone string          `json:"common_contact_phone"`
-	PlaceWorkHours     json.RawMessage `json:"place_work_hours" swaggertype:"object"`
-	Custom             json.RawMessage `json:"custom" swaggertype:"object"`
-	Localization       json.RawMessage `json:"localization" swaggertype:"object"`
-	Source             string          `json:"source"`
-	StartTime          *time.Time      `json:"start_time"`
-	EndTime            *time.Time      `json:"end_time"`
-	IsSearchable       bool            `json:"is_searchable"`
+	CommonLocationType    int             `json:"common_location_type"`
+	CommonLocationSubType int             `json:"common_location_sub_type"`
+	CommonLatitude        float64         `json:"common_latitude"`
+	CommonLongitude       float64         `json:"common_longitude"`
+	CommonAddress         string          `json:"common_address"`
+	CommonContactEmail    string          `json:"common_contact_email"`
+	CommonContactPhone    string          `json:"common_contact_phone"`
+	PlaceWorkHours        json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Custom                json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization          json.RawMessage `json:"localization" swaggertype:"object"`
+	Source                string          `json:"source"`
+	StartTime             *time.Time      `json:"start_time"`
+	EndTime               *time.Time      `json:"end_time"`
+	IsSearchable          bool            `json:"is_searchable"`
 }
 
 type UpdateLocationRequest struct {
@@ -188,12 +188,12 @@ type UpdateLocationRequest struct {
 	CommonShortName    string          `json:"common_short_name"`
 	CommonDescription  string          `json:"common_description"`
 	CommonColor        string          `json:"common_color"`
-	CommonLocationType int             `json:"common_location_type"`
-	CommonSubType      int             `json:"common_sub_type"`
-	CommonLatitude     float64         `json:"common_latitude"`
-	CommonLongitude    float64         `json:"common_longitude"`
-	CommonAddress      string          `json:"common_address"`
-	CommonLogo         string          `json:"common_logo"`
+	CommonLocationType    int             `json:"common_location_type"`
+	CommonLocationSubType int             `json:"common_location_sub_type"`
+	CommonLatitude        float64         `json:"common_latitude"`
+	CommonLongitude       float64         `json:"common_longitude"`
+	CommonAddress         string          `json:"common_address"`
+	CommonLogo            string          `json:"common_logo"`
 	CommonContactEmail string          `json:"common_contact_email"`
 	CommonContactPhone string          `json:"common_contact_phone"`
 	PlaceWorkHours     json.RawMessage `json:"place_work_hours" swaggertype:"object"`
@@ -260,7 +260,7 @@ func LocationToResponse(l *domain.Location) LocationResponse {
 		CommonHidden: l.CommonHidden, CommonName: l.CommonName,
 		CommonShortName: l.CommonShortName, CommonDescription: l.CommonDescription,
 		CommonColor: l.CommonColor, CommonLocationType: l.CommonLocationType,
-		CommonSubType: l.CommonSubType, CommonLatitude: l.CommonLatitude,
+		CommonLocationSubType: l.CommonLocationSubType, CommonLatitude: l.CommonLatitude,
 		CommonLongitude: l.CommonLongitude, CommonAddress: l.CommonAddress,
 		CommonLogo: l.CommonLogo, CommonLargeLogo: l.CommonLargeLogo,
 		CommonMediumLogo: l.CommonMediumLogo, CommonSmallLogo: l.CommonSmallLogo,

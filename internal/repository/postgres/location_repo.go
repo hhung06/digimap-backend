@@ -25,7 +25,7 @@ func NewLocationRepository(pool *pgxpool.Pool) repository.LocationRepository {
 const locationSelectCols = `
 	id, venue_id, level_id, main_category_id, external_id,
 	common_hidden, common_name, common_short_name, common_description, common_color,
-	common_location_type, common_sub_type, common_latitude, common_longitude, common_address,
+	common_location_type, common_location_sub_type, common_latitude, common_longitude, common_address,
 	common_location_state, common_location_state_start_date, common_location_state_end_date,
 	common_logo, common_large_logo, common_medium_logo, common_small_logo,
 	common_social_website, common_social_twitter, common_social_tiktok,
@@ -101,7 +101,7 @@ func (r *locationRepo) Create(ctx context.Context, l *domain.Location) error {
 		INSERT INTO locations (
 			id, venue_id, level_id, main_category_id, external_id,
 			common_hidden, common_name, common_short_name, common_description, common_color,
-			common_location_type, common_sub_type, common_latitude, common_longitude, common_address,
+			common_location_type, common_location_sub_type, common_latitude, common_longitude, common_address,
 			common_location_state, common_location_state_start_date, common_location_state_end_date,
 			common_logo, common_social_website, common_social_twitter, common_social_tiktok,
 			common_social_facebook, common_social_instagram,
@@ -113,15 +113,15 @@ func (r *locationRepo) Create(ctx context.Context, l *domain.Location) error {
 			is_top_location, top_location_sort_index, icon_default,
 			custom, localization, source, start_time, end_time, is_searchable
 		) VALUES (
-			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-			$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,
+			$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
 			$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50
 		) RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
 		l.ID, uuidOrNil(l.VenueID), l.LevelID, l.MainCategoryID, nullStr(l.ExternalID),
 		l.CommonHidden, l.CommonName, nullStr(l.CommonShortName), nullStr(l.CommonDescription),
-		nullStr(l.CommonColor), l.CommonLocationType, l.CommonSubType,
+		nullStr(l.CommonColor), l.CommonLocationType, l.CommonLocationSubType,
 		l.CommonLatitude, l.CommonLongitude, nullStr(l.CommonAddress),
 		l.CommonLocationState, l.CommonLocationStateStartDate, l.CommonLocationStateEndDate,
 		nullStr(l.CommonLogo),
@@ -146,7 +146,7 @@ func (r *locationRepo) Update(ctx context.Context, l *domain.Location) error {
 		UPDATE locations SET
 			level_id=$2, main_category_id=$3, external_id=$4,
 			common_hidden=$5, common_name=$6, common_short_name=$7, common_description=$8,
-			common_color=$9, common_location_type=$10, common_sub_type=$11,
+			common_color=$9, common_location_type=$10, common_location_sub_type=$11,
 			common_latitude=$12, common_longitude=$13, common_address=$14,
 			common_location_state=$15, common_location_state_start_date=$16,
 			common_location_state_end_date=$17,
@@ -166,7 +166,7 @@ func (r *locationRepo) Update(ctx context.Context, l *domain.Location) error {
 	err := r.pool.QueryRow(ctx, q,
 		l.ID, l.LevelID, l.MainCategoryID, nullStr(l.ExternalID),
 		l.CommonHidden, l.CommonName, nullStr(l.CommonShortName), nullStr(l.CommonDescription),
-		nullStr(l.CommonColor), l.CommonLocationType, l.CommonSubType,
+		nullStr(l.CommonColor), l.CommonLocationType, l.CommonLocationSubType,
 		l.CommonLatitude, l.CommonLongitude, nullStr(l.CommonAddress),
 		l.CommonLocationState, l.CommonLocationStateStartDate, l.CommonLocationStateEndDate,
 		nullStr(l.CommonLogo),
@@ -306,14 +306,15 @@ func scanLocation(row pgx.Row) (*domain.Location, error) {
 		topLogo, topLogoType, boothNum, boothSize, boothSvcs, boothProds *string
 		personName, personTitle, roomNum, roomDept, roomEquip            *string
 		iconDefault, source                                              *string
+		lat, lng                                                         *float64
 		workHours, custom, localization                                  []byte
 		deletedAt                                                        *time.Time
 	)
 	err := row.Scan(
 		&l.ID, &l.VenueID, &l.LevelID, &l.MainCategoryID, &extID,
 		&l.CommonHidden, &l.CommonName, &shortName, &desc, &color,
-		&l.CommonLocationType, &l.CommonSubType,
-		&l.CommonLatitude, &l.CommonLongitude, &addr,
+		&l.CommonLocationType, &l.CommonLocationSubType,
+		&lat, &lng, &addr,
 		&l.CommonLocationState, &l.CommonLocationStateStartDate, &l.CommonLocationStateEndDate,
 		&logo, &largeLogo, &medLogo, &smallLogo,
 		&socWeb, &socTw, &socTk, &socFb, &socIg,
@@ -328,6 +329,12 @@ func scanLocation(row pgx.Row) (*domain.Location, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+	if lat != nil {
+		l.CommonLatitude = *lat
+	}
+	if lng != nil {
+		l.CommonLongitude = *lng
 	}
 	derefStr(&l.ExternalID, extID)
 	derefStr(&l.CommonShortName, shortName)

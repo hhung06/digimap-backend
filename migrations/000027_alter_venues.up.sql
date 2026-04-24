@@ -1,0 +1,3 @@
+ALTER TABLE venues
+    DROP COLUMN IF EXISTS slug,
+    DROP COLUMN IF EXISTS is_published;

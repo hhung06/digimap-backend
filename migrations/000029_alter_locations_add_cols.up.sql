@@ -1,0 +1,3 @@
+ALTER TABLE locations
+    ADD COLUMN IF NOT EXISTS common_location_sub_type SMALLINT  NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS common_show_short_name   BOOLEAN   NOT NULL DEFAULT FALSE;

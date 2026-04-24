@@ -44,7 +44,7 @@ type Location struct {
 	CommonDescription            string
 	CommonColor                  string
 	CommonLocationType           int
-	CommonSubType                int
+	CommonLocationSubType        int
 	CommonLatitude               float64
 	CommonLongitude              float64
 	CommonAddress                string
