@@ -13,14 +13,14 @@ import (
 type EventTagResponse struct {
 	ID           uuid.UUID       `json:"id"`
 	Name         string          `json:"name"`
-	Localization json.RawMessage `json:"localization,omitempty"`
+	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 type EventTagRequest struct {
 	Name         string          `json:"name" binding:"required"`
-	Localization json.RawMessage `json:"localization"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 func EventTagToResponse(t *domain.EventTag) EventTagResponse {
@@ -36,14 +36,14 @@ type EventTypeResponse struct {
 	ID           uuid.UUID       `json:"id"`
 	VenueID      *uuid.UUID      `json:"venue_id,omitempty"`
 	Name         string          `json:"name"`
-	Localization json.RawMessage `json:"localization,omitempty"`
+	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 type EventTypeRequest struct {
 	Name         string          `json:"name" binding:"required"`
-	Localization json.RawMessage `json:"localization"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 func EventTypeToResponse(t *domain.EventType) EventTypeResponse {
@@ -82,7 +82,7 @@ type EventResponse struct {
 	ShowEndTime   *time.Time          `json:"show_end_time,omitempty"`
 	ContentDetail string              `json:"content_detail,omitempty"`
 	ContentURL    string              `json:"content_url,omitempty"`
-	Localization  json.RawMessage     `json:"localization,omitempty"`
+	Localization  json.RawMessage     `json:"localization,omitempty" swaggertype:"object"`
 	Tags          []EventTagResponse  `json:"tags,omitempty"`
 	Locations     []uuid.UUID         `json:"locations,omitempty"`
 	Images        []EventImageResponse `json:"images,omitempty"`
@@ -104,7 +104,7 @@ type CreateEventRequest struct {
 	ShowEndTime   *time.Time      `json:"show_end_time"`
 	ContentDetail string          `json:"content_detail"`
 	ContentURL    string          `json:"content_url"`
-	Localization  json.RawMessage `json:"localization"`
+	Localization  json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 type UpdateEventRequest struct {
@@ -121,7 +121,7 @@ type UpdateEventRequest struct {
 	ShowEndTime   *time.Time      `json:"show_end_time"`
 	ContentDetail string          `json:"content_detail"`
 	ContentURL    string          `json:"content_url"`
-	Localization  json.RawMessage `json:"localization"`
+	Localization  json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 func EventToResponse(e *domain.Event) EventResponse {

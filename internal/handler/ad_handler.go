@@ -21,6 +21,18 @@ func newAdHandler(svc service.AdvertisementService, enrichers *enricher.Registry
 	return &adHandler{svc: svc, enrichers: enrichers}
 }
 
+// @Summary     List advertisements
+// @Description List advertisements for a venue
+// @Tags        ads
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/ads [get]
 func (h *adHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -41,6 +53,18 @@ func (h *adHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
+// @Summary     Get advertisement
+// @Description Get an advertisement by ID
+// @Tags        ads
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string true "Venue ID"
+// @Param       adID path     string true "Advertisement ID"
+// @Success     200  {object} dto.Response{data=dto.AdvertisementResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     404  {object} dto.Response
+// @Router      /venues/{id}/ads/{adID} [get]
 func (h *adHandler) Get(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -61,6 +85,19 @@ func (h *adHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.AdvertisementToResponse(a), extras)))
 }
 
+// @Summary     Create advertisement
+// @Description Create a new advertisement (requires editor role)
+// @Tags        ads
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                      true "Venue ID"
+// @Param       body body     dto.AdvertisementRequest    true "Advertisement details"
+// @Success     201  {object} dto.Response{data=dto.AdvertisementResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/ads [post]
 func (h *adHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -89,6 +126,20 @@ func (h *adHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.AdvertisementToResponse(a)))
 }
 
+// @Summary     Update advertisement
+// @Description Update an advertisement (requires editor role)
+// @Tags        ads
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                     true "Venue ID"
+// @Param       adID path     string                     true "Advertisement ID"
+// @Param       body body     dto.AdvertisementRequest   true "Advertisement details"
+// @Success     200  {object} dto.Response{data=dto.AdvertisementResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/ads/{adID} [put]
 func (h *adHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("adID"))
 	if err != nil {
@@ -117,6 +168,18 @@ func (h *adHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.AdvertisementToResponse(a)))
 }
 
+// @Summary     Delete advertisement
+// @Description Delete an advertisement (requires editor role)
+// @Tags        ads
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path string true "Venue ID"
+// @Param       adID path string true "Advertisement ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/ads/{adID} [delete]
 func (h *adHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("adID"))
 	if err != nil {
@@ -130,6 +193,18 @@ func (h *adHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+// @Summary     Publish advertisement
+// @Description Publish a draft advertisement (requires editor role)
+// @Tags        ads
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string true "Venue ID"
+// @Param       adID path     string true "Advertisement ID"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/ads/{adID}/publish [post]
 func (h *adHandler) Publish(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("adID"))
 	if err != nil {

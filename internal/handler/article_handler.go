@@ -19,6 +19,18 @@ func newArticleHandler(svc service.ArticleService) *articleHandler {
 	return &articleHandler{svc: svc}
 }
 
+// @Summary     List articles
+// @Description List articles for a venue
+// @Tags        articles
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/articles [get]
 func (h *articleHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -38,6 +50,18 @@ func (h *articleHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
+// @Summary     Get article
+// @Description Get an article by ID
+// @Tags        articles
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true "Venue ID"
+// @Param       articleID path     string true "Article ID"
+// @Success     200       {object} dto.Response{data=dto.ArticleResponse}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     404       {object} dto.Response
+// @Router      /venues/{id}/articles/{articleID} [get]
 func (h *articleHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("articleID"))
 	if err != nil {
@@ -52,6 +76,19 @@ func (h *articleHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.ArticleToResponse(a)))
 }
 
+// @Summary     Create article
+// @Description Create a new article (requires editor role)
+// @Tags        articles
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string               true "Venue ID"
+// @Param       body body     dto.ArticleRequest   true "Article details"
+// @Success     201  {object} dto.Response{data=dto.ArticleResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/articles [post]
 func (h *articleHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -80,6 +117,20 @@ func (h *articleHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.ArticleToResponse(a)))
 }
 
+// @Summary     Update article
+// @Description Update an article (requires editor role)
+// @Tags        articles
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string               true "Venue ID"
+// @Param       articleID path     string               true "Article ID"
+// @Param       body      body     dto.ArticleRequest   true "Article details"
+// @Success     200       {object} dto.Response{data=dto.ArticleResponse}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     403       {object} dto.Response
+// @Router      /venues/{id}/articles/{articleID} [put]
 func (h *articleHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("articleID"))
 	if err != nil {
@@ -108,6 +159,18 @@ func (h *articleHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.ArticleToResponse(a)))
 }
 
+// @Summary     Delete article
+// @Description Delete an article (requires editor role)
+// @Tags        articles
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path string true "Venue ID"
+// @Param       articleID path string true "Article ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/articles/{articleID} [delete]
 func (h *articleHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("articleID"))
 	if err != nil {
@@ -121,6 +184,20 @@ func (h *articleHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+// @Summary     Add article image
+// @Description Add an image to an article (requires editor role)
+// @Tags        articles
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string                    true "Venue ID"
+// @Param       articleID path     string                    true "Article ID"
+// @Param       body      body     dto.ArticleImageRequest   true "Image details"
+// @Success     201       {object} dto.Response{data=dto.ArticleImageResponse}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     403       {object} dto.Response
+// @Router      /venues/{id}/articles/{articleID}/images [post]
 func (h *articleHandler) CreateImage(c *gin.Context) {
 	articleID, err := uuid.Parse(c.Param("articleID"))
 	if err != nil {
@@ -142,6 +219,19 @@ func (h *articleHandler) CreateImage(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.ArticleImageToResponse(img)))
 }
 
+// @Summary     Delete article image
+// @Description Delete an image from an article (requires editor role)
+// @Tags        articles
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path string true "Venue ID"
+// @Param       articleID path string true "Article ID"
+// @Param       imageID   path string true "Image ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/articles/{articleID}/images/{imageID} [delete]
 func (h *articleHandler) DeleteImage(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("imageID"))
 	if err != nil {

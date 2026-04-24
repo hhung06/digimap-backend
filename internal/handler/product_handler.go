@@ -24,6 +24,16 @@ func newProductHandler(svc service.ProductService, storageSvc service.StorageSer
 
 // ── Product categories ────────────────────────────────────────────────────────
 
+// @Summary     List product categories
+// @Description List all product categories for a venue
+// @Tags        products
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=[]dto.ProductCategoryResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Router      /venues/{id}/product-categories [get]
 func (h *productHandler) ListCategories(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -42,6 +52,19 @@ func (h *productHandler) ListCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
+// @Summary     Create product category
+// @Description Create a new product category (requires editor role)
+// @Tags        products
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                      true "Venue ID"
+// @Param       body body     dto.ProductCategoryRequest  true "Category details"
+// @Success     201  {object} dto.Response{data=dto.ProductCategoryResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/product-categories [post]
 func (h *productHandler) CreateCategory(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -64,6 +87,20 @@ func (h *productHandler) CreateCategory(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.ProductCategoryToResponse(cat)))
 }
 
+// @Summary     Update product category
+// @Description Update a product category (requires editor role)
+// @Tags        products
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id    path     string                     true "Venue ID"
+// @Param       catID path     string                     true "Category ID"
+// @Param       body  body     dto.ProductCategoryRequest true "Category details"
+// @Success     200   {object} dto.Response{data=dto.ProductCategoryResponse}
+// @Failure     400   {object} dto.Response
+// @Failure     401   {object} dto.Response
+// @Failure     403   {object} dto.Response
+// @Router      /venues/{id}/product-categories/{catID} [put]
 func (h *productHandler) UpdateCategory(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("catID"))
 	if err != nil {
@@ -86,6 +123,18 @@ func (h *productHandler) UpdateCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.ProductCategoryToResponse(cat)))
 }
 
+// @Summary     Delete product category
+// @Description Delete a product category (requires editor role)
+// @Tags        products
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id    path string true "Venue ID"
+// @Param       catID path string true "Category ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/product-categories/{catID} [delete]
 func (h *productHandler) DeleteCategory(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("catID"))
 	if err != nil {
@@ -101,6 +150,18 @@ func (h *productHandler) DeleteCategory(c *gin.Context) {
 
 // ── Products ──────────────────────────────────────────────────────────────────
 
+// @Summary     List products
+// @Description List products for a venue
+// @Tags        products
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/products [get]
 func (h *productHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -122,6 +183,18 @@ func (h *productHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Get product
+// @Description Get a product by ID
+// @Tags        products
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true "Venue ID"
+// @Param       productID path     string true "Product ID"
+// @Success     200       {object} dto.Response{data=dto.ProductResponse}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     404       {object} dto.Response
+// @Router      /venues/{id}/products/{productID} [get]
 func (h *productHandler) Get(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -143,6 +216,19 @@ func (h *productHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.ProductToResponse(prod), extras)))
 }
 
+// @Summary     Create product
+// @Description Create a new product (requires editor role)
+// @Tags        products
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                    true "Venue ID"
+// @Param       body body     dto.CreateProductRequest  true "Product details"
+// @Success     201  {object} dto.Response{data=dto.ProductResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/products [post]
 func (h *productHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -168,6 +254,21 @@ func (h *productHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.ProductToResponse(prod)))
 }
 
+// @Summary     Update product
+// @Description Update a product (requires editor role)
+// @Tags        products
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string                   true "Venue ID"
+// @Param       productID path     string                   true "Product ID"
+// @Param       body      body     dto.UpdateProductRequest true "Product details"
+// @Success     200       {object} dto.Response{data=dto.ProductResponse}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     403       {object} dto.Response
+// @Failure     404       {object} dto.Response
+// @Router      /venues/{id}/products/{productID} [put]
 func (h *productHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("productID"))
 	if err != nil {
@@ -193,6 +294,18 @@ func (h *productHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.ProductToResponse(prod)))
 }
 
+// @Summary     Delete product
+// @Description Delete a product (requires editor role)
+// @Tags        products
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path string true "Venue ID"
+// @Param       productID path string true "Product ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/products/{productID} [delete]
 func (h *productHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("productID"))
 	if err != nil {
@@ -208,6 +321,20 @@ func (h *productHandler) Delete(c *gin.Context) {
 
 // ── Attachments ───────────────────────────────────────────────────────────────
 
+// @Summary     Add product attachment
+// @Description Add an attachment to a product (requires editor role)
+// @Tags        products
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string                       true "Venue ID"
+// @Param       productID path     string                       true "Product ID"
+// @Param       body      body     dto.ProductAttachmentRequest true "Attachment details"
+// @Success     201       {object} dto.Response{data=dto.ProductAttachmentResponse}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     403       {object} dto.Response
+// @Router      /venues/{id}/products/{productID}/attachments [post]
 func (h *productHandler) CreateAttachment(c *gin.Context) {
 	productID, err := uuid.Parse(c.Param("productID"))
 	if err != nil {
@@ -233,6 +360,19 @@ func (h *productHandler) CreateAttachment(c *gin.Context) {
 	}))
 }
 
+// @Summary     Delete product attachment
+// @Description Delete a product attachment (requires editor role)
+// @Tags        products
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path string true "Venue ID"
+// @Param       productID path string true "Product ID"
+// @Param       attID     path string true "Attachment ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/products/{productID}/attachments/{attID} [delete]
 func (h *productHandler) DeleteAttachment(c *gin.Context) {
 	productID, err := uuid.Parse(c.Param("productID"))
 	if err != nil {
@@ -253,6 +393,17 @@ func (h *productHandler) DeleteAttachment(c *gin.Context) {
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
+// @Summary     Presign upload URL
+// @Description Generate a pre-signed S3 upload URL
+// @Tags        storage
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.PresignUploadRequest true "Upload request"
+// @Success     200  {object} dto.Response{data=dto.PresignUploadResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /storage/presign-upload [post]
 func (h *productHandler) PresignUpload(c *gin.Context) {
 	var req dto.PresignUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

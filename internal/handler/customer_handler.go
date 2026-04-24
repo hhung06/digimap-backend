@@ -19,8 +19,17 @@ func newCustomerHandler(svc service.CustomerService) *customerHandler {
 	return &customerHandler{svc: svc}
 }
 
-// List godoc
-// GET /api/v1/customers
+// @Summary     List customers
+// @Description List all customers (system admin only)
+// @Tags        customers
+// @Produce     json
+// @Security    BearerAuth
+// @Param       page      query    int false "Page number"
+// @Param       page_size query    int false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     401       {object} dto.Response
+// @Failure     403       {object} dto.Response
+// @Router      /customers [get]
 func (h *customerHandler) List(c *gin.Context) {
 	p := paginationFromQuery(c)
 	customers, total, err := h.svc.List(c.Request.Context(), p)
@@ -35,8 +44,18 @@ func (h *customerHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
-// Get godoc
-// GET /api/v1/customers/:id
+// @Summary     Get customer
+// @Description Get a customer by ID (system admin only)
+// @Tags        customers
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Customer ID"
+// @Success     200 {object} dto.Response{data=dto.CustomerResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /customers/{id} [get]
 func (h *customerHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -51,8 +70,18 @@ func (h *customerHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.CustomerToResponse(cust)))
 }
 
-// Create godoc
-// POST /api/v1/customers
+// @Summary     Create customer
+// @Description Create a new customer (system admin only)
+// @Tags        customers
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.CustomerRequest true "Customer details"
+// @Success     201  {object} dto.Response{data=dto.CustomerResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /customers [post]
 func (h *customerHandler) Create(c *gin.Context) {
 	var req dto.CustomerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,8 +104,20 @@ func (h *customerHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.CustomerToResponse(cust)))
 }
 
-// Update godoc
-// PUT /api/v1/customers/:id
+// @Summary     Update customer
+// @Description Update an existing customer (system admin only)
+// @Tags        customers
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string              true "Customer ID"
+// @Param       body body     dto.CustomerRequest true "Customer details"
+// @Success     200  {object} dto.Response{data=dto.CustomerResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Failure     404  {object} dto.Response
+// @Router      /customers/{id} [put]
 func (h *customerHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -105,8 +146,18 @@ func (h *customerHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.CustomerToResponse(cust)))
 }
 
-// Delete godoc
-// DELETE /api/v1/customers/:id
+// @Summary     Delete customer
+// @Description Delete a customer by ID (system admin only)
+// @Tags        customers
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path string true "Customer ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /customers/{id} [delete]
 func (h *customerHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

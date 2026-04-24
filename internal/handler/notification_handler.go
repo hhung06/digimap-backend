@@ -22,6 +22,18 @@ func newNotificationHandler(svc service.NotificationService, enrichers *enricher
 	return &notificationHandler{svc: svc, enrichers: enrichers}
 }
 
+// @Summary     List notifications
+// @Description List notifications for a venue
+// @Tags        notifications
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/notifications [get]
 func (h *notificationHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -42,6 +54,18 @@ func (h *notificationHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Get notification
+// @Description Get a notification by ID
+// @Tags        notifications
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string true "Venue ID"
+// @Param       notifID path     string true "Notification ID"
+// @Success     200     {object} dto.Response{data=dto.NotificationResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     404     {object} dto.Response
+// @Router      /venues/{id}/notifications/{notifID} [get]
 func (h *notificationHandler) Get(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -62,6 +86,19 @@ func (h *notificationHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.NotificationToResponse(n), extras)))
 }
 
+// @Summary     Create notification
+// @Description Create a new notification (requires editor role)
+// @Tags        notifications
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                          true "Venue ID"
+// @Param       body body     dto.CreateNotificationRequest  true "Notification details"
+// @Success     201  {object} dto.Response{data=dto.NotificationResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/notifications [post]
 func (h *notificationHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -102,6 +139,20 @@ func (h *notificationHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.NotificationToResponse(n)))
 }
 
+// @Summary     Update notification
+// @Description Update a notification (requires editor role)
+// @Tags        notifications
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string                          true "Venue ID"
+// @Param       notifID path     string                          true "Notification ID"
+// @Param       body    body     dto.UpdateNotificationRequest  true "Notification details"
+// @Success     200     {object} dto.Response{data=dto.NotificationResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     403     {object} dto.Response
+// @Router      /venues/{id}/notifications/{notifID} [put]
 func (h *notificationHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("notifID"))
 	if err != nil {
@@ -128,6 +179,18 @@ func (h *notificationHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.NotificationToResponse(n)))
 }
 
+// @Summary     Delete notification
+// @Description Delete a notification (requires editor role)
+// @Tags        notifications
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path string true "Venue ID"
+// @Param       notifID path string true "Notification ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/notifications/{notifID} [delete]
 func (h *notificationHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("notifID"))
 	if err != nil {
@@ -141,6 +204,18 @@ func (h *notificationHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+// @Summary     Send notification
+// @Description Send a notification to its recipients (requires editor role)
+// @Tags        notifications
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string true "Venue ID"
+// @Param       notifID path     string true "Notification ID"
+// @Success     200     {object} dto.Response
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     403     {object} dto.Response
+// @Router      /venues/{id}/notifications/{notifID}/send [post]
 func (h *notificationHandler) Send(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("notifID"))
 	if err != nil {

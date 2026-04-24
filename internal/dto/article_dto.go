@@ -23,7 +23,7 @@ type ArticleResponse struct {
 	PublishedAt          *time.Time             `json:"published_at,omitempty"`
 	PublishedPeriodStart *time.Time             `json:"published_period_start,omitempty"`
 	PublishedPeriodEnd   *time.Time             `json:"published_period_end,omitempty"`
-	Localization         json.RawMessage        `json:"localization,omitempty"`
+	Localization         json.RawMessage        `json:"localization,omitempty" swaggertype:"object"`
 	Images               []ArticleImageResponse `json:"images,omitempty"`
 	CreatedAt            time.Time              `json:"created_at"`
 	UpdatedAt            time.Time              `json:"updated_at"`
@@ -50,7 +50,7 @@ type ArticleRequest struct {
 	PublishedAt          *time.Time      `json:"published_at"`
 	PublishedPeriodStart *time.Time      `json:"published_period_start"`
 	PublishedPeriodEnd   *time.Time      `json:"published_period_end"`
-	Localization         json.RawMessage `json:"localization"`
+	Localization         json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 type ArticleImageRequest struct {

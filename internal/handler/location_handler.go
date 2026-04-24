@@ -28,6 +28,16 @@ func newLocationHandler(
 
 // ── Location categories ───────────────────────────────────────────────────────
 
+// @Summary     List location categories
+// @Description List all location categories for a venue
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=[]dto.LocationCategoryResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Router      /venues/{id}/categories [get]
 func (h *locationHandler) ListCategories(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -46,6 +56,18 @@ func (h *locationHandler) ListCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
+// @Summary     Get location category
+// @Description Get a location category by ID
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id    path     string true "Venue ID"
+// @Param       catID path     string true "Category ID"
+// @Success     200   {object} dto.Response{data=dto.LocationCategoryResponse}
+// @Failure     400   {object} dto.Response
+// @Failure     401   {object} dto.Response
+// @Failure     404   {object} dto.Response
+// @Router      /venues/{id}/categories/{catID} [get]
 func (h *locationHandler) GetCategory(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("catID"))
 	if err != nil {
@@ -60,6 +82,19 @@ func (h *locationHandler) GetCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.LocationCategoryToResponse(cat)))
 }
 
+// @Summary     Create location category
+// @Description Create a new location category (requires editor role)
+// @Tags        locations
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                      true "Venue ID"
+// @Param       body body     dto.LocationCategoryRequest true "Category details"
+// @Success     201  {object} dto.Response{data=dto.LocationCategoryResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/categories [post]
 func (h *locationHandler) CreateCategory(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -86,6 +121,21 @@ func (h *locationHandler) CreateCategory(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.LocationCategoryToResponse(cat)))
 }
 
+// @Summary     Update location category
+// @Description Update a location category (requires editor role)
+// @Tags        locations
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id    path     string                      true "Venue ID"
+// @Param       catID path     string                      true "Category ID"
+// @Param       body  body     dto.LocationCategoryRequest true "Category details"
+// @Success     200   {object} dto.Response{data=dto.LocationCategoryResponse}
+// @Failure     400   {object} dto.Response
+// @Failure     401   {object} dto.Response
+// @Failure     403   {object} dto.Response
+// @Failure     404   {object} dto.Response
+// @Router      /venues/{id}/categories/{catID} [put]
 func (h *locationHandler) UpdateCategory(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("catID"))
 	if err != nil {
@@ -112,6 +162,18 @@ func (h *locationHandler) UpdateCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.LocationCategoryToResponse(cat)))
 }
 
+// @Summary     Delete location category
+// @Description Delete a location category (requires editor role)
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id    path string true "Venue ID"
+// @Param       catID path string true "Category ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/categories/{catID} [delete]
 func (h *locationHandler) DeleteCategory(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("catID"))
 	if err != nil {
@@ -127,6 +189,18 @@ func (h *locationHandler) DeleteCategory(c *gin.Context) {
 
 // ── Locations ─────────────────────────────────────────────────────────────────
 
+// @Summary     List locations
+// @Description List locations for a venue
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/locations [get]
 func (h *locationHandler) ListLocations(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -148,6 +222,18 @@ func (h *locationHandler) ListLocations(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Get location
+// @Description Get a location by ID
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string true "Venue ID"
+// @Param       locationID path     string true "Location ID"
+// @Success     200        {object} dto.Response{data=dto.LocationResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     404        {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID} [get]
 func (h *locationHandler) GetLocation(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -169,6 +255,19 @@ func (h *locationHandler) GetLocation(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.LocationToResponse(l), extras)))
 }
 
+// @Summary     Create location
+// @Description Create a new location (requires editor role)
+// @Tags        locations
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                    true "Venue ID"
+// @Param       body body     dto.CreateLocationRequest true "Location details"
+// @Success     201  {object} dto.Response{data=dto.LocationResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/locations [post]
 func (h *locationHandler) CreateLocation(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -188,6 +287,21 @@ func (h *locationHandler) CreateLocation(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.LocationToResponse(l)))
 }
 
+// @Summary     Update location
+// @Description Update a location (requires editor role)
+// @Tags        locations
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string                    true "Venue ID"
+// @Param       locationID path     string                    true "Location ID"
+// @Param       body       body     dto.UpdateLocationRequest true "Location details"
+// @Success     200        {object} dto.Response{data=dto.LocationResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Failure     404        {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID} [put]
 func (h *locationHandler) UpdateLocation(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {
@@ -207,6 +321,18 @@ func (h *locationHandler) UpdateLocation(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.LocationToResponse(l)))
 }
 
+// @Summary     Delete location
+// @Description Delete a location (requires editor role)
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path string true "Venue ID"
+// @Param       locationID path string true "Location ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID} [delete]
 func (h *locationHandler) DeleteLocation(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {
@@ -220,6 +346,18 @@ func (h *locationHandler) DeleteLocation(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+// @Summary     Duplicate location
+// @Description Duplicate a location (requires editor role)
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string true "Venue ID"
+// @Param       locationID path     string true "Location ID"
+// @Success     201        {object} dto.Response{data=dto.LocationResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID}/duplicate [post]
 func (h *locationHandler) DuplicateLocation(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {
@@ -234,6 +372,20 @@ func (h *locationHandler) DuplicateLocation(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.LocationToResponse(clone)))
 }
 
+// @Summary     Set top location
+// @Description Pin or unpin a location as a top result (requires editor role)
+// @Tags        locations
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string                    true "Venue ID"
+// @Param       locationID path     string                    true "Location ID"
+// @Param       body       body     dto.SetTopLocationRequest true "Set top details"
+// @Success     200        {object} dto.Response
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID}/set-top [put]
 func (h *locationHandler) SetTop(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {
@@ -254,6 +406,20 @@ func (h *locationHandler) SetTop(c *gin.Context) {
 
 // ── Location images ───────────────────────────────────────────────────────────
 
+// @Summary     Add location image
+// @Description Add an image to a location (requires editor role)
+// @Tags        locations
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string                    true "Venue ID"
+// @Param       locationID path     string                    true "Location ID"
+// @Param       body       body     dto.LocationImageRequest  true "Image details"
+// @Success     201        {object} dto.Response{data=dto.LocationImageResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID}/images [post]
 func (h *locationHandler) CreateImage(c *gin.Context) {
 	locationID, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {
@@ -280,6 +446,19 @@ func (h *locationHandler) CreateImage(c *gin.Context) {
 	}))
 }
 
+// @Summary     Delete location image
+// @Description Delete an image from a location (requires editor role)
+// @Tags        locations
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path string true "Venue ID"
+// @Param       locationID path string true "Location ID"
+// @Param       imageID    path string true "Image ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/locations/{locationID}/images/{imageID} [delete]
 func (h *locationHandler) DeleteImage(c *gin.Context) {
 	locationID, err := uuid.Parse(c.Param("locationID"))
 	if err != nil {

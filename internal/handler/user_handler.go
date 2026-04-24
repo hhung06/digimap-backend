@@ -22,6 +22,14 @@ func newUserHandler(svc service.UserService) *userHandler {
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 
+// @Summary     Get profile
+// @Description Get the authenticated user's profile
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Success     200 {object} dto.Response{data=dto.UserResponse}
+// @Failure     401 {object} dto.Response
+// @Router      /profile [get]
 func (h *userHandler) GetProfile(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	u, err := h.svc.GetProfile(c.Request.Context(), userID)
@@ -32,6 +40,17 @@ func (h *userHandler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.UserToResponse(u)))
 }
 
+// @Summary     Update profile
+// @Description Update the authenticated user's profile
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.UpdateProfileRequest true "Profile details"
+// @Success     200  {object} dto.Response{data=dto.UserResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /profile [put]
 func (h *userHandler) UpdateProfile(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	var req dto.UpdateProfileRequest
@@ -56,6 +75,16 @@ func (h *userHandler) UpdateProfile(c *gin.Context) {
 
 // ── Venue users ───────────────────────────────────────────────────────────────
 
+// @Summary     List venue users
+// @Description List all users in a venue
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=[]dto.UserResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Router      /venues/{id}/users [get]
 func (h *userHandler) ListVenueUsers(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -74,6 +103,20 @@ func (h *userHandler) ListVenueUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
+// @Summary     Change user role
+// @Description Change a user's role in a venue (requires owner role)
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id     path     string                true "Venue ID"
+// @Param       userID path     string                true "User ID"
+// @Param       body   body     dto.ChangeRoleRequest true "Role details"
+// @Success     200    {object} dto.Response
+// @Failure     400    {object} dto.Response
+// @Failure     401    {object} dto.Response
+// @Failure     403    {object} dto.Response
+// @Router      /venues/{id}/users/{userID}/role [put]
 func (h *userHandler) ChangeRole(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -98,6 +141,18 @@ func (h *userHandler) ChangeRole(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(nil))
 }
 
+// @Summary     Remove user from venue
+// @Description Remove a user from a venue (requires owner role)
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id     path string true "Venue ID"
+// @Param       userID path string true "User ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/users/{userID} [delete]
 func (h *userHandler) RemoveFromVenue(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -118,6 +173,17 @@ func (h *userHandler) RemoveFromVenue(c *gin.Context) {
 
 // ── Invitations ───────────────────────────────────────────────────────────────
 
+// @Summary     List invitations
+// @Description List pending invitations for a venue (requires owner role)
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=[]dto.InvitationResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/invitations [get]
 func (h *userHandler) ListInvitations(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -136,6 +202,19 @@ func (h *userHandler) ListInvitations(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
+// @Summary     Invite user
+// @Description Invite a user to a venue (requires owner role)
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                true "Venue ID"
+// @Param       body body     dto.InviteUserRequest true "Invitation details"
+// @Success     201  {object} dto.Response{data=dto.InvitationResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/users/invite [post]
 func (h *userHandler) InviteUser(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -157,6 +236,17 @@ func (h *userHandler) InviteUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.InvitationToResponse(inv)))
 }
 
+// @Summary     Accept invitation
+// @Description Accept a venue invitation using a token
+// @Tags        users
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.AcceptInvitationRequest true "Invitation token"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /invitations/accept [post]
 func (h *userHandler) AcceptInvitation(c *gin.Context) {
 	var req dto.AcceptInvitationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -171,6 +261,18 @@ func (h *userHandler) AcceptInvitation(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(nil))
 }
 
+// @Summary     Cancel invitation
+// @Description Cancel a pending invitation (requires owner role)
+// @Tags        users
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id           path string true "Venue ID"
+// @Param       invitationID path string true "Invitation ID"
+// @Success     200          {object} dto.Response
+// @Failure     400          {object} dto.Response
+// @Failure     401          {object} dto.Response
+// @Failure     403          {object} dto.Response
+// @Router      /venues/{id}/invitations/{invitationID}/cancel [post]
 func (h *userHandler) CancelInvitation(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("invitationID"))
 	if err != nil {

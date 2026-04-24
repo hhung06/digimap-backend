@@ -24,7 +24,7 @@ type LocationCategoryResponse struct {
 	Description  string          `json:"description,omitempty"`
 	Type         string          `json:"type,omitempty"`
 	Image        string          `json:"image,omitempty"`
-	Localization json.RawMessage `json:"localization,omitempty"`
+	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	Source       string          `json:"source"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
@@ -42,7 +42,7 @@ type LocationCategoryRequest struct {
 	Description  string          `json:"description"`
 	Type         string          `json:"type"`
 	Image        string          `json:"image"`
-	Localization json.RawMessage `json:"localization"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 	Source       string          `json:"source"`
 }
 
@@ -77,8 +77,8 @@ type AmenityResponse struct {
 	CommonSocialInstagram string          `json:"common_social_instagram,omitempty"`
 	CommonContactEmail    string          `json:"common_contact_email,omitempty"`
 	CommonContactPhone    string          `json:"common_contact_phone,omitempty"`
-	PlaceWorkHours        json.RawMessage `json:"place_work_hours,omitempty"`
-	Localization          json.RawMessage `json:"localization,omitempty"`
+	PlaceWorkHours        json.RawMessage `json:"place_work_hours,omitempty" swaggertype:"object"`
+	Localization          json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
 }
@@ -100,8 +100,8 @@ type AmenityRequest struct {
 	CommonSocialInstagram string          `json:"common_social_instagram"`
 	CommonContactEmail    string          `json:"common_contact_email"`
 	CommonContactPhone    string          `json:"common_contact_phone"`
-	PlaceWorkHours        json.RawMessage `json:"place_work_hours"`
-	Localization          json.RawMessage `json:"localization"`
+	PlaceWorkHours        json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Localization          json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 // ── Location ──────────────────────────────────────────────────────────────────
@@ -131,9 +131,9 @@ type LocationResponse struct {
 	IsTopLocation      bool                       `json:"is_top_location"`
 	IsSearchable       bool                       `json:"is_searchable"`
 	Source             string                     `json:"source"`
-	PlaceWorkHours     json.RawMessage            `json:"place_work_hours,omitempty"`
-	Custom             json.RawMessage            `json:"custom,omitempty"`
-	Localization       json.RawMessage            `json:"localization,omitempty"`
+	PlaceWorkHours     json.RawMessage            `json:"place_work_hours,omitempty" swaggertype:"object"`
+	Custom             json.RawMessage            `json:"custom,omitempty" swaggertype:"object"`
+	Localization       json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
 	StartTime          *time.Time                 `json:"start_time,omitempty"`
 	EndTime            *time.Time                 `json:"end_time,omitempty"`
 	Categories         []LocationCategoryResponse `json:"categories,omitempty"`
@@ -169,9 +169,9 @@ type CreateLocationRequest struct {
 	CommonAddress      string          `json:"common_address"`
 	CommonContactEmail string          `json:"common_contact_email"`
 	CommonContactPhone string          `json:"common_contact_phone"`
-	PlaceWorkHours     json.RawMessage `json:"place_work_hours"`
-	Custom             json.RawMessage `json:"custom"`
-	Localization       json.RawMessage `json:"localization"`
+	PlaceWorkHours     json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Custom             json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization       json.RawMessage `json:"localization" swaggertype:"object"`
 	Source             string          `json:"source"`
 	StartTime          *time.Time      `json:"start_time"`
 	EndTime            *time.Time      `json:"end_time"`
@@ -196,9 +196,9 @@ type UpdateLocationRequest struct {
 	CommonLogo         string          `json:"common_logo"`
 	CommonContactEmail string          `json:"common_contact_email"`
 	CommonContactPhone string          `json:"common_contact_phone"`
-	PlaceWorkHours     json.RawMessage `json:"place_work_hours"`
-	Custom             json.RawMessage `json:"custom"`
-	Localization       json.RawMessage `json:"localization"`
+	PlaceWorkHours     json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Custom             json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization       json.RawMessage `json:"localization" swaggertype:"object"`
 	Source             string          `json:"source"`
 	StartTime          *time.Time      `json:"start_time"`
 	EndTime            *time.Time      `json:"end_time"`
@@ -233,7 +233,7 @@ type PromotionResponse struct {
 	DistributionStart *time.Time      `json:"distribution_start,omitempty"`
 	DistributionEnd   *time.Time      `json:"distribution_end,omitempty"`
 	DisplayType       string          `json:"display_type"`
-	Localization      json.RawMessage `json:"localization,omitempty"`
+	Localization      json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
@@ -250,7 +250,7 @@ type PromotionRequest struct {
 	DistributionStart *time.Time      `json:"distribution_start"`
 	DistributionEnd   *time.Time      `json:"distribution_end"`
 	DisplayType       string          `json:"display_type"`
-	Localization      json.RawMessage `json:"localization"`
+	Localization      json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 func LocationToResponse(l *domain.Location) LocationResponse {

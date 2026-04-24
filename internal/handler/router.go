@@ -6,8 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/hhung06/digimap-backend/config"
+	_ "github.com/hhung06/digimap-backend/docs"
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
@@ -64,6 +67,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	// Infrastructure endpoints
 	r.GET("/health", newHealthHandler(deps.DB, deps.RedisClient))
 	r.GET("/version", versionHandler)
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1 := r.Group("/api/v1")
 

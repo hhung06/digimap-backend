@@ -21,7 +21,7 @@ type SnapshotResponse struct {
 }
 
 type CreateSnapshotRequest struct {
-	Bundle json.RawMessage `json:"bundle" binding:"required"`
+	Bundle json.RawMessage `json:"bundle" binding:"required" swaggertype:"object"`
 }
 
 func SnapshotToResponse(s *domain.Snapshot) SnapshotResponse {

@@ -90,7 +90,7 @@ docker-down:
 	docker-compose down
 
 docker-up-app:
-	docker-compose up
+	docker-compose up -d
 
 docker-build:
 	docker build \

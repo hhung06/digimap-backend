@@ -70,13 +70,13 @@ type VenueResponse struct {
 	WorkHours      string          `json:"work_hours,omitempty"`
 	Description    string          `json:"description,omitempty"`
 	IsPublished    bool            `json:"is_published"`
-	Theme          json.RawMessage `json:"theme,omitempty"`
-	Plugins        json.RawMessage `json:"plugins,omitempty"`
-	Translations   json.RawMessage `json:"translations,omitempty"`
-	Localization   json.RawMessage `json:"localization,omitempty"`
-	CustomData     json.RawMessage `json:"custom_data,omitempty"`
-	AppConfigs     json.RawMessage `json:"app_configs,omitempty"`
-	AppDomains     json.RawMessage `json:"app_domains,omitempty"`
+	Theme          json.RawMessage `json:"theme,omitempty" swaggertype:"object"`
+	Plugins        json.RawMessage `json:"plugins,omitempty" swaggertype:"object"`
+	Translations   json.RawMessage `json:"translations,omitempty" swaggertype:"object"`
+	Localization   json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
+	CustomData     json.RawMessage `json:"custom_data,omitempty" swaggertype:"object"`
+	AppConfigs     json.RawMessage `json:"app_configs,omitempty" swaggertype:"object"`
+	AppDomains     json.RawMessage `json:"app_domains,omitempty" swaggertype:"object"`
 	SubDomains     string          `json:"sub_domains,omitempty"`
 	SEOTitle       string          `json:"seo_title,omitempty"`
 	SEODescription string          `json:"seo_description,omitempty"`
@@ -115,13 +115,13 @@ type CreateVenueRequest struct {
 	Telephone      string          `json:"telephone"`
 	WorkHours      string          `json:"work_hours"`
 	Description    string          `json:"description"`
-	Theme          json.RawMessage `json:"theme"`
-	Plugins        json.RawMessage `json:"plugins"`
-	Translations   json.RawMessage `json:"translations"`
-	Localization   json.RawMessage `json:"localization"`
-	CustomData     json.RawMessage `json:"custom_data"`
-	AppConfigs     json.RawMessage `json:"app_configs"`
-	AppDomains     json.RawMessage `json:"app_domains"`
+	Theme          json.RawMessage `json:"theme" swaggertype:"object"`
+	Plugins        json.RawMessage `json:"plugins" swaggertype:"object"`
+	Translations   json.RawMessage `json:"translations" swaggertype:"object"`
+	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
+	CustomData     json.RawMessage `json:"custom_data" swaggertype:"object"`
+	AppConfigs     json.RawMessage `json:"app_configs" swaggertype:"object"`
+	AppDomains     json.RawMessage `json:"app_domains" swaggertype:"object"`
 	SubDomains     string          `json:"sub_domains"`
 	SEOTitle       string          `json:"seo_title"`
 	SEODescription string          `json:"seo_description"`
@@ -149,13 +149,13 @@ type UpdateVenueRequest struct {
 	WorkHours      string          `json:"work_hours"`
 	Description    string          `json:"description"`
 	IsPublished    bool            `json:"is_published"`
-	Theme          json.RawMessage `json:"theme"`
-	Plugins        json.RawMessage `json:"plugins"`
-	Translations   json.RawMessage `json:"translations"`
-	Localization   json.RawMessage `json:"localization"`
-	CustomData     json.RawMessage `json:"custom_data"`
-	AppConfigs     json.RawMessage `json:"app_configs"`
-	AppDomains     json.RawMessage `json:"app_domains"`
+	Theme          json.RawMessage `json:"theme" swaggertype:"object"`
+	Plugins        json.RawMessage `json:"plugins" swaggertype:"object"`
+	Translations   json.RawMessage `json:"translations" swaggertype:"object"`
+	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
+	CustomData     json.RawMessage `json:"custom_data" swaggertype:"object"`
+	AppConfigs     json.RawMessage `json:"app_configs" swaggertype:"object"`
+	AppDomains     json.RawMessage `json:"app_domains" swaggertype:"object"`
 	SubDomains     string          `json:"sub_domains"`
 	SEOTitle       string          `json:"seo_title"`
 	SEODescription string          `json:"seo_description"`

@@ -14,7 +14,7 @@ type ProductCategoryResponse struct {
 	ExternalID   string          `json:"external_id,omitempty"`
 	Name         string          `json:"name"`
 	Source       string          `json:"source"`
-	Localization json.RawMessage `json:"localization,omitempty"`
+	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }
@@ -23,7 +23,7 @@ type ProductCategoryRequest struct {
 	ExternalID   string          `json:"external_id"`
 	Name         string          `json:"name" binding:"required"`
 	Source       string          `json:"source"`
-	Localization json.RawMessage `json:"localization"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 type ProductAttachmentResponse struct {
@@ -55,8 +55,8 @@ type ProductResponse struct {
 	OriginCountry  string                      `json:"origin_country,omitempty"`
 	Expiration     string                      `json:"expiration,omitempty"`
 	Description    string                      `json:"description,omitempty"`
-	Custom         json.RawMessage             `json:"custom,omitempty"`
-	Localization   json.RawMessage             `json:"localization,omitempty"`
+	Custom         json.RawMessage             `json:"custom,omitempty" swaggertype:"object"`
+	Localization   json.RawMessage             `json:"localization,omitempty" swaggertype:"object"`
 	Source         string                      `json:"source"`
 	Categories     []ProductCategoryResponse   `json:"categories,omitempty"`
 	Attachments    []ProductAttachmentResponse `json:"attachments,omitempty"`
@@ -76,8 +76,8 @@ type CreateProductRequest struct {
 	OriginCountry  string          `json:"origin_country"`
 	Expiration     string          `json:"expiration"`
 	Description    string          `json:"description"`
-	Custom         json.RawMessage `json:"custom"`
-	Localization   json.RawMessage `json:"localization"`
+	Custom         json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
 	Source         string          `json:"source"`
 }
 
@@ -93,8 +93,8 @@ type UpdateProductRequest struct {
 	OriginCountry  string          `json:"origin_country"`
 	Expiration     string          `json:"expiration"`
 	Description    string          `json:"description"`
-	Custom         json.RawMessage `json:"custom"`
-	Localization   json.RawMessage `json:"localization"`
+	Custom         json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
 	Source         string          `json:"source"`
 }
 

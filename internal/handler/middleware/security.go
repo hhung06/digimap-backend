@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hhung06/digimap-backend/config"
 )
@@ -24,8 +26,12 @@ func SecurityHeaders(cfg config.AppConfig) gin.HandlerFunc {
 		// Restrict which browser features this page can use
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
-		// Content Security Policy — restrictive default; adjust per-app
-		c.Header("Content-Security-Policy", "default-src 'self'; object-src 'none'; base-uri 'self'")
+		// Swagger UI requires inline styles, data URIs, and blob workers — relax CSP for its path only
+		if strings.HasPrefix(c.Request.URL.Path, "/swagger/") {
+			c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; worker-src blob:")
+		} else {
+			c.Header("Content-Security-Policy", "default-src 'self'; object-src 'none'; base-uri 'self'")
+		}
 
 		// HSTS: only send over HTTPS, only in production
 		if cfg.IsProduction() {

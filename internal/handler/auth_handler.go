@@ -24,7 +24,16 @@ func newAuthHandler(authSvc service.AuthService, cfg authConfig) *authHandler {
 	return &authHandler{auth: authSvc, cfg: cfg}
 }
 
-// POST /api/v1/auth/login
+// @Summary     Login
+// @Description Authenticate with email and password, returns JWT tokens
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     dto.LoginRequest true "Login credentials"
+// @Success     200  {object} dto.Response{data=dto.LoginResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /auth/login [post]
 func (h *authHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,7 +57,16 @@ func (h *authHandler) Login(c *gin.Context) {
 	}))
 }
 
-// POST /api/v1/auth/register
+// @Summary     Register
+// @Description Register a new user account
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     dto.RegisterRequest true "Registration details"
+// @Success     201  {object} dto.Response{data=dto.UserResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     409  {object} dto.Response
+// @Router      /auth/register [post]
 func (h *authHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -70,7 +88,16 @@ func (h *authHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(toUserResponse(user)))
 }
 
-// POST /api/v1/auth/refresh
+// @Summary     Refresh token
+// @Description Exchange a refresh token for a new token pair
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     dto.RefreshTokenRequest true "Refresh token"
+// @Success     200  {object} dto.Response{data=dto.TokenResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /auth/refresh [post]
 func (h *authHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -91,7 +118,17 @@ func (h *authHandler) RefreshToken(c *gin.Context) {
 	}))
 }
 
-// POST /api/v1/auth/logout  [protected]
+// @Summary     Logout
+// @Description Invalidate the current refresh token
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.LogoutRequest true "Refresh token to invalidate"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /auth/logout [post]
 func (h *authHandler) Logout(c *gin.Context) {
 	var req dto.LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -107,7 +144,15 @@ func (h *authHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "logged out"}))
 }
 
-// POST /api/v1/auth/password-reset
+// @Summary     Request password reset
+// @Description Send a password reset email
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     dto.PasswordResetRequest true "Email address"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Router      /auth/password-reset [post]
 func (h *authHandler) RequestPasswordReset(c *gin.Context) {
 	var req dto.PasswordResetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -120,7 +165,15 @@ func (h *authHandler) RequestPasswordReset(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "if the email exists a reset link has been sent"}))
 }
 
-// POST /api/v1/auth/password-reset/confirm
+// @Summary     Confirm password reset
+// @Description Reset password using token from email
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Param       body body     dto.PasswordResetConfirmRequest true "Token and new password"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Router      /auth/password-reset/confirm [post]
 func (h *authHandler) ConfirmPasswordReset(c *gin.Context) {
 	var req dto.PasswordResetConfirmRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -136,7 +189,17 @@ func (h *authHandler) ConfirmPasswordReset(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "password updated"}))
 }
 
-// PUT /api/v1/auth/password-change  [protected]
+// @Summary     Change password
+// @Description Change password for the authenticated user
+// @Tags        auth
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.ChangePasswordRequest true "Old and new password"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /auth/password-change [put]
 func (h *authHandler) ChangePassword(c *gin.Context) {
 	var req dto.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

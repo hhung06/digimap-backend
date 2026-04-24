@@ -20,8 +20,18 @@ func newVenueHandler(svc service.VenueService) *venueHandler {
 	return &venueHandler{svc: svc}
 }
 
-// List godoc
-// GET /api/v1/venues
+// @Summary     List venues
+// @Description List venues; system admins see all, others must supply customer_id
+// @Tags        venues
+// @Produce     json
+// @Security    BearerAuth
+// @Param       customer_id query    string false "Customer ID (required for non-admins)"
+// @Param       page        query    int    false "Page number"
+// @Param       page_size   query    int    false "Page size"
+// @Success     200         {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400         {object} dto.Response
+// @Failure     401         {object} dto.Response
+// @Router      /venues [get]
 func (h *venueHandler) List(c *gin.Context) {
 	p := paginationFromQuery(c)
 
@@ -56,8 +66,17 @@ func (h *venueHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(venuesToResponse(venues), total, p.Page, p.PageSize))
 }
 
-// Get godoc
-// GET /api/v1/venues/:id
+// @Summary     Get venue
+// @Description Get a venue by ID
+// @Tags        venues
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=dto.VenueResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id} [get]
 func (h *venueHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -72,8 +91,17 @@ func (h *venueHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.VenueToResponse(v)))
 }
 
-// Create godoc
-// POST /api/v1/venues
+// @Summary     Create venue
+// @Description Create a new venue
+// @Tags        venues
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       body body     dto.CreateVenueRequest true "Venue details"
+// @Success     201  {object} dto.Response{data=dto.VenueResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Router      /venues [post]
 func (h *venueHandler) Create(c *gin.Context) {
 	var req dto.CreateVenueRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -88,8 +116,20 @@ func (h *venueHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.VenueToResponse(v)))
 }
 
-// Update godoc
-// PUT /api/v1/venues/:id
+// @Summary     Update venue
+// @Description Update an existing venue (requires editor role)
+// @Tags        venues
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                true "Venue ID"
+// @Param       body body     dto.UpdateVenueRequest true "Venue details"
+// @Success     200  {object} dto.Response{data=dto.VenueResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Failure     404  {object} dto.Response
+// @Router      /venues/{id} [put]
 func (h *venueHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -109,8 +149,18 @@ func (h *venueHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.VenueToResponse(v)))
 }
 
-// Delete godoc
-// DELETE /api/v1/venues/:id
+// @Summary     Delete venue
+// @Description Delete a venue (requires owner role)
+// @Tags        venues
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path string true "Venue ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id} [delete]
 func (h *venueHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -124,8 +174,19 @@ func (h *venueHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-// Publish godoc
-// POST /api/v1/venues/:id/publish
+// @Summary     Publish venue
+// @Description Publish or unpublish a venue (requires owner role)
+// @Tags        venues
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string true "Venue ID"
+// @Param       body body     object true "Published flag"
+// @Success     200  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/publish [post]
 func (h *venueHandler) Publish(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -146,8 +207,18 @@ func (h *venueHandler) Publish(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(gin.H{"published": body.Published}))
 }
 
-// Clone godoc
-// POST /api/v1/venues/:id/clone
+// @Summary     Clone venue
+// @Description Clone a venue (requires owner role)
+// @Tags        venues
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     201 {object} dto.Response{data=dto.VenueResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id}/clone [post]
 func (h *venueHandler) Clone(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -162,8 +233,18 @@ func (h *venueHandler) Clone(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.VenueToResponse(cloned)))
 }
 
-// GetKey godoc
-// GET /api/v1/venues/:id/key
+// @Summary     Get venue API keys
+// @Description Get public and private API keys for a venue (requires owner role)
+// @Tags        venues
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=dto.VenueKeyResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id}/key [get]
 func (h *venueHandler) GetKey(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -181,8 +262,18 @@ func (h *venueHandler) GetKey(c *gin.Context) {
 	}))
 }
 
-// RegenerateKey godoc
-// PUT /api/v1/venues/:id/key
+// @Summary     Regenerate venue API keys
+// @Description Regenerate API keys for a venue (requires owner role)
+// @Tags        venues
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=dto.VenueKeyResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id}/key [put]
 func (h *venueHandler) RegenerateKey(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

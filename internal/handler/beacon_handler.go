@@ -19,6 +19,18 @@ func newBeaconHandler(svc service.BeaconService) *beaconHandler {
 	return &beaconHandler{svc: svc}
 }
 
+// @Summary     List beacons
+// @Description List beacons for a venue
+// @Tags        beacons
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/beacons [get]
 func (h *beaconHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -38,6 +50,18 @@ func (h *beaconHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Get beacon
+// @Description Get a beacon by ID
+// @Tags        beacons
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string true "Venue ID"
+// @Param       beaconID path     string true "Beacon ID"
+// @Success     200      {object} dto.Response{data=dto.BeaconResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     404      {object} dto.Response
+// @Router      /venues/{id}/beacons/{beaconID} [get]
 func (h *beaconHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("beaconID"))
 	if err != nil {
@@ -52,6 +76,19 @@ func (h *beaconHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.BeaconToResponse(b)))
 }
 
+// @Summary     Create beacon
+// @Description Create a new beacon (requires editor role)
+// @Tags        beacons
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string             true "Venue ID"
+// @Param       body body     dto.BeaconRequest  true "Beacon details"
+// @Success     201  {object} dto.Response{data=dto.BeaconResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/beacons [post]
 func (h *beaconHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -78,6 +115,20 @@ func (h *beaconHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.BeaconToResponse(b)))
 }
 
+// @Summary     Update beacon
+// @Description Update a beacon (requires editor role)
+// @Tags        beacons
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string             true "Venue ID"
+// @Param       beaconID path     string             true "Beacon ID"
+// @Param       body     body     dto.BeaconRequest  true "Beacon details"
+// @Success     200      {object} dto.Response{data=dto.BeaconResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     403      {object} dto.Response
+// @Router      /venues/{id}/beacons/{beaconID} [put]
 func (h *beaconHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("beaconID"))
 	if err != nil {
@@ -104,6 +155,18 @@ func (h *beaconHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.BeaconToResponse(b)))
 }
 
+// @Summary     Delete beacon
+// @Description Delete a beacon (requires editor role)
+// @Tags        beacons
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path string true "Venue ID"
+// @Param       beaconID path string true "Beacon ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/beacons/{beaconID} [delete]
 func (h *beaconHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("beaconID"))
 	if err != nil {

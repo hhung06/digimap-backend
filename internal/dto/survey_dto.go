@@ -62,7 +62,7 @@ type SurveyResponse struct {
 	IsForced       bool               `json:"is_forced"`
 	Source         int                `json:"source"`
 	App            string             `json:"app"`
-	SegmentFilters json.RawMessage    `json:"segment_filters,omitempty"`
+	SegmentFilters json.RawMessage    `json:"segment_filters,omitempty" swaggertype:"object"`
 	Questions      []QuestionResponse `json:"questions,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"`
 	UpdatedAt      time.Time          `json:"updated_at"`
@@ -78,7 +78,7 @@ type CreateSurveyRequest struct {
 	PublishType    int             `json:"publish_type"`
 	IsForced       bool            `json:"is_forced"`
 	App            string          `json:"app"`
-	SegmentFilters json.RawMessage `json:"segment_filters"`
+	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
 }
 
 type UpdateSurveyRequest struct {
@@ -91,7 +91,7 @@ type UpdateSurveyRequest struct {
 	PublishType    int             `json:"publish_type"`
 	IsForced       bool            `json:"is_forced"`
 	App            string          `json:"app"`
-	SegmentFilters json.RawMessage `json:"segment_filters"`
+	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
 }
 
 // ── Survey responses ──────────────────────────────────────────────────────────

@@ -19,6 +19,19 @@ func newSnapshotHandler(svc service.SnapshotService) *snapshotHandler {
 	return &snapshotHandler{svc: svc}
 }
 
+// @Summary     List snapshots
+// @Description List snapshots for a venue (system admin only)
+// @Tags        snapshots
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     403       {object} dto.Response
+// @Router      /venues/{id}/snapshots [get]
 func (h *snapshotHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -38,6 +51,19 @@ func (h *snapshotHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Get snapshot
+// @Description Get a snapshot by ID (system admin only)
+// @Tags        snapshots
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string true "Venue ID"
+// @Param       snapshotID path     string true "Snapshot ID"
+// @Success     200        {object} dto.Response{data=dto.SnapshotResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Failure     404        {object} dto.Response
+// @Router      /venues/{id}/snapshots/{snapshotID} [get]
 func (h *snapshotHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("snapshotID"))
 	if err != nil {
@@ -52,6 +78,18 @@ func (h *snapshotHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.SnapshotToResponse(s)))
 }
 
+// @Summary     Get latest published snapshot
+// @Description Get the most recent published snapshot for a venue (system admin only)
+// @Tags        snapshots
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=dto.SnapshotResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id}/snapshots/recent [get]
 func (h *snapshotHandler) LatestPublished(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -66,6 +104,19 @@ func (h *snapshotHandler) LatestPublished(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.SnapshotToResponse(s)))
 }
 
+// @Summary     Create snapshot draft
+// @Description Create a new snapshot draft for a venue (system admin only)
+// @Tags        snapshots
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                     true "Venue ID"
+// @Param       body body     dto.CreateSnapshotRequest  true "Snapshot details"
+// @Success     201  {object} dto.Response{data=dto.SnapshotResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/snapshots [post]
 func (h *snapshotHandler) CreateDraft(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -86,6 +137,18 @@ func (h *snapshotHandler) CreateDraft(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.SnapshotToResponse(s)))
 }
 
+// @Summary     Delete snapshot
+// @Description Delete a snapshot (system admin only)
+// @Tags        snapshots
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path string true "Venue ID"
+// @Param       snapshotID path string true "Snapshot ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/snapshots/{snapshotID} [delete]
 func (h *snapshotHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("snapshotID"))
 	if err != nil {

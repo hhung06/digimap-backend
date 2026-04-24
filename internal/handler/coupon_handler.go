@@ -19,6 +19,18 @@ func newCouponHandler(svc service.CouponService) *couponHandler {
 	return &couponHandler{svc: svc}
 }
 
+// @Summary     List coupons
+// @Description List coupons for a venue
+// @Tags        coupons
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/coupons [get]
 func (h *couponHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -38,6 +50,18 @@ func (h *couponHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
+// @Summary     Get coupon
+// @Description Get a coupon by ID
+// @Tags        coupons
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string true "Venue ID"
+// @Param       couponID path     string true "Coupon ID"
+// @Success     200      {object} dto.Response{data=dto.CouponResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     404      {object} dto.Response
+// @Router      /venues/{id}/coupons/{couponID} [get]
 func (h *couponHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("couponID"))
 	if err != nil {
@@ -52,6 +76,19 @@ func (h *couponHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.CouponToResponse(cp)))
 }
 
+// @Summary     Create coupon
+// @Description Create a new coupon (requires editor role)
+// @Tags        coupons
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string              true "Venue ID"
+// @Param       body body     dto.CouponRequest   true "Coupon details"
+// @Success     201  {object} dto.Response{data=dto.CouponResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/coupons [post]
 func (h *couponHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -76,6 +113,20 @@ func (h *couponHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.CouponToResponse(cp)))
 }
 
+// @Summary     Update coupon
+// @Description Update a coupon (requires editor role)
+// @Tags        coupons
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string             true "Venue ID"
+// @Param       couponID path     string             true "Coupon ID"
+// @Param       body     body     dto.CouponRequest  true "Coupon details"
+// @Success     200      {object} dto.Response{data=dto.CouponResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     403      {object} dto.Response
+// @Router      /venues/{id}/coupons/{couponID} [put]
 func (h *couponHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("couponID"))
 	if err != nil {
@@ -100,6 +151,18 @@ func (h *couponHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.CouponToResponse(cp)))
 }
 
+// @Summary     Delete coupon
+// @Description Delete a coupon (requires editor role)
+// @Tags        coupons
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path string true "Venue ID"
+// @Param       couponID path string true "Coupon ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/coupons/{couponID} [delete]
 func (h *couponHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("couponID"))
 	if err != nil {

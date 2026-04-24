@@ -18,7 +18,7 @@ type CouponResponse struct {
 	Status       string          `json:"status"`
 	IssuedAt     *time.Time      `json:"issued_at,omitempty"`
 	ExpiredAt    *time.Time      `json:"expired_at,omitempty"`
-	Localization json.RawMessage `json:"localization,omitempty"`
+	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }
@@ -30,7 +30,7 @@ type CouponRequest struct {
 	Status       string          `json:"status"`
 	IssuedAt     *time.Time      `json:"issued_at"`
 	ExpiredAt    *time.Time      `json:"expired_at"`
-	Localization json.RawMessage `json:"localization"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 func CouponToResponse(c *domain.Coupon) CouponResponse {

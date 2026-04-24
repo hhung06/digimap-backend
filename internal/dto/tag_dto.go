@@ -12,14 +12,14 @@ import (
 type TagResponse struct {
 	ID           uuid.UUID       `json:"id"`
 	Name         string          `json:"name"`
-	Localization json.RawMessage `json:"localization,omitempty"`
+	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 type TagRequest struct {
 	Name         string          `json:"name" binding:"required"`
-	Localization json.RawMessage `json:"localization"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
 type AttachTagRequest struct {

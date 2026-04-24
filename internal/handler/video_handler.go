@@ -19,6 +19,18 @@ func newVideoHandler(svc service.VideoService) *videoHandler {
 	return &videoHandler{svc: svc}
 }
 
+// @Summary     List videos
+// @Description List videos for a venue
+// @Tags        videos
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/videos [get]
 func (h *videoHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -38,6 +50,18 @@ func (h *videoHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
+// @Summary     Get video
+// @Description Get a video by ID
+// @Tags        videos
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string true "Venue ID"
+// @Param       videoID path     string true "Video ID"
+// @Success     200     {object} dto.Response{data=dto.VideoResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     404     {object} dto.Response
+// @Router      /venues/{id}/videos/{videoID} [get]
 func (h *videoHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("videoID"))
 	if err != nil {
@@ -52,6 +76,19 @@ func (h *videoHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.VideoToResponse(v)))
 }
 
+// @Summary     Create video
+// @Description Create a new video (requires editor role)
+// @Tags        videos
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string             true "Venue ID"
+// @Param       body body     dto.VideoRequest   true "Video details"
+// @Success     201  {object} dto.Response{data=dto.VideoResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/videos [post]
 func (h *videoHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -75,6 +112,20 @@ func (h *videoHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.VideoToResponse(v)))
 }
 
+// @Summary     Update video
+// @Description Update a video (requires editor role)
+// @Tags        videos
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string           true "Venue ID"
+// @Param       videoID path     string           true "Video ID"
+// @Param       body    body     dto.VideoRequest true "Video details"
+// @Success     200     {object} dto.Response{data=dto.VideoResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     403     {object} dto.Response
+// @Router      /venues/{id}/videos/{videoID} [put]
 func (h *videoHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("videoID"))
 	if err != nil {
@@ -98,6 +149,18 @@ func (h *videoHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.VideoToResponse(v)))
 }
 
+// @Summary     Delete video
+// @Description Delete a video (requires editor role)
+// @Tags        videos
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path string true "Venue ID"
+// @Param       videoID path string true "Video ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/videos/{videoID} [delete]
 func (h *videoHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("videoID"))
 	if err != nil {

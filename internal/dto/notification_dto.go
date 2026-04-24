@@ -19,11 +19,11 @@ type NotificationResponse struct {
 	Status         int             `json:"status"`
 	SendStatus     int             `json:"send_status"`
 	SendType       int             `json:"send_type"`
-	Data           json.RawMessage `json:"data,omitempty"`
+	Data           json.RawMessage `json:"data,omitempty" swaggertype:"object"`
 	LinkURL        string          `json:"link_url,omitempty"`
 	ScheduledAt    *time.Time      `json:"scheduled_at,omitempty"`
 	TargetApp      string          `json:"target_app"`
-	SegmentFilters json.RawMessage `json:"segment_filters,omitempty"`
+	SegmentFilters json.RawMessage `json:"segment_filters,omitempty" swaggertype:"object"`
 	RetryCount     int             `json:"retry_count"`
 	PublishedAt    *time.Time      `json:"published_at,omitempty"`
 	CreatedBy      *uuid.UUID      `json:"created_by,omitempty"`
@@ -38,12 +38,12 @@ type CreateNotificationRequest struct {
 	Topic          string          `json:"topic"`
 	Kind           int             `json:"type"`
 	SendType       int             `json:"send_type"`
-	Data           json.RawMessage `json:"data"`
+	Data           json.RawMessage `json:"data" swaggertype:"object"`
 	LinkURL        string          `json:"link_url"`
 	ScheduledAt    *time.Time      `json:"scheduled_at"`
 	TargetApp      string          `json:"target_app"`
-	SegmentFilters json.RawMessage `json:"segment_filters"`
-	DeviceTokens   json.RawMessage `json:"device_tokens"`
+	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
+	DeviceTokens   json.RawMessage `json:"device_tokens" swaggertype:"object"`
 }
 
 type UpdateNotificationRequest struct {
@@ -53,12 +53,12 @@ type UpdateNotificationRequest struct {
 	Topic          string          `json:"topic"`
 	Kind           int             `json:"type"`
 	SendType       int             `json:"send_type"`
-	Data           json.RawMessage `json:"data"`
+	Data           json.RawMessage `json:"data" swaggertype:"object"`
 	LinkURL        string          `json:"link_url"`
 	ScheduledAt    *time.Time      `json:"scheduled_at"`
 	TargetApp      string          `json:"target_app"`
-	SegmentFilters json.RawMessage `json:"segment_filters"`
-	DeviceTokens   json.RawMessage `json:"device_tokens"`
+	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
+	DeviceTokens   json.RawMessage `json:"device_tokens" swaggertype:"object"`
 }
 
 func NotificationToResponse(n *domain.Notification) NotificationResponse {

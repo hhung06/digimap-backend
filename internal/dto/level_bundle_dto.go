@@ -21,7 +21,7 @@ type LevelBundleResponse struct {
 
 type CreateLevelBundleRequest struct {
 	LevelID uuid.UUID `json:"level_id" binding:"required"`
-	Bundle  json.RawMessage `json:"bundle" binding:"required"`
+	Bundle  json.RawMessage `json:"bundle" binding:"required" swaggertype:"object"`
 }
 
 func LevelBundleToResponse(b *domain.LevelBundle) LevelBundleResponse {

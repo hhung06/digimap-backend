@@ -15,7 +15,7 @@ type EventLogResponse struct {
 	ID        uuid.UUID       `json:"id"`
 	VenueID   *uuid.UUID      `json:"venue_id,omitempty"`
 	Name      string          `json:"name"`
-	Params    json.RawMessage `json:"params,omitempty"`
+	Params    json.RawMessage `json:"params,omitempty" swaggertype:"object"`
 	DeviceID  string          `json:"device_id,omitempty"`
 	UserID    string          `json:"user_id,omitempty"`
 	UserAgent string          `json:"user_agent,omitempty"`
@@ -26,7 +26,7 @@ type EventLogResponse struct {
 // TrackEventRequest is the public-API payload for logging a single event.
 type TrackEventRequest struct {
 	Name     string          `json:"name" binding:"required"`
-	Params   json.RawMessage `json:"params"`
+	Params   json.RawMessage `json:"params" swaggertype:"object"`
 	DeviceID string          `json:"device_id"`
 	UserID   string          `json:"user_id"`
 }
@@ -50,7 +50,7 @@ type SearchQueryResponse struct {
 	SearchCount  int             `json:"search_count"`
 	LastSearched *time.Time      `json:"last_searched,omitempty"`
 	IsPromoted   bool            `json:"is_promoted"`
-	Reference    json.RawMessage `json:"reference,omitempty"`
+	Reference    json.RawMessage `json:"reference,omitempty" swaggertype:"object"`
 	Status       string          `json:"status"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`

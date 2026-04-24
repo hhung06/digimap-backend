@@ -22,6 +22,18 @@ func newSurveyHandler(svc service.SurveyService, enrichers *enricher.Registry) *
 	return &surveyHandler{svc: svc, enrichers: enrichers}
 }
 
+// @Summary     List surveys
+// @Description List surveys for a venue
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/surveys [get]
 func (h *surveyHandler) List(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -42,6 +54,18 @@ func (h *surveyHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Get survey
+// @Description Get a survey by ID
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string true "Venue ID"
+// @Param       surveyID path     string true "Survey ID"
+// @Success     200      {object} dto.Response{data=dto.SurveyResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     404      {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID} [get]
 func (h *surveyHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {
@@ -62,6 +86,19 @@ func (h *surveyHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.SurveyToResponse(s), extras)))
 }
 
+// @Summary     Create survey
+// @Description Create a new survey (requires editor role)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                    true "Venue ID"
+// @Param       body body     dto.CreateSurveyRequest   true "Survey details"
+// @Success     201  {object} dto.Response{data=dto.SurveyResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/surveys [post]
 func (h *surveyHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -89,6 +126,20 @@ func (h *surveyHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.SurveyToResponse(s)))
 }
 
+// @Summary     Update survey
+// @Description Update a survey (requires editor role)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string                  true "Venue ID"
+// @Param       surveyID path     string                  true "Survey ID"
+// @Param       body     body     dto.UpdateSurveyRequest true "Survey details"
+// @Success     200      {object} dto.Response{data=dto.SurveyResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     403      {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID} [put]
 func (h *surveyHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {
@@ -115,6 +166,18 @@ func (h *surveyHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.SurveyToResponse(s)))
 }
 
+// @Summary     Delete survey
+// @Description Delete a survey (requires editor role)
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path string true "Venue ID"
+// @Param       surveyID path string true "Survey ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID} [delete]
 func (h *surveyHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {
@@ -130,6 +193,20 @@ func (h *surveyHandler) Delete(c *gin.Context) {
 
 // ── Questions ─────────────────────────────────────────────────────────────────
 
+// @Summary     Create survey question
+// @Description Add a question to a survey (requires editor role)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string               true "Venue ID"
+// @Param       surveyID path     string               true "Survey ID"
+// @Param       body     body     dto.QuestionRequest  true "Question details"
+// @Success     201      {object} dto.Response{data=dto.QuestionResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     403      {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/questions [post]
 func (h *surveyHandler) CreateQuestion(c *gin.Context) {
 	surveyID, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {
@@ -176,6 +253,21 @@ func (h *surveyHandler) CreateQuestion(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(qr))
 }
 
+// @Summary     Update survey question
+// @Description Update a survey question (requires editor role)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string               true "Venue ID"
+// @Param       surveyID   path     string               true "Survey ID"
+// @Param       questionID path     string               true "Question ID"
+// @Param       body       body     dto.QuestionRequest  true "Question details"
+// @Success     200        {object} dto.Response{data=dto.QuestionResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/questions/{questionID} [put]
 func (h *surveyHandler) UpdateQuestion(c *gin.Context) {
 	questionID, err := uuid.Parse(c.Param("questionID"))
 	if err != nil {
@@ -209,6 +301,19 @@ func (h *surveyHandler) UpdateQuestion(c *gin.Context) {
 	}))
 }
 
+// @Summary     Delete survey question
+// @Description Delete a survey question (requires editor role)
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path string true "Venue ID"
+// @Param       surveyID   path string true "Survey ID"
+// @Param       questionID path string true "Question ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/questions/{questionID} [delete]
 func (h *surveyHandler) DeleteQuestion(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("questionID"))
 	if err != nil {
@@ -224,6 +329,21 @@ func (h *surveyHandler) DeleteQuestion(c *gin.Context) {
 
 // ── Options ───────────────────────────────────────────────────────────────────
 
+// @Summary     Create question option
+// @Description Add an option to a survey question (requires editor role)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string              true "Venue ID"
+// @Param       surveyID   path     string              true "Survey ID"
+// @Param       questionID path     string              true "Question ID"
+// @Param       body       body     dto.OptionRequest   true "Option details"
+// @Success     201        {object} dto.Response{data=dto.OptionResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/questions/{questionID}/options [post]
 func (h *surveyHandler) CreateOption(c *gin.Context) {
 	questionID, err := uuid.Parse(c.Param("questionID"))
 	if err != nil {
@@ -245,6 +365,22 @@ func (h *surveyHandler) CreateOption(c *gin.Context) {
 	}))
 }
 
+// @Summary     Update question option
+// @Description Update a survey question option (requires editor role)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path     string             true "Venue ID"
+// @Param       surveyID   path     string             true "Survey ID"
+// @Param       questionID path     string             true "Question ID"
+// @Param       optionID   path     string             true "Option ID"
+// @Param       body       body     dto.OptionRequest  true "Option details"
+// @Success     200        {object} dto.Response{data=dto.OptionResponse}
+// @Failure     400        {object} dto.Response
+// @Failure     401        {object} dto.Response
+// @Failure     403        {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/questions/{questionID}/options/{optionID} [put]
 func (h *surveyHandler) UpdateOption(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("optionID"))
 	if err != nil {
@@ -271,6 +407,20 @@ func (h *surveyHandler) UpdateOption(c *gin.Context) {
 	}))
 }
 
+// @Summary     Delete question option
+// @Description Delete a survey question option (requires editor role)
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id         path string true "Venue ID"
+// @Param       surveyID   path string true "Survey ID"
+// @Param       questionID path string true "Question ID"
+// @Param       optionID   path string true "Option ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/questions/{questionID}/options/{optionID} [delete]
 func (h *surveyHandler) DeleteOption(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("optionID"))
 	if err != nil {
@@ -286,6 +436,19 @@ func (h *surveyHandler) DeleteOption(c *gin.Context) {
 
 // ── Responses ─────────────────────────────────────────────────────────────────
 
+// @Summary     List survey responses
+// @Description List responses for a survey
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       surveyID  path     string true  "Survey ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/responses [get]
 func (h *surveyHandler) ListResponses(c *gin.Context) {
 	surveyID, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {
@@ -305,6 +468,17 @@ func (h *surveyHandler) ListResponses(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
+// @Summary     Submit survey response
+// @Description Submit a response to a survey (public endpoint, no auth required)
+// @Tags        surveys
+// @Accept      json
+// @Produce     json
+// @Param       id       path     string                   true "Venue ID"
+// @Param       surveyID path     string                   true "Survey ID"
+// @Param       body     body     dto.SubmitSurveyRequest  true "Survey response"
+// @Success     201      {object} dto.Response{data=dto.SurveyResponseResponse}
+// @Failure     400      {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/responses [post]
 func (h *surveyHandler) SubmitResponse(c *gin.Context) {
 	surveyID, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {

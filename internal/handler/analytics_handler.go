@@ -18,8 +18,16 @@ func newAnalyticsHandler(svc service.AnalyticsService) *analyticsHandler {
 	return &analyticsHandler{svc: svc}
 }
 
-// TrackEvent handles POST /api/v1/public/venues/:id/events
-// No auth required — called from mobile apps via API key or open.
+// @Summary     Track event
+// @Description Track an analytics event (no auth required)
+// @Tags        analytics
+// @Accept      json
+// @Produce     json
+// @Param       id   path     string                 true "Venue ID"
+// @Param       body body     dto.TrackEventRequest  true "Event data"
+// @Success     201  {object} dto.Response{data=dto.EventLogResponse}
+// @Failure     400  {object} dto.Response
+// @Router      /public/venues/{id}/events [post]
 func (h *analyticsHandler) TrackEvent(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -47,7 +55,16 @@ func (h *analyticsHandler) TrackEvent(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.EventLogToResponse(e)))
 }
 
-// TrackSearch handles POST /api/v1/public/venues/:id/searches
+// @Summary     Track search
+// @Description Track a search query (no auth required)
+// @Tags        analytics
+// @Accept      json
+// @Produce     json
+// @Param       id   path     string                  true "Venue ID"
+// @Param       body body     dto.TrackSearchRequest  true "Search data"
+// @Success     201  {object} dto.Response
+// @Failure     400  {object} dto.Response
+// @Router      /public/venues/{id}/searches [post]
 func (h *analyticsHandler) TrackSearch(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -66,7 +83,18 @@ func (h *analyticsHandler) TrackSearch(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(nil))
 }
 
-// ListEventLogs handles GET /api/v1/venues/:id/analytics/events (JWT + viewer)
+// @Summary     List event logs
+// @Description List analytics event logs for a venue
+// @Tags        analytics
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/analytics/events [get]
 func (h *analyticsHandler) ListEventLogs(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -86,7 +114,18 @@ func (h *analyticsHandler) ListEventLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
-// ListSearchQueries handles GET /api/v1/venues/:id/analytics/searches (JWT + viewer)
+// @Summary     List search queries
+// @Description List search query logs for a venue
+// @Tags        analytics
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Router      /venues/{id}/analytics/searches [get]
 func (h *analyticsHandler) ListSearchQueries(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {

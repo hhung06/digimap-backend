@@ -21,8 +21,16 @@ func newLevelHandler(svc service.LevelService) *levelHandler {
 
 // ── Map groups ────────────────────────────────────────────────────────────────
 
-// ListMapGroups godoc
-// GET /api/v1/venues/:id/map-groups
+// @Summary     List map groups
+// @Description List all map groups for a venue
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=[]dto.MapGroupResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Router      /venues/{id}/map-groups [get]
 func (h *levelHandler) ListMapGroups(c *gin.Context) {
 	venueID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -41,8 +49,19 @@ func (h *levelHandler) ListMapGroups(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
-// CreateMapGroup godoc
-// POST /api/v1/venues/:id/map-groups
+// @Summary     Create map group
+// @Description Create a new map group for a venue (requires editor role)
+// @Tags        levels
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string              true "Venue ID"
+// @Param       body body     dto.MapGroupRequest true "Map group details"
+// @Success     201  {object} dto.Response{data=dto.MapGroupResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/map-groups [post]
 func (h *levelHandler) CreateMapGroup(c *gin.Context) {
 	venueID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -65,8 +84,21 @@ func (h *levelHandler) CreateMapGroup(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.MapGroupToResponse(mg)))
 }
 
-// UpdateMapGroup godoc
-// PUT /api/v1/venues/:id/map-groups/:mgID
+// @Summary     Update map group
+// @Description Update a map group (requires editor role)
+// @Tags        levels
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string              true "Venue ID"
+// @Param       mgID path     string              true "Map Group ID"
+// @Param       body body     dto.MapGroupRequest true "Map group details"
+// @Success     200  {object} dto.Response{data=dto.MapGroupResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Failure     404  {object} dto.Response
+// @Router      /venues/{id}/map-groups/{mgID} [put]
 func (h *levelHandler) UpdateMapGroup(c *gin.Context) {
 	mgID, err := uuid.Parse(c.Param("mgID"))
 	if err != nil {
@@ -89,8 +121,18 @@ func (h *levelHandler) UpdateMapGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.MapGroupToResponse(mg)))
 }
 
-// DeleteMapGroup godoc
-// DELETE /api/v1/venues/:id/map-groups/:mgID
+// @Summary     Delete map group
+// @Description Delete a map group (requires editor role)
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path string true "Venue ID"
+// @Param       mgID path string true "Map Group ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/map-groups/{mgID} [delete]
 func (h *levelHandler) DeleteMapGroup(c *gin.Context) {
 	mgID, err := uuid.Parse(c.Param("mgID"))
 	if err != nil {
@@ -106,8 +148,16 @@ func (h *levelHandler) DeleteMapGroup(c *gin.Context) {
 
 // ── Levels ────────────────────────────────────────────────────────────────────
 
-// ListLevels godoc
-// GET /api/v1/venues/:id/levels
+// @Summary     List levels
+// @Description List all levels for a venue
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id  path     string true "Venue ID"
+// @Success     200 {object} dto.Response{data=[]dto.LevelResponse}
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Router      /venues/{id}/levels [get]
 func (h *levelHandler) ListLevels(c *gin.Context) {
 	venueID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -126,8 +176,18 @@ func (h *levelHandler) ListLevels(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
-// GetLevel godoc
-// GET /api/v1/venues/:id/levels/:levelID
+// @Summary     Get level
+// @Description Get a level by ID
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string true "Venue ID"
+// @Param       levelID path     string true "Level ID"
+// @Success     200     {object} dto.Response{data=dto.LevelResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     404     {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID} [get]
 func (h *levelHandler) GetLevel(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
@@ -142,8 +202,19 @@ func (h *levelHandler) GetLevel(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.LevelToResponse(l)))
 }
 
-// CreateLevel godoc
-// POST /api/v1/venues/:id/levels
+// @Summary     Create level
+// @Description Create a new level for a venue (requires editor role)
+// @Tags        levels
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id   path     string                true "Venue ID"
+// @Param       body body     dto.CreateLevelRequest true "Level details"
+// @Success     201  {object} dto.Response{data=dto.LevelResponse}
+// @Failure     400  {object} dto.Response
+// @Failure     401  {object} dto.Response
+// @Failure     403  {object} dto.Response
+// @Router      /venues/{id}/levels [post]
 func (h *levelHandler) CreateLevel(c *gin.Context) {
 	venueID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -170,8 +241,21 @@ func (h *levelHandler) CreateLevel(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.LevelToResponse(l)))
 }
 
-// UpdateLevel godoc
-// PUT /api/v1/venues/:id/levels/:levelID
+// @Summary     Update level
+// @Description Update a level (requires editor role)
+// @Tags        levels
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string                true "Venue ID"
+// @Param       levelID path     string                true "Level ID"
+// @Param       body    body     dto.UpdateLevelRequest true "Level details"
+// @Success     200     {object} dto.Response{data=dto.LevelResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     403     {object} dto.Response
+// @Failure     404     {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID} [put]
 func (h *levelHandler) UpdateLevel(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
@@ -198,8 +282,18 @@ func (h *levelHandler) UpdateLevel(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.LevelToResponse(l)))
 }
 
-// DeleteLevel godoc
-// DELETE /api/v1/venues/:id/levels/:levelID
+// @Summary     Delete level
+// @Description Delete a level (requires editor role)
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path string true "Venue ID"
+// @Param       levelID path string true "Level ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID} [delete]
 func (h *levelHandler) DeleteLevel(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
@@ -215,8 +309,20 @@ func (h *levelHandler) DeleteLevel(c *gin.Context) {
 
 // ── Perspectives ──────────────────────────────────────────────────────────────
 
-// UpsertPerspective godoc
-// PUT /api/v1/venues/:id/levels/:levelID/perspective
+// @Summary     Upsert perspective
+// @Description Create or update the camera perspective for a level (requires editor role)
+// @Tags        levels
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string                  true "Venue ID"
+// @Param       levelID path     string                  true "Level ID"
+// @Param       body    body     dto.PerspectiveRequest  true "Perspective details"
+// @Success     200     {object} dto.Response{data=dto.PerspectiveResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     403     {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID}/perspective [put]
 func (h *levelHandler) UpsertPerspective(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
@@ -254,8 +360,17 @@ func (h *levelHandler) UpsertPerspective(c *gin.Context) {
 
 // ── Geo references ────────────────────────────────────────────────────────────
 
-// ListGeoReferences godoc
-// GET /api/v1/venues/:id/levels/:levelID/geo-references
+// @Summary     List geo references
+// @Description List geo references for a level
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string true "Venue ID"
+// @Param       levelID path     string true "Level ID"
+// @Success     200     {object} dto.Response{data=[]dto.GeoReferenceResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID}/geo-references [get]
 func (h *levelHandler) ListGeoReferences(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
@@ -274,8 +389,20 @@ func (h *levelHandler) ListGeoReferences(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
-// CreateGeoReference godoc
-// POST /api/v1/venues/:id/levels/:levelID/geo-references
+// @Summary     Create geo reference
+// @Description Create a geo reference for a level (requires editor role)
+// @Tags        levels
+// @Accept      json
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path     string                  true "Venue ID"
+// @Param       levelID path     string                  true "Level ID"
+// @Param       body    body     dto.GeoReferenceRequest true "Geo reference details"
+// @Success     201     {object} dto.Response{data=dto.GeoReferenceResponse}
+// @Failure     400     {object} dto.Response
+// @Failure     401     {object} dto.Response
+// @Failure     403     {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID}/geo-references [post]
 func (h *levelHandler) CreateGeoReference(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
@@ -298,8 +425,19 @@ func (h *levelHandler) CreateGeoReference(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.GeoRefToResponse(g)))
 }
 
-// DeleteGeoReference godoc
-// DELETE /api/v1/venues/:id/levels/:levelID/geo-references/:refID
+// @Summary     Delete geo reference
+// @Description Delete a geo reference (requires editor role)
+// @Tags        levels
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id      path string true "Venue ID"
+// @Param       levelID path string true "Level ID"
+// @Param       refID   path string true "Geo Reference ID"
+// @Success     204
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Router      /venues/{id}/levels/{levelID}/geo-references/{refID} [delete]
 func (h *levelHandler) DeleteGeoReference(c *gin.Context) {
 	levelID, err := uuid.Parse(c.Param("levelID"))
 	if err != nil {
