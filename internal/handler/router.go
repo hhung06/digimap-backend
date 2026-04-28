@@ -350,7 +350,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 		// Analytics (protected — viewer access)
 		analyticsH := newAnalyticsHandler(deps.AnalyticsService)
-		venues.GET("/:id/analytics/events", viewerAccess, analyticsH.ListEventLogs)
+		// venues.GET("/:id/analytics/events", viewerAccess, analyticsH.ListEventLogs)
 		venues.GET("/:id/analytics/searches", viewerAccess, analyticsH.ListSearchQueries)
 	}
 
@@ -401,11 +401,48 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	v1.GET("/tags/entity", jwtAuth, tagH.ListEntityTags)
 
 	// ── App layer (API Key auth) ───────────────────────────────────────────────
-	appH := newAppHandler(deps.LocationService, deps.EventService)
+	appH := newAppHandler(
+		deps.LocationService,
+		deps.EventService,
+		deps.ProductService,
+		deps.ProductPlazaService,
+		deps.ArticleService,
+		deps.NotificationService,
+		deps.CouponService,
+		deps.AdvertisementService,
+		deps.SurveyService,
+		deps.LocationCategoryService,
+	)
 	appKey := r.Group("/app/v1", middleware.APIKeyAuth(venueKeyLookup{deps.VenueRepo}))
 	{
 		appKey.GET("/locations", appH.ListLocations)
+		appKey.GET("/locations/:locationID", appH.GetLocation)
 		appKey.GET("/events", appH.ListEvents)
+		appKey.GET("/products", appH.ListProducts)
+		appKey.GET("/products/:productID", appH.GetProduct)
+		appKey.GET("/product-categories", appH.ListProductCategories)
+		appKey.GET("/product-plazas", appH.ListProductPlazas)
+		appKey.GET("/product-plazas/:plazaID", appH.GetProductPlaza)
+		appKey.GET("/articles", appH.ListArticles)
+		appKey.GET("/articles/:articleID", appH.GetArticle)
+		appKey.GET("/featured-zones", appH.ListFeaturedZones)
+		appKey.GET("/featured-zones/:zoneID", appH.GetFeaturedZone)
+		appKey.GET("/notifications", appH.ListNotifications)
+		appKey.GET("/notifications/:notifID", appH.GetNotification)
+		appKey.GET("/coupons", appH.ListCoupons)
+		appKey.GET("/coupons/:couponID", appH.GetCoupon)
+		appKey.GET("/ads", appH.ListAds)
+		appKey.GET("/surveys/:surveyID", appH.GetSurvey)
+	}
+
+	// ── Public API (no auth) ──────────────────────────────────────────────────
+	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService)
+	publicAPI := r.Group("/public/v1")
+	{
+		publicAPI.GET("/venues/:id/information", publicH.VenueInformation)
+		publicAPI.GET("/surveys/:id", publicH.GetSurvey)
+		publicAPI.POST("/surveys/:id/submit-response", publicH.SubmitSurveyResponse)
+		publicAPI.GET("/venue-info", publicH.VenueInfo)
 	}
 
 	return r
