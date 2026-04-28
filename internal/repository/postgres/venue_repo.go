@@ -50,6 +50,15 @@ func (r *venueRepo) FindByPublicKey(ctx context.Context, publicKey string) (*dom
 	return v, err
 }
 
+func (r *venueRepo) FindByPrivateKey(ctx context.Context, privateKey string) (*domain.Venue, error) {
+	q := `SELECT ` + venueSelectCols + ` FROM venues WHERE private_key = $1 AND deleted_at IS NULL`
+	v, err := scanVenue(r.pool.QueryRow(ctx, q, privateKey))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.NewNotFound("venue not found")
+	}
+	return v, err
+}
+
 func (r *venueRepo) List(ctx context.Context, customerID uuid.UUID, p domain.Pagination) ([]*domain.Venue, int64, error) {
 	const countQ = `SELECT COUNT(*) FROM venues WHERE customer_id = $1 AND deleted_at IS NULL`
 	q := `SELECT ` + venueSelectCols + ` FROM venues WHERE customer_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`

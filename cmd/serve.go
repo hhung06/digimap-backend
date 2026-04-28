@@ -81,6 +81,10 @@ func runServe(_ *cobra.Command, _ []string) error {
 	searchQueryRepo := postgresrepo.NewSearchQueryRepository(pool)
 	snapshotRepo := postgresrepo.NewSnapshotRepository(pool)
 	levelBundleRepo := postgresrepo.NewLevelBundleRepository(pool)
+	assetRepo := postgresrepo.NewAssetRepository(pool)
+	levelTypeRepo := postgresrepo.NewLevelTypeRepository(pool)
+	themeRepo := postgresrepo.NewThemeRepository(pool)
+	productPlazaRepo := postgresrepo.NewProductPlazaRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
 	mailer := email.NewLogSender(logger)
@@ -110,6 +114,10 @@ func runServe(_ *cobra.Command, _ []string) error {
 	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, redisClient)
 	snapshotSvc := service.NewSnapshotService(snapshotRepo, storer, cfg.App.Environment)
 	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, storer, cfg.App.Environment)
+	assetSvc := service.NewAssetService(assetRepo)
+	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
+	themeSvc := service.NewThemeService(themeRepo)
+	productPlazaSvc := service.NewProductPlazaService(productPlazaRepo)
 
 	enricherRegistry := enricher.NewRegistry(venueRepo)
 	tenants.RegisterAll(enricherRegistry)
@@ -138,8 +146,15 @@ func runServe(_ *cobra.Command, _ []string) error {
 		AnalyticsService:        analyticsSvc,
 		SnapshotService:         snapshotSvc,
 		LevelBundleService:      levelBundleSvc,
+		AssetService:            assetSvc,
+		LevelTypeService:        levelTypeSvc,
+		ThemeService:            themeSvc,
+		ProductPlazaService:     productPlazaSvc,
 		EnricherRegistry:        enricherRegistry,
 		UserRepo:                userRepo,
+		VenueRepo:               venueRepo,
+		LocationRepo:            locationRepo,
+		ProductRepo:             productRepo,
 		RedisClient:             redisClient,
 		DB:                      pool,
 	}

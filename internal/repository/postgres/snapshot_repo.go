@@ -104,6 +104,14 @@ func (r *snapshotRepo) CountDraftsByVenue(ctx context.Context, venueID uuid.UUID
 	return count, err
 }
 
+func (r *snapshotRepo) UnpublishVenue(ctx context.Context, venueID uuid.UUID) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE snapshots SET state = $1 WHERE venue_id = $2 AND state = $3 AND deleted_at IS NULL`,
+		domain.SnapshotStateDraft, venueID, domain.SnapshotStatePublic,
+	)
+	return err
+}
+
 func (r *snapshotRepo) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error {
 	// Hard-delete (not soft-delete) so ON DELETE CASCADE fires for level_bundles.
 	_, err := r.pool.Exec(ctx, `

@@ -1,3 +1,22 @@
+-- Ensure trigger helper functions exist (may be missing from older DB setups)
+CREATE OR REPLACE FUNCTION trigger_set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION create_updated_at_trigger(tbl TEXT)
+RETURNS VOID AS $$
+BEGIN
+    EXECUTE format(
+        'CREATE TRIGGER set_%s_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at()',
+        tbl, tbl
+    );
+END;
+$$ LANGUAGE plpgsql;
+
 -- Event tags (global, not venue-specific)
 CREATE TABLE IF NOT EXISTS event_tags (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

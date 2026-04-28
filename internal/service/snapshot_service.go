@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -17,6 +18,9 @@ type SnapshotService interface {
 	Get(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error)
 	LatestPublished(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error)
 	CreateDraft(ctx context.Context, venueID, createdBy uuid.UUID, bundle []byte) (*domain.Snapshot, error)
+	Publish(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error)
+	Revert(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error)
+	AutoPublish(ctx context.Context, venueID, createdBy uuid.UUID) (*domain.Snapshot, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -78,6 +82,64 @@ func (s *snapshotService) CreateDraft(ctx context.Context, venueID, createdBy uu
 		_ = s.repo.DeleteOldestDraft(ctx, venueID) // best-effort prune
 	}
 
+	return snap, nil
+}
+
+func (s *snapshotService) Publish(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error) {
+	snap, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	if err := s.repo.UpdateState(ctx, snap.ID, domain.SnapshotStatePublic, &now); err != nil {
+		return nil, fmt.Errorf("publish snapshot: %w", err)
+	}
+	snap.State = domain.SnapshotStatePublic
+	snap.PublishAt = &now
+	return snap, nil
+}
+
+func (s *snapshotService) Revert(ctx context.Context, id uuid.UUID) (*domain.Snapshot, error) {
+	snap, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.UnpublishVenue(ctx, snap.VenueID); err != nil {
+		return nil, fmt.Errorf("unpublish existing snapshots: %w", err)
+	}
+	now := time.Now()
+	if err := s.repo.UpdateState(ctx, snap.ID, domain.SnapshotStatePublic, &now); err != nil {
+		return nil, fmt.Errorf("revert snapshot: %w", err)
+	}
+	snap.State = domain.SnapshotStatePublic
+	snap.PublishAt = &now
+	return snap, nil
+}
+
+func (s *snapshotService) AutoPublish(ctx context.Context, venueID, createdBy uuid.UUID) (*domain.Snapshot, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		id = uuid.New()
+	}
+	snap := &domain.Snapshot{
+		ID:        id,
+		VenueID:   venueID,
+		State:     domain.SnapshotStateDraft,
+		Method:    domain.SnapshotMethodAuto,
+		CreatedBy: &createdBy,
+	}
+	if err := s.repo.Create(ctx, snap); err != nil {
+		return nil, fmt.Errorf("create auto snapshot record: %w", err)
+	}
+	if err := s.repo.UnpublishVenue(ctx, venueID); err != nil {
+		return nil, fmt.Errorf("unpublish existing snapshots: %w", err)
+	}
+	now := time.Now()
+	if err := s.repo.UpdateState(ctx, snap.ID, domain.SnapshotStatePublic, &now); err != nil {
+		return nil, fmt.Errorf("publish auto snapshot: %w", err)
+	}
+	snap.State = domain.SnapshotStatePublic
+	snap.PublishAt = &now
 	return snap, nil
 }
 

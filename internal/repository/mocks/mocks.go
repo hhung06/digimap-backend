@@ -428,6 +428,11 @@ func (m *SnapshotRepository) DeleteOldestDraft(ctx context.Context, venueID uuid
 	return m.Called(ctx, venueID).Error(0)
 }
 
+func (m *SnapshotRepository) UnpublishVenue(ctx context.Context, venueID uuid.UUID) error {
+	args := m.Called(ctx, venueID)
+	return args.Error(0)
+}
+
 // ── LevelBundleRepository ─────────────────────────────────────────────────────
 
 // LevelBundleRepository is a mock implementation of repository.LevelBundleRepository.
@@ -467,6 +472,14 @@ func (m *VenueRepository) GetCustomerID(ctx context.Context, venueID uuid.UUID) 
 	return args.Get(0).(uuid.UUID), args.Error(1)
 }
 
+func (m *VenueRepository) FindByPrivateKey(ctx context.Context, privateKey string) (*domain.Venue, error) {
+	args := m.Called(ctx, privateKey)
+	if v, ok := args.Get(0).(*domain.Venue); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 // ── StorerMock ────────────────────────────────────────────────────────────────
 
 // StorerMock is a testify/mock implementation of storage.Storer.
@@ -493,4 +506,297 @@ func (m *StorerMock) GetObject(ctx context.Context, key string) ([]byte, error) 
 		return b, args.Error(1)
 	}
 	return nil, args.Error(1)
+}
+
+// ── AssetRepository ───────────────────────────────────────────────────────────
+
+type AssetRepository struct{ mock.Mock }
+
+func (m *AssetRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Asset, error) {
+	args := m.Called(ctx, id)
+	if a, ok := args.Get(0).(*domain.Asset); ok {
+		return a, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *AssetRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Asset, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if a, ok := args.Get(0).([]*domain.Asset); ok {
+		return a, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *AssetRepository) Create(ctx context.Context, a *domain.Asset) error {
+	args := m.Called(ctx, a)
+	return args.Error(0)
+}
+
+func (m *AssetRepository) Update(ctx context.Context, a *domain.Asset) error {
+	args := m.Called(ctx, a)
+	return args.Error(0)
+}
+
+func (m *AssetRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// ── LevelTypeRepository ───────────────────────────────────────────────────────
+
+type LevelTypeRepository struct{ mock.Mock }
+
+func (m *LevelTypeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelType, error) {
+	args := m.Called(ctx, id)
+	if lt, ok := args.Get(0).(*domain.LevelType); ok {
+		return lt, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelTypeRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.LevelType, error) {
+	args := m.Called(ctx, venueID)
+	if lt, ok := args.Get(0).([]*domain.LevelType); ok {
+		return lt, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelTypeRepository) Create(ctx context.Context, lt *domain.LevelType) error {
+	return m.Called(ctx, lt).Error(0)
+}
+
+func (m *LevelTypeRepository) Update(ctx context.Context, lt *domain.LevelType) error {
+	return m.Called(ctx, lt).Error(0)
+}
+
+func (m *LevelTypeRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── ThemeRepository ───────────────────────────────────────────────────────────
+
+type ThemeRepository struct{ mock.Mock }
+
+func (m *ThemeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Theme, error) {
+	args := m.Called(ctx, id)
+	if t, ok := args.Get(0).(*domain.Theme); ok {
+		return t, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ThemeRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.Theme, error) {
+	args := m.Called(ctx, venueID)
+	if t, ok := args.Get(0).([]*domain.Theme); ok {
+		return t, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ThemeRepository) Create(ctx context.Context, t *domain.Theme) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *ThemeRepository) Update(ctx context.Context, t *domain.Theme) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *ThemeRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── ProductPlazaRepository ────────────────────────────────────────────────────
+
+// ── LocationRepository ────────────────────────────────────────────────────────
+
+type LocationRepository struct{ mock.Mock }
+
+func (m *LocationRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Location, error) {
+	args := m.Called(ctx, id)
+	if l, ok := args.Get(0).(*domain.Location); ok {
+		return l, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationRepository) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error) {
+	args := m.Called(ctx, venueID, typeFilter, p)
+	if locs, ok := args.Get(0).([]*domain.Location); ok {
+		return locs, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *LocationRepository) Create(ctx context.Context, l *domain.Location) error {
+	return m.Called(ctx, l).Error(0)
+}
+
+func (m *LocationRepository) Update(ctx context.Context, l *domain.Location) error {
+	return m.Called(ctx, l).Error(0)
+}
+
+func (m *LocationRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *LocationRepository) SetCategories(ctx context.Context, locationID uuid.UUID, categoryIDs []uuid.UUID) error {
+	return m.Called(ctx, locationID, categoryIDs).Error(0)
+}
+
+func (m *LocationRepository) SetTopLocation(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error {
+	return m.Called(ctx, id, isTop, sortIndex).Error(0)
+}
+
+func (m *LocationRepository) GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error) {
+	args := m.Called(ctx, lat, lng, radiusKm, venueID)
+	if locs, ok := args.Get(0).([]*domain.Location); ok {
+		return locs, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationRepository) ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error) {
+	args := m.Called(ctx, locationID)
+	if imgs, ok := args.Get(0).([]*domain.LocationImage); ok {
+		return imgs, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationRepository) CreateImage(ctx context.Context, img *domain.LocationImage) error {
+	return m.Called(ctx, img).Error(0)
+}
+
+func (m *LocationRepository) DeleteImage(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *LocationRepository) FindByExternalID(ctx context.Context, venueID uuid.UUID, externalID string, locationType int) (*domain.Location, error) {
+	args := m.Called(ctx, venueID, externalID, locationType)
+	if l, ok := args.Get(0).(*domain.Location); ok {
+		return l, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+// ── ProductPlazaRepository ────────────────────────────────────────────────────
+
+type ProductPlazaRepository struct{ mock.Mock }
+
+func (m *ProductPlazaRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error) {
+	args := m.Called(ctx, id)
+	if p, ok := args.Get(0).(*domain.ProductPlaza); ok {
+		return p, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductPlazaRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error) {
+	args := m.Called(ctx, venueID)
+	if p, ok := args.Get(0).([]*domain.ProductPlaza); ok {
+		return p, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductPlazaRepository) Create(ctx context.Context, p *domain.ProductPlaza) error {
+	return m.Called(ctx, p).Error(0)
+}
+
+func (m *ProductPlazaRepository) Update(ctx context.Context, p *domain.ProductPlaza) error {
+	return m.Called(ctx, p).Error(0)
+}
+
+func (m *ProductPlazaRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── ProductRepository ─────────────────────────────────────────────────────────
+
+type ProductRepository struct{ mock.Mock }
+
+func (m *ProductRepository) FindCategoryByID(ctx context.Context, id uuid.UUID) (*domain.ProductCategory, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.ProductCategory); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductRepository) ListCategories(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductCategory, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.ProductCategory); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductRepository) CreateCategory(ctx context.Context, c *domain.ProductCategory) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *ProductRepository) UpdateCategory(ctx context.Context, c *domain.ProductCategory) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *ProductRepository) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *ProductRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Product); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if v, ok := args.Get(0).([]*domain.Product); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *ProductRepository) Create(ctx context.Context, p *domain.Product) error {
+	return m.Called(ctx, p).Error(0)
+}
+
+func (m *ProductRepository) Update(ctx context.Context, p *domain.Product) error {
+	return m.Called(ctx, p).Error(0)
+}
+
+func (m *ProductRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *ProductRepository) SetCategories(ctx context.Context, productID uuid.UUID, categoryIDs []uuid.UUID) error {
+	return m.Called(ctx, productID, categoryIDs).Error(0)
+}
+
+func (m *ProductRepository) FindByCode(ctx context.Context, venueID uuid.UUID, code, source string) (*domain.Product, error) {
+	args := m.Called(ctx, venueID, code, source)
+	if v, ok := args.Get(0).(*domain.Product); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductRepository) ListAttachments(ctx context.Context, productID uuid.UUID) ([]*domain.ProductAttachment, error) {
+	args := m.Called(ctx, productID)
+	if v, ok := args.Get(0).([]*domain.ProductAttachment); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ProductRepository) CreateAttachment(ctx context.Context, a *domain.ProductAttachment) error {
+	return m.Called(ctx, a).Error(0)
+}
+
+func (m *ProductRepository) DeleteAttachment(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
 }

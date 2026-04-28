@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -208,8 +209,17 @@ func (h *locationHandler) ListLocations(c *gin.Context) {
 		return
 	}
 	p := paginationFromQuery(c)
+
+	// Parse optional ?type= filter
+	var typeFilter *int
+	if t := c.Query("type"); t != "" {
+		if v, err := strconv.Atoi(t); err == nil {
+			typeFilter = &v
+		}
+	}
+
 	ctx := c.Request.Context()
-	locations, total, err := h.locationSvc.List(ctx, venueID, p)
+	locations, total, err := h.locationSvc.List(ctx, venueID, typeFilter, p)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -475,6 +485,48 @@ func (h *locationHandler) DeleteImage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// GeoSearch returns locations within radiusKm of the given lat/lng.
+func (h *locationHandler) GeoSearch(c *gin.Context) {
+	latStr := c.Query("lat")
+	lngStr := c.Query("lng")
+	radiusStr := c.Query("radius")
+
+	if latStr == "" || lngStr == "" || radiusStr == "" {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "lat, lng, and radius are required"))
+		return
+	}
+
+	lat, err1 := strconv.ParseFloat(latStr, 64)
+	lng, err2 := strconv.ParseFloat(lngStr, 64)
+	radius, err3 := strconv.ParseFloat(radiusStr, 64)
+	if err1 != nil || err2 != nil || err3 != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "lat, lng, and radius must be valid numbers"))
+		return
+	}
+
+	var venueID *uuid.UUID
+	if v := c.Query("venue_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue_id"))
+			return
+		}
+		venueID = &id
+	}
+
+	locs, err := h.locationSvc.GeoSearch(c.Request.Context(), lat, lng, radius, venueID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	items := make([]dto.LocationResponse, len(locs))
+	for i, loc := range locs {
+		items[i] = dto.LocationToResponse(loc)
+	}
+	c.JSON(http.StatusOK, dto.OK(items))
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

@@ -7,6 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// ── Location types ────────────────────────────────────────────────────────────
+
+const (
+	LocationTypeDefault = 0
+	LocationTypeBooth   = 2
+	LocationTypeMemo    = 6
+)
+
 // ── Location category ─────────────────────────────────────────────────────────
 
 type LocationCategory struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,18 +63,32 @@ func (r *locationRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Loca
 	return l, nil
 }
 
-func (r *locationRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error) {
-	const countQ = `SELECT COUNT(*) FROM locations WHERE venue_id = $1 AND deleted_at IS NULL`
-	q := `SELECT ` + locationSelectCols + `
-		FROM locations WHERE venue_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+func (r *locationRepo) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error) {
+	var countQ, q string
+	var args []interface{}
+
+	// Base condition
+	baseWhere := `venue_id = $1 AND deleted_at IS NULL`
+	args = append(args, venueID)
+
+	// Add type filter if provided
+	if typeFilter != nil {
+		baseWhere += ` AND common_location_type = $2`
+		args = append(args, *typeFilter)
+	}
+
+	countQ = `SELECT COUNT(*) FROM locations WHERE ` + baseWhere
+
+	q = `SELECT ` + locationSelectCols + ` FROM locations WHERE ` + baseWhere + `
+		ORDER BY created_at DESC LIMIT $` + strconv.Itoa(len(args)+1) + ` OFFSET $` + strconv.Itoa(len(args)+2)
 
 	var total int64
-	if err := r.pool.QueryRow(ctx, countQ, venueID).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, countQ, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	rows, err := r.pool.Query(ctx, q, venueID, p.PageSize, p.Offset())
+	queryArgs := append(args, p.PageSize, p.Offset())
+	rows, err := r.pool.Query(ctx, q, queryArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -266,6 +281,56 @@ func (r *locationRepo) CreateImage(ctx context.Context, img *domain.LocationImag
 
 func (r *locationRepo) DeleteImage(ctx context.Context, id uuid.UUID) error {
 	return softDelete(ctx, r.pool, "location_images", id.String())
+}
+
+func (r *locationRepo) GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error) {
+	const q = `
+		WITH haversine AS (
+			SELECT *,
+				6371 * 2 * ASIN(SQRT(
+					POWER(SIN(RADIANS($1 - common_latitude) / 2), 2) +
+					COS(RADIANS($1)) * COS(RADIANS(common_latitude)) *
+					POWER(SIN(RADIANS($2 - common_longitude) / 2), 2)
+				)) AS distance_km
+			FROM locations
+			WHERE deleted_at IS NULL
+			  AND common_latitude IS NOT NULL AND common_longitude IS NOT NULL
+			  AND ($4::uuid IS NULL OR venue_id = $4)
+		)
+		SELECT ` + locationSelectCols + `
+		FROM haversine
+		WHERE distance_km <= $3
+		ORDER BY distance_km
+		LIMIT 100`
+
+	rows, err := r.pool.Query(ctx, q, lat, lng, radiusKm, venueID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*domain.Location
+	for rows.Next() {
+		loc, err := scanLocation(rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, loc)
+	}
+	return results, rows.Err()
+}
+
+func (r *locationRepo) FindByExternalID(ctx context.Context, venueID uuid.UUID, externalID string, locationType int) (*domain.Location, error) {
+	q := `SELECT ` + locationSelectCols + `
+		FROM locations
+		WHERE venue_id = $1 AND external_id = $2 AND common_location_type = $3 AND deleted_at IS NULL
+		LIMIT 1`
+
+	l, err := scanLocation(r.pool.QueryRow(ctx, q, venueID, externalID, locationType))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.NewNotFound("location not found")
+	}
+	return l, err
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

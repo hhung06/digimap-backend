@@ -157,7 +157,7 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 	}
 	const q = `
 		INSERT INTO products (
-			id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
+			id, venue_id, location_id, main_category_id, image, name, code, size, price,
 			origin_country, expiration, description, custom, localization, source
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING created_at, updated_at`
@@ -173,7 +173,7 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 func (r *productRepo) Update(ctx context.Context, p *domain.Product) error {
 	const q = `
 		UPDATE products SET
-			location_id=$2, main_category_id=$3, image=$4, name=$5, external_id=$6, size=$7,
+			location_id=$2, main_category_id=$3, image=$4, name=$5, code=$6, size=$7,
 			price=$8, origin_country=$9, expiration=$10, description=$11,
 			custom=$12, localization=$13, source=$14
 		WHERE id=$1 AND deleted_at IS NULL
@@ -193,6 +193,20 @@ func (r *productRepo) Update(ctx context.Context, p *domain.Product) error {
 
 func (r *productRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return softDelete(ctx, r.pool, "products", id.String())
+}
+
+func (r *productRepo) FindByCode(ctx context.Context, venueID uuid.UUID, code, source string) (*domain.Product, error) {
+	const q = `
+		SELECT id, venue_id, location_id, main_category_id, image, name, code, size, price,
+		       origin_country, expiration, description, custom, localization, source,
+		       created_at, updated_at, deleted_at
+		FROM products WHERE venue_id = $1 AND code = $2 AND source = $3 AND deleted_at IS NULL`
+
+	p, err := scanProduct(r.pool.QueryRow(ctx, q, venueID, code, source))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.NewNotFound("product not found")
+	}
+	return p, err
 }
 
 func (r *productRepo) SetCategories(ctx context.Context, productID uuid.UUID, categoryIDs []uuid.UUID) error {

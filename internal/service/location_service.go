@@ -54,12 +54,13 @@ func (s *locationCategoryService) Delete(ctx context.Context, id uuid.UUID) erro
 
 type LocationService interface {
 	Get(ctx context.Context, id uuid.UUID) (*domain.Location, error)
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error)
+	List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error)
 	Create(ctx context.Context, l *domain.Location) error
 	Update(ctx context.Context, l *domain.Location, categoryIDs []uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	Duplicate(ctx context.Context, id uuid.UUID) (*domain.Location, error)
 	SetTop(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error
+	GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error)
 
 	// Images
 	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
@@ -79,9 +80,9 @@ func (s *locationService) Get(ctx context.Context, id uuid.UUID) (*domain.Locati
 	return s.repo.FindByID(ctx, id)
 }
 
-func (s *locationService) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error) {
+func (s *locationService) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error) {
 	p.Normalize()
-	return s.repo.List(ctx, venueID, p)
+	return s.repo.List(ctx, venueID, typeFilter, p)
 }
 
 func (s *locationService) Create(ctx context.Context, l *domain.Location) error {
@@ -157,6 +158,10 @@ func (s *locationService) ListImages(ctx context.Context, locationID uuid.UUID) 
 
 func (s *locationService) CreateImage(ctx context.Context, img *domain.LocationImage) error {
 	return s.repo.CreateImage(ctx, img)
+}
+
+func (s *locationService) GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error) {
+	return s.repo.GeoSearch(ctx, lat, lng, radiusKm, venueID)
 }
 
 func (s *locationService) DeleteImage(ctx context.Context, locationID, imageID uuid.UUID) error {

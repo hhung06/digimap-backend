@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
@@ -44,8 +46,15 @@ type Dependencies struct {
 	AnalyticsService        service.AnalyticsService
 	SnapshotService         service.SnapshotService
 	LevelBundleService      service.LevelBundleService
+	AssetService            service.AssetService
+	LevelTypeService        service.LevelTypeService
+	ThemeService            service.ThemeService
+	ProductPlazaService     service.ProductPlazaService
 	EnricherRegistry        *enricher.Registry
 	UserRepo                repository.UserRepository
+	VenueRepo               repository.VenueRepository
+	LocationRepo            repository.LocationRepository
+	ProductRepo             repository.ProductRepository
 	RedisClient             *redis.Client
 	DB                      *pgxpool.Pool
 }
@@ -85,7 +94,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	auth := v1.Group("/auth", authRL)
 	{
 		auth.POST("/login", authH.Login)
-		auth.POST("/register", authH.Register)
 		auth.POST("/refresh", authH.RefreshToken)
 		auth.POST("/password-reset", authH.RequestPasswordReset)
 		auth.POST("/password-reset/confirm", authH.ConfirmPasswordReset)
@@ -103,6 +111,8 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	custH := newCustomerHandler(deps.CustomerService)
 	adminOnly := v1.Group("/", jwtAuth, middleware.SystemAdminRequired(), apiRL)
 	{
+		adminOnly.POST("/auth/register", authH.Register)
+
 		adminOnly.GET("/customers", custH.List)
 		adminOnly.POST("/customers", custH.Create)
 		adminOnly.GET("/customers/:id", custH.Get)
@@ -116,12 +126,43 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.GET("/venues/:id/snapshots", snapshotH.List)
 		adminOnly.POST("/venues/:id/snapshots", snapshotH.CreateDraft)
 		adminOnly.GET("/venues/:id/snapshots/recent", snapshotH.LatestPublished)
+		adminOnly.POST("/venues/:id/snapshots/auto-publish", snapshotH.AutoPublish)
 		adminOnly.GET("/venues/:id/snapshots/:snapshotID", snapshotH.Get)
 		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID", snapshotH.Delete)
+		adminOnly.POST("/venues/:id/snapshots/:snapshotID/publish", snapshotH.Publish)
+		adminOnly.POST("/venues/:id/snapshots/:snapshotID/revert", snapshotH.Revert)
 
 		adminOnly.POST("/venues/:id/snapshots/:snapshotID/bundles", bundleH.Create)
 		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles", bundleH.List)
 		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/bundles/:bundleID", bundleH.Delete)
+
+		assetH := newAssetHandler(deps.AssetService)
+		adminOnly.GET("/venues/:id/assets", assetH.List)
+		adminOnly.POST("/venues/:id/assets", assetH.Create)
+		adminOnly.GET("/venues/:id/assets/:assetID", assetH.Get)
+		adminOnly.PUT("/venues/:id/assets/:assetID", assetH.Update)
+		adminOnly.DELETE("/venues/:id/assets/:assetID", assetH.Delete)
+
+		ltH := newLevelTypeHandler(deps.LevelTypeService)
+		adminOnly.GET("/venues/:id/level-types", ltH.List)
+		adminOnly.POST("/venues/:id/level-types", ltH.Create)
+		adminOnly.PUT("/venues/:id/level-types/:typeID", ltH.Update)
+		adminOnly.DELETE("/venues/:id/level-types/:typeID", ltH.Delete)
+
+		themeH := newThemeHandler(deps.ThemeService)
+		adminOnly.GET("/venues/:id/themes", themeH.List)
+		adminOnly.POST("/venues/:id/themes", themeH.Create)
+		adminOnly.PUT("/venues/:id/themes/:themeID", themeH.Update)
+		adminOnly.DELETE("/venues/:id/themes/:themeID", themeH.Delete)
+
+		plazaH := newProductPlazaHandler(deps.ProductPlazaService)
+		adminOnly.GET("/venues/:id/product-plazas", plazaH.List)
+		adminOnly.POST("/venues/:id/product-plazas", plazaH.Create)
+		adminOnly.PUT("/venues/:id/product-plazas/:plazaID", plazaH.Update)
+		adminOnly.DELETE("/venues/:id/product-plazas/:plazaID", plazaH.Delete)
+
+		geoLocH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry)
+		adminOnly.GET("/geo-search", geoLocH.GeoSearch)
 	}
 
 	// ── Venue routes (JWT required; RBAC applied per action) ──────────────────
@@ -321,6 +362,16 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		public.POST("/venues/:id/searches", analyticsH.TrackSearch)
 	}
 
+	// ── JMA Webhooks (no auth — external callback) ─────────────────────────────
+	webhookH := newWebhookHandler(deps.VenueRepo, deps.LocationRepo, deps.ProductRepo)
+	webhooks := v1.Group("/webhooks")
+	{
+		jma := webhooks.Group("/jma")
+		jma.POST("/exhibitors", webhookH.JMAExhibitorUpdate)
+		jma.POST("/products", webhookH.JMAProductUpdate)
+		jma.POST("/push", webhookH.JMAPushNotification)
+	}
+
 	// ── Storage (pre-signed uploads) ──────────────────────────────────────────
 	prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
 	protected.POST("/storage/presign-upload", prodH.PresignUpload)
@@ -349,7 +400,28 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	v1.DELETE("/tags/:tagID/detach", jwtAuth, tagH.DetachTag)
 	v1.GET("/tags/entity", jwtAuth, tagH.ListEntityTags)
 
+	// ── App layer (API Key auth) ───────────────────────────────────────────────
+	appH := newAppHandler(deps.LocationService, deps.EventService)
+	appKey := r.Group("/app/v1", middleware.APIKeyAuth(venueKeyLookup{deps.VenueRepo}))
+	{
+		appKey.GET("/locations", appH.ListLocations)
+		appKey.GET("/events", appH.ListEvents)
+	}
+
 	return r
+}
+
+// venueKeyLookup adapts repository.VenueRepository to the middleware.VenueByPublicKeyLookup interface.
+type venueKeyLookup struct {
+	repo repository.VenueRepository
+}
+
+func (v venueKeyLookup) FindByPublicKey(ctx context.Context, publicKey string) (uuid.UUID, string, error) {
+	venue, err := v.repo.FindByPublicKey(ctx, publicKey)
+	if err != nil {
+		return uuid.Nil, "", err
+	}
+	return venue.ID, venue.PrivateKey, nil
 }
 
 func versionHandler(c *gin.Context) {

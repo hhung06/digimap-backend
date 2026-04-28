@@ -44,6 +44,7 @@ type CustomerRepository interface {
 type VenueRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Venue, error)
 	FindByPublicKey(ctx context.Context, publicKey string) (*domain.Venue, error)
+	FindByPrivateKey(ctx context.Context, privateKey string) (*domain.Venue, error)
 	List(ctx context.Context, customerID uuid.UUID, p domain.Pagination) ([]*domain.Venue, int64, error)
 	ListAll(ctx context.Context, p domain.Pagination) ([]*domain.Venue, int64, error)
 	Create(ctx context.Context, v *domain.Venue) error
@@ -91,12 +92,14 @@ type LocationCategoryRepository interface {
 // LocationRepository handles locations, images, and promotions.
 type LocationRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Location, error)
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error)
+	List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error)
 	Create(ctx context.Context, l *domain.Location) error
 	Update(ctx context.Context, l *domain.Location) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	SetCategories(ctx context.Context, locationID uuid.UUID, categoryIDs []uuid.UUID) error
 	SetTopLocation(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error
+	GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error)
+	FindByExternalID(ctx context.Context, venueID uuid.UUID, externalID string, locationType int) (*domain.Location, error)
 
 	// Images
 	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
@@ -120,6 +123,8 @@ type ProductRepository interface {
 	Update(ctx context.Context, p *domain.Product) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	SetCategories(ctx context.Context, productID uuid.UUID, categoryIDs []uuid.UUID) error
+
+	FindByCode(ctx context.Context, venueID uuid.UUID, code, source string) (*domain.Product, error)
 
 	// Attachments
 	ListAttachments(ctx context.Context, productID uuid.UUID) ([]*domain.ProductAttachment, error)
@@ -308,6 +313,7 @@ type SnapshotRepository interface {
 	// the oldest created_at for the given venue, triggering ON DELETE CASCADE
 	// to remove its associated LevelBundle rows.
 	DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error
+	UnpublishVenue(ctx context.Context, venueID uuid.UUID) error
 }
 
 // LevelBundleRepository handles per-level bundle data persistence.
@@ -315,5 +321,41 @@ type LevelBundleRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelBundle, error)
 	ListBySnapshot(ctx context.Context, snapshotID uuid.UUID) ([]*domain.LevelBundle, error)
 	Create(ctx context.Context, b *domain.LevelBundle) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AssetRepository handles asset metadata persistence.
+type AssetRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Asset, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Asset, int64, error)
+	Create(ctx context.Context, a *domain.Asset) error
+	Update(ctx context.Context, a *domain.Asset) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// LevelTypeRepository handles level type CRUD.
+type LevelTypeRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelType, error)
+	List(ctx context.Context, venueID uuid.UUID) ([]*domain.LevelType, error)
+	Create(ctx context.Context, lt *domain.LevelType) error
+	Update(ctx context.Context, lt *domain.LevelType) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// ThemeRepository handles theme CRUD.
+type ThemeRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.Theme, error)
+	List(ctx context.Context, venueID uuid.UUID) ([]*domain.Theme, error)
+	Create(ctx context.Context, t *domain.Theme) error
+	Update(ctx context.Context, t *domain.Theme) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// ProductPlazaRepository handles product plaza CRUD.
+type ProductPlazaRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error)
+	List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error)
+	Create(ctx context.Context, p *domain.ProductPlaza) error
+	Update(ctx context.Context, p *domain.ProductPlaza) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
