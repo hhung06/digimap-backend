@@ -55,6 +55,7 @@ type Dependencies struct {
 	VenueRepo               repository.VenueRepository
 	LocationRepo            repository.LocationRepository
 	ProductRepo             repository.ProductRepository
+	AppUserRepo             repository.AppUserRepository
 	RedisClient             *redis.Client
 	DB                      *pgxpool.Pool
 }
@@ -412,6 +413,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		deps.AdvertisementService,
 		deps.SurveyService,
 		deps.LocationCategoryService,
+		deps.AnalyticsService,
 	)
 	appKey := r.Group("/app/v1", middleware.APIKeyAuth(venueKeyLookup{deps.VenueRepo}))
 	{
@@ -433,16 +435,20 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.GET("/coupons/:couponID", appH.GetCoupon)
 		appKey.GET("/ads", appH.ListAds)
 		appKey.GET("/surveys/:surveyID", appH.GetSurvey)
+		appKey.GET("/top-search", appH.TopSearch)
+		appKey.GET("/search-options", appH.SearchOptions)
+		appKey.GET("/promotions", appH.Promotions)
 	}
 
 	// ── Public API (no auth) ──────────────────────────────────────────────────
-	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService)
+	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService, deps.AppUserRepo)
 	publicAPI := r.Group("/public/v1")
 	{
 		publicAPI.GET("/venues/:id/information", publicH.VenueInformation)
 		publicAPI.GET("/surveys/:id", publicH.GetSurvey)
 		publicAPI.POST("/surveys/:id/submit-response", publicH.SubmitSurveyResponse)
 		publicAPI.GET("/venue-info", publicH.VenueInfo)
+		publicAPI.GET("/visitor-surveys", publicH.VisitorSurveys)
 	}
 
 	return r

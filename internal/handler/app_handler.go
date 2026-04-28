@@ -22,6 +22,7 @@ type appHandler struct {
 	ads                service.AdvertisementService
 	surveys            service.SurveyService
 	locationCategories service.LocationCategoryService
+	analytics          service.AnalyticsService
 }
 
 func newAppHandler(
@@ -35,6 +36,7 @@ func newAppHandler(
 	ads service.AdvertisementService,
 	surveys service.SurveyService,
 	locationCategories service.LocationCategoryService,
+	analytics service.AnalyticsService,
 ) *appHandler {
 	return &appHandler{
 		locations:          locations,
@@ -47,6 +49,7 @@ func newAppHandler(
 		ads:                ads,
 		surveys:            surveys,
 		locationCategories: locationCategories,
+		analytics:          analytics,
 	}
 }
 
@@ -309,4 +312,77 @@ func (h *appHandler) GetSurvey(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.SurveyToResponse(s)))
+}
+
+func (h *appHandler) TopSearch(c *gin.Context) {
+	venueID := middleware.GetVenueID(c)
+	p := paginationFromQuery(c)
+	queries, total, err := h.analytics.ListSearchQueries(c.Request.Context(), venueID, p)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	items := make([]dto.SearchQueryResponse, len(queries))
+	for i, q := range queries {
+		items[i] = dto.SearchQueryToResponse(q)
+	}
+	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
+}
+
+func (h *appHandler) SearchOptions(c *gin.Context) {
+	venueID := middleware.GetVenueID(c)
+	q := c.Query("q")
+	const limit = 20
+	locs, err := h.locations.SearchByName(c.Request.Context(), venueID, q, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	prods, err := h.products.SearchByName(c.Request.Context(), venueID, q, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	locItems := make([]dto.LocationResponse, len(locs))
+	for i, l := range locs {
+		locItems[i] = dto.LocationToResponse(l)
+	}
+	prodItems := make([]dto.ProductResponse, len(prods))
+	for i, p := range prods {
+		prodItems[i] = dto.ProductToResponse(p)
+	}
+	c.JSON(http.StatusOK, dto.OK(gin.H{
+		"locations": locItems,
+		"products":  prodItems,
+	}))
+}
+
+func (h *appHandler) Promotions(c *gin.Context) {
+	venueID := middleware.GetVenueID(c)
+	surveys, err := h.surveys.ListPromo(c.Request.Context(), venueID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	p := paginationFromQuery(c)
+	coupons, total, err := h.coupons.List(c.Request.Context(), venueID, p)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	surveyItems := make([]dto.SurveyResponse, len(surveys))
+	for i, s := range surveys {
+		surveyItems[i] = dto.SurveyToResponse(s)
+	}
+	couponItems := make([]dto.CouponResponse, len(coupons))
+	for i, cp := range coupons {
+		couponItems[i] = dto.CouponToResponse(cp)
+	}
+	c.JSON(http.StatusOK, dto.OK(gin.H{
+		"surveys": surveyItems,
+		"coupons": gin.H{
+			"items": couponItems,
+			"total": total,
+		},
+	}))
 }

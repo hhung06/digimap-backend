@@ -333,6 +333,27 @@ func (r *locationRepo) FindByExternalID(ctx context.Context, venueID uuid.UUID, 
 	return l, err
 }
 
+func (r *locationRepo) SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Location, error) {
+	const query = `SELECT ` + locationSelectCols + `
+		FROM locations
+		WHERE venue_id = $1 AND common_name ILIKE $2 AND deleted_at IS NULL
+		ORDER BY common_name LIMIT $3`
+	rows, err := r.pool.Query(ctx, query, venueID, "%"+q+"%", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*domain.Location
+	for rows.Next() {
+		l, err := scanLocation(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func (r *locationRepo) loadCategories(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationCategory, error) {

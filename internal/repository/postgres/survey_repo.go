@@ -273,6 +273,27 @@ func (r *surveyRepo) CreateResponse(ctx context.Context, resp *domain.SurveyResp
 	return nil
 }
 
+func (r *surveyRepo) ListActive(ctx context.Context, venueID uuid.UUID, publishTypes []int) ([]*domain.Survey, error) {
+	q := `SELECT ` + surveySelectCols + `
+		FROM surveys
+		WHERE venue_id = $1 AND status = $2 AND publish_type = ANY($3) AND deleted_at IS NULL
+		ORDER BY created_at DESC`
+	rows, err := r.pool.Query(ctx, q, venueID, domain.SurveyStatusActive, publishTypes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*domain.Survey
+	for rows.Next() {
+		s, err := scanSurvey(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
 // ── scan helpers ──────────────────────────────────────────────────────────────
 
 func scanSurvey(row scanner) (*domain.Survey, error) {

@@ -2,12 +2,14 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
@@ -15,10 +17,11 @@ type publicHandler struct {
 	venues        service.VenueService
 	surveys       service.SurveyService
 	productPlazas service.ProductPlazaService
+	appUsers      repository.AppUserRepository
 }
 
-func newPublicHandler(venues service.VenueService, surveys service.SurveyService, productPlazas service.ProductPlazaService) *publicHandler {
-	return &publicHandler{venues: venues, surveys: surveys, productPlazas: productPlazas}
+func newPublicHandler(venues service.VenueService, surveys service.SurveyService, productPlazas service.ProductPlazaService, appUsers repository.AppUserRepository) *publicHandler {
+	return &publicHandler{venues: venues, surveys: surveys, productPlazas: productPlazas, appUsers: appUsers}
 }
 
 func (h *publicHandler) VenueInformation(c *gin.Context) {
@@ -90,4 +93,38 @@ func (h *publicHandler) VenueInfo(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.VenueToResponse(v)))
+}
+
+func (h *publicHandler) VisitorSurveys(c *gin.Context) {
+	key := c.Query("public_key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "public_key is required"))
+		return
+	}
+	venue, err := h.venues.GetByPublicKey(c.Request.Context(), key)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	// Authenticate visitor by token if provided; visitor token is optional.
+	token := strings.TrimPrefix(c.GetHeader("Authorization"), "Token ")
+	if token != "" {
+		if _, err := h.appUsers.FindByToken(c.Request.Context(), venue.ID, token); err != nil {
+			c.JSON(http.StatusUnauthorized, dto.Fail(dto.CodeAuthRequired, "invalid visitor token"))
+			return
+		}
+	}
+
+	surveys, err := h.surveys.ListActive(c.Request.Context(), venue.ID,
+		[]int{domain.SurveyPublishInApp, domain.SurveyPublishBoth})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	items := make([]dto.SurveyResponse, len(surveys))
+	for i, s := range surveys {
+		items[i] = dto.SurveyToResponse(s)
+	}
+	c.JSON(http.StatusOK, dto.OK(items))
 }

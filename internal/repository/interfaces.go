@@ -93,6 +93,7 @@ type LocationCategoryRepository interface {
 type LocationRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Location, error)
 	List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error)
+	SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Location, error)
 	Create(ctx context.Context, l *domain.Location) error
 	Update(ctx context.Context, l *domain.Location) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -119,6 +120,7 @@ type ProductRepository interface {
 	// Products
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Product, error)
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error)
+	SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Product, error)
 	Create(ctx context.Context, p *domain.Product) error
 	Update(ctx context.Context, p *domain.Product) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -163,6 +165,9 @@ type SurveyRepository interface {
 	CreateOption(ctx context.Context, o *domain.Option) error
 	UpdateOption(ctx context.Context, o *domain.Option) error
 	DeleteOption(ctx context.Context, id uuid.UUID) error
+
+	// Active surveys for visitor/app consumption
+	ListActive(ctx context.Context, venueID uuid.UUID, publishTypes []int) ([]*domain.Survey, error)
 
 	// Responses
 	ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error)
@@ -358,4 +363,10 @@ type ProductPlazaRepository interface {
 	Create(ctx context.Context, p *domain.ProductPlaza) error
 	Update(ctx context.Context, p *domain.ProductPlaza) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AppUserRepository handles visitor/app user persistence.
+type AppUserRepository interface {
+	FindByToken(ctx context.Context, venueID uuid.UUID, token string) (*domain.AppUser, error)
+	Create(ctx context.Context, u *domain.AppUser) error
 }

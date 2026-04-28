@@ -681,6 +681,14 @@ func (m *LocationRepository) FindByExternalID(ctx context.Context, venueID uuid.
 	return nil, args.Error(1)
 }
 
+func (m *LocationRepository) SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Location, error) {
+	args := m.Called(ctx, venueID, q, limit)
+	if locs, ok := args.Get(0).([]*domain.Location); ok {
+		return locs, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 // ── ProductPlazaRepository ────────────────────────────────────────────────────
 
 type ProductPlazaRepository struct{ mock.Mock }
@@ -799,4 +807,28 @@ func (m *ProductRepository) CreateAttachment(ctx context.Context, a *domain.Prod
 
 func (m *ProductRepository) DeleteAttachment(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
+}
+
+func (m *ProductRepository) SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Product, error) {
+	args := m.Called(ctx, venueID, q, limit)
+	if v, ok := args.Get(0).([]*domain.Product); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+// ── AppUserRepository ─────────────────────────────────────────────────────────
+
+type AppUserRepository struct{ mock.Mock }
+
+func (m *AppUserRepository) FindByToken(ctx context.Context, venueID uuid.UUID, token string) (*domain.AppUser, error) {
+	args := m.Called(ctx, venueID, token)
+	if v, ok := args.Get(0).(*domain.AppUser); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *AppUserRepository) Create(ctx context.Context, u *domain.AppUser) error {
+	return m.Called(ctx, u).Error(0)
 }

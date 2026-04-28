@@ -85,6 +85,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	levelTypeRepo := postgresrepo.NewLevelTypeRepository(pool)
 	themeRepo := postgresrepo.NewThemeRepository(pool)
 	productPlazaRepo := postgresrepo.NewProductPlazaRepository(pool)
+	appUserRepo := postgresrepo.NewAppUserRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
 	mailer := email.NewLogSender(logger)
@@ -155,6 +156,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		VenueRepo:               venueRepo,
 		LocationRepo:            locationRepo,
 		ProductRepo:             productRepo,
+		AppUserRepo:             appUserRepo,
 		RedisClient:             redisClient,
 		DB:                      pool,
 	}

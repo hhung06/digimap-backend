@@ -267,6 +267,29 @@ func (r *productRepo) DeleteAttachment(ctx context.Context, id uuid.UUID) error 
 	return softDelete(ctx, r.pool, "product_attachments", id.String())
 }
 
+func (r *productRepo) SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Product, error) {
+	const query = `
+		SELECT id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
+		       origin_country, expiration, description, custom, localization, source,
+		       created_at, updated_at, deleted_at
+		FROM products WHERE venue_id = $1 AND name ILIKE $2 AND deleted_at IS NULL
+		ORDER BY name LIMIT $3`
+	rows, err := r.pool.Query(ctx, query, venueID, "%"+q+"%", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*domain.Product
+	for rows.Next() {
+		p, err := scanProduct(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 // ── scan helpers ──────────────────────────────────────────────────────────────
 
 func (r *productRepo) loadProductCategories(ctx context.Context, productID uuid.UUID) ([]*domain.ProductCategory, error) {

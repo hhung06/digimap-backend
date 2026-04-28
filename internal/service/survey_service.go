@@ -27,6 +27,10 @@ type SurveyService interface {
 	UpdateOption(ctx context.Context, o *domain.Option) error
 	DeleteOption(ctx context.Context, id uuid.UUID) error
 
+	// Active surveys for visitor/promo consumption
+	ListPromo(ctx context.Context, venueID uuid.UUID) ([]*domain.Survey, error)
+	ListActive(ctx context.Context, venueID uuid.UUID, publishTypes []int) ([]*domain.Survey, error)
+
 	// Responses
 	ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error)
 	SubmitResponse(ctx context.Context, r *domain.SurveyResponse) error
@@ -89,6 +93,14 @@ func (s *surveyService) UpdateOption(ctx context.Context, o *domain.Option) erro
 
 func (s *surveyService) DeleteOption(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteOption(ctx, id)
+}
+
+func (s *surveyService) ListPromo(ctx context.Context, venueID uuid.UUID) ([]*domain.Survey, error) {
+	return s.repo.ListActive(ctx, venueID, []int{domain.SurveyPublishPromo})
+}
+
+func (s *surveyService) ListActive(ctx context.Context, venueID uuid.UUID, publishTypes []int) ([]*domain.Survey, error) {
+	return s.repo.ListActive(ctx, venueID, publishTypes)
 }
 
 func (s *surveyService) ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error) {

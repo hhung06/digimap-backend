@@ -26,6 +26,7 @@ type ProductService interface {
 	// Products
 	Get(ctx context.Context, id uuid.UUID) (*domain.Product, error)
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error)
+	SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Product, error)
 	Create(ctx context.Context, p *domain.Product, categoryIDs []uuid.UUID) error
 	Update(ctx context.Context, p *domain.Product, categoryIDs []uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -74,6 +75,10 @@ func (s *productService) Get(ctx context.Context, id uuid.UUID) (*domain.Product
 func (s *productService) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error) {
 	p.Normalize()
 	return s.repo.List(ctx, venueID, p)
+}
+
+func (s *productService) SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Product, error) {
+	return s.repo.SearchByName(ctx, venueID, q, limit)
 }
 
 func (s *productService) Create(ctx context.Context, p *domain.Product, categoryIDs []uuid.UUID) error {
