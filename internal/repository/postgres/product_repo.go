@@ -96,7 +96,7 @@ func (r *productRepo) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 
 func (r *productRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
 	const q = `
-		SELECT id, venue_id, location_id, main_category_id, image, name, code, size, price,
+		SELECT id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
 		       origin_country, expiration, description, custom, localization, source,
 		       created_at, updated_at, deleted_at
 		FROM products WHERE id = $1 AND deleted_at IS NULL`
@@ -124,7 +124,7 @@ func (r *productRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Produ
 func (r *productRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error) {
 	const countQ = `SELECT COUNT(*) FROM products WHERE venue_id = $1 AND deleted_at IS NULL`
 	const q = `
-		SELECT id, venue_id, location_id, main_category_id, image, name, code, size, price,
+		SELECT id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
 		       origin_country, expiration, description, custom, localization, source,
 		       created_at, updated_at, deleted_at
 		FROM products WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
@@ -157,7 +157,7 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 	}
 	const q = `
 		INSERT INTO products (
-			id, venue_id, location_id, main_category_id, image, name, code, size, price,
+			id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
 			origin_country, expiration, description, custom, localization, source
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING created_at, updated_at`
@@ -173,7 +173,7 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 func (r *productRepo) Update(ctx context.Context, p *domain.Product) error {
 	const q = `
 		UPDATE products SET
-			location_id=$2, main_category_id=$3, image=$4, name=$5, code=$6, size=$7,
+			location_id=$2, main_category_id=$3, image=$4, name=$5, external_id=$6, size=$7,
 			price=$8, origin_country=$9, expiration=$10, description=$11,
 			custom=$12, localization=$13, source=$14
 		WHERE id=$1 AND deleted_at IS NULL
@@ -197,10 +197,10 @@ func (r *productRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *productRepo) FindByCode(ctx context.Context, venueID uuid.UUID, code, source string) (*domain.Product, error) {
 	const q = `
-		SELECT id, venue_id, location_id, main_category_id, image, name, code, size, price,
+		SELECT id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
 		       origin_country, expiration, description, custom, localization, source,
 		       created_at, updated_at, deleted_at
-		FROM products WHERE venue_id = $1 AND code = $2 AND source = $3 AND deleted_at IS NULL`
+		FROM products WHERE venue_id = $1 AND external_id = $2 AND source = $3 AND deleted_at IS NULL`
 
 	p, err := scanProduct(r.pool.QueryRow(ctx, q, venueID, code, source))
 	if errors.Is(err, pgx.ErrNoRows) {
