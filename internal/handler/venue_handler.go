@@ -174,39 +174,6 @@ func (h *venueHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-// @Summary     Publish venue
-// @Description Publish or unpublish a venue (requires owner role)
-// @Tags        venues
-// @Accept      json
-// @Produce     json
-// @Security    BearerAuth
-// @Param       id   path     string true "Venue ID"
-// @Param       body body     object true "Published flag"
-// @Success     200  {object} dto.Response
-// @Failure     400  {object} dto.Response
-// @Failure     401  {object} dto.Response
-// @Failure     403  {object} dto.Response
-// @Router      /venues/{id}/publish [post]
-func (h *venueHandler) Publish(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
-		return
-	}
-	var body struct {
-		Published bool `json:"published"`
-	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid request body"))
-		return
-	}
-	if err := h.svc.Publish(c.Request.Context(), id, body.Published); err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, dto.OK(gin.H{"published": body.Published}))
-}
-
 // @Summary     Clone venue
 // @Description Clone a venue (requires owner role)
 // @Tags        venues

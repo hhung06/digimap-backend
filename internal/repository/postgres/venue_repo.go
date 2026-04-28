@@ -187,9 +187,6 @@ func (r *venueRepo) UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, pri
 	return nil
 }
 
-func (r *venueRepo) UpdatePublished(_ context.Context, _ uuid.UUID, _ bool) error {
-	return nil
-}
 
 func (r *venueRepo) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
 	var customerID uuid.UUID

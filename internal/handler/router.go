@@ -111,7 +111,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	custH := newCustomerHandler(deps.CustomerService)
 	adminOnly := v1.Group("/", jwtAuth, middleware.SystemAdminRequired(), apiRL)
 	{
-		adminOnly.POST("/auth/register", authH.Register)
+		// adminOnly.POST("/auth/register", authH.Register)
 
 		adminOnly.GET("/customers", custH.List)
 		adminOnly.POST("/customers", custH.Create)
@@ -121,7 +121,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 		// Snapshot sub-resources (system admin only)
 		snapshotH := newSnapshotHandler(deps.SnapshotService)
-		bundleH := newLevelBundleHandler(deps.LevelBundleService)
+		// bundleH := newLevelBundleHandler(deps.LevelBundleService)
 
 		adminOnly.GET("/venues/:id/snapshots", snapshotH.List)
 		adminOnly.POST("/venues/:id/snapshots", snapshotH.CreateDraft)
@@ -132,9 +132,9 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.POST("/venues/:id/snapshots/:snapshotID/publish", snapshotH.Publish)
 		adminOnly.POST("/venues/:id/snapshots/:snapshotID/revert", snapshotH.Revert)
 
-		adminOnly.POST("/venues/:id/snapshots/:snapshotID/bundles", bundleH.Create)
-		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles", bundleH.List)
-		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/bundles/:bundleID", bundleH.Delete)
+		// adminOnly.POST("/venues/:id/snapshots/:snapshotID/bundles", bundleH.Create)
+		// adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles", bundleH.List)
+		// adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/bundles/:bundleID", bundleH.Delete)
 
 		assetH := newAssetHandler(deps.AssetService)
 		adminOnly.GET("/venues/:id/assets", assetH.List)
@@ -174,8 +174,8 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.GET("/:id", venueH.Get)
 		venues.PUT("/:id", middleware.VenueAccess(deps.UserRepo, service.RoleEditor), venueH.Update)
 		venues.DELETE("/:id", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Delete)
-		venues.POST("/:id/publish", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Publish)
-		venues.POST("/:id/clone", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Clone)
+		// venues.POST("/:id/publish", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Publish)
+		// venues.POST("/:id/clone", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.Clone)
 		venues.GET("/:id/key", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.GetKey)
 		venues.PUT("/:id/key", middleware.VenueAccess(deps.UserRepo, service.RoleOwner), venueH.RegenerateKey)
 

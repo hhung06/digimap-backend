@@ -69,7 +69,6 @@ type VenueResponse struct {
 	Telephone      string          `json:"telephone,omitempty"`
 	WorkHours      string          `json:"work_hours,omitempty"`
 	Description    string          `json:"description,omitempty"`
-	IsPublished    bool            `json:"is_published"`
 	Theme          json.RawMessage `json:"theme,omitempty" swaggertype:"object"`
 	Plugins        json.RawMessage `json:"plugins,omitempty" swaggertype:"object"`
 	Translations   json.RawMessage `json:"translations,omitempty" swaggertype:"object"`
@@ -148,7 +147,6 @@ type UpdateVenueRequest struct {
 	Telephone      string          `json:"telephone"`
 	WorkHours      string          `json:"work_hours"`
 	Description    string          `json:"description"`
-	IsPublished    bool            `json:"is_published"`
 	Theme          json.RawMessage `json:"theme" swaggertype:"object"`
 	Plugins        json.RawMessage `json:"plugins" swaggertype:"object"`
 	Translations   json.RawMessage `json:"translations" swaggertype:"object"`

@@ -66,7 +66,6 @@ type VenueService interface {
 	Create(ctx context.Context, v *domain.Venue) error
 	Update(ctx context.Context, v *domain.Venue) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	Publish(ctx context.Context, id uuid.UUID, published bool) error
 	RegenerateKeys(ctx context.Context, id uuid.UUID) (*domain.Venue, error)
 	Clone(ctx context.Context, sourceID uuid.UUID) (*domain.Venue, error)
 }
@@ -123,13 +122,6 @@ func (s *venueService) Update(ctx context.Context, v *domain.Venue) error {
 
 func (s *venueService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
-}
-
-func (s *venueService) Publish(ctx context.Context, id uuid.UUID, published bool) error {
-	if _, err := s.repo.FindByID(ctx, id); err != nil {
-		return err
-	}
-	return s.repo.UpdatePublished(ctx, id, published)
 }
 
 func (s *venueService) RegenerateKeys(ctx context.Context, id uuid.UUID) (*domain.Venue, error) {
