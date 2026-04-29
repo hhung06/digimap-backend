@@ -50,6 +50,8 @@ type Dependencies struct {
 	LevelTypeService        service.LevelTypeService
 	ThemeService            service.ThemeService
 	ProductPlazaService     service.ProductPlazaService
+	LanguageService         service.LanguageService
+	FeaturedZoneService     service.FeaturedZoneService
 	EnricherRegistry        *enricher.Registry
 	UserRepo                repository.UserRepository
 	VenueRepo               repository.VenueRepository
@@ -349,6 +351,22 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.PUT("/:id/videos/:videoID", editorAccess, videoH.Update)
 		venues.DELETE("/:id/videos/:videoID", editorAccess, videoH.Delete)
 
+		// Language sub-resources
+		langH := newLanguageHandler(deps.LanguageService)
+
+		venues.GET("/:id/languages", viewerAccess, langH.List)
+		venues.POST("/:id/languages", editorAccess, langH.Create)
+		venues.PUT("/:id/languages/:langID", editorAccess, langH.Update)
+		venues.DELETE("/:id/languages/:langID", editorAccess, langH.Delete)
+
+		// Featured zone sub-resources (management)
+		fzH := newFeaturedZoneHandler(deps.FeaturedZoneService)
+
+		venues.GET("/:id/featured-zones", viewerAccess, fzH.List)
+		venues.POST("/:id/featured-zones", editorAccess, fzH.Create)
+		venues.PUT("/:id/featured-zones/:zoneID", editorAccess, fzH.Update)
+		venues.DELETE("/:id/featured-zones/:zoneID", editorAccess, fzH.Delete)
+
 		// Analytics (protected — viewer access)
 		analyticsH := newAnalyticsHandler(deps.AnalyticsService)
 		// venues.GET("/:id/analytics/events", viewerAccess, analyticsH.ListEventLogs)
@@ -412,7 +430,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		deps.CouponService,
 		deps.AdvertisementService,
 		deps.SurveyService,
-		deps.LocationCategoryService,
+		deps.FeaturedZoneService,
 		deps.AnalyticsService,
 	)
 	appKey := r.Group("/app/v1", middleware.APIKeyAuth(venueKeyLookup{deps.VenueRepo}))
@@ -433,6 +451,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.GET("/notifications/:notifID", appH.GetNotification)
 		appKey.GET("/coupons", appH.ListCoupons)
 		appKey.GET("/coupons/:couponID", appH.GetCoupon)
+		appKey.PUT("/coupons/:couponID/redeem", appH.RedeemCoupon)
 		appKey.GET("/ads", appH.ListAds)
 		appKey.GET("/surveys/:surveyID", appH.GetSurvey)
 		appKey.GET("/top-search", appH.TopSearch)

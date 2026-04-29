@@ -12,17 +12,17 @@ import (
 )
 
 type appHandler struct {
-	locations          service.LocationService
-	events             service.EventService
-	products           service.ProductService
-	productPlazas      service.ProductPlazaService
-	articles           service.ArticleService
-	notifications      service.NotificationService
-	coupons            service.CouponService
-	ads                service.AdvertisementService
-	surveys            service.SurveyService
-	locationCategories service.LocationCategoryService
-	analytics          service.AnalyticsService
+	locations     service.LocationService
+	events        service.EventService
+	products      service.ProductService
+	productPlazas service.ProductPlazaService
+	articles      service.ArticleService
+	notifications service.NotificationService
+	coupons       service.CouponService
+	ads           service.AdvertisementService
+	surveys       service.SurveyService
+	featuredZones service.FeaturedZoneService
+	analytics     service.AnalyticsService
 }
 
 func newAppHandler(
@@ -35,21 +35,21 @@ func newAppHandler(
 	coupons service.CouponService,
 	ads service.AdvertisementService,
 	surveys service.SurveyService,
-	locationCategories service.LocationCategoryService,
+	featuredZones service.FeaturedZoneService,
 	analytics service.AnalyticsService,
 ) *appHandler {
 	return &appHandler{
-		locations:          locations,
-		events:             events,
-		products:           products,
-		productPlazas:      productPlazas,
-		articles:           articles,
-		notifications:      notifications,
-		coupons:            coupons,
-		ads:                ads,
-		surveys:            surveys,
-		locationCategories: locationCategories,
-		analytics:          analytics,
+		locations:     locations,
+		events:        events,
+		products:      products,
+		productPlazas: productPlazas,
+		articles:      articles,
+		notifications: notifications,
+		coupons:       coupons,
+		ads:           ads,
+		surveys:       surveys,
+		featuredZones: featuredZones,
+		analytics:     analytics,
 	}
 }
 
@@ -199,16 +199,14 @@ func (h *appHandler) GetArticle(c *gin.Context) {
 
 func (h *appHandler) ListFeaturedZones(c *gin.Context) {
 	venueID := middleware.GetVenueID(c)
-	cats, err := h.locationCategories.List(c.Request.Context(), venueID)
+	zones, err := h.featuredZones.ListActive(c.Request.Context(), venueID)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.LocationCategoryResponse, 0, len(cats))
-	for _, cat := range cats {
-		if cat.Source == "external" {
-			items = append(items, dto.LocationCategoryToResponse(cat))
-		}
+	items := make([]dto.FeaturedZoneResponse, len(zones))
+	for i, z := range zones {
+		items[i] = dto.FeaturedZoneToResponse(z)
 	}
 	c.JSON(http.StatusOK, dto.OK(items))
 }
@@ -219,12 +217,12 @@ func (h *appHandler) GetFeaturedZone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid zone id"))
 		return
 	}
-	cat, err := h.locationCategories.Get(c.Request.Context(), id)
+	z, err := h.featuredZones.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.LocationCategoryToResponse(cat)))
+	c.JSON(http.StatusOK, dto.OK(dto.FeaturedZoneToResponse(z)))
 }
 
 func (h *appHandler) ListNotifications(c *gin.Context) {
@@ -283,6 +281,31 @@ func (h *appHandler) GetCoupon(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.CouponToResponse(coupon)))
+}
+
+func (h *appHandler) RedeemCoupon(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("couponID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid coupon id"))
+		return
+	}
+	var body struct {
+		AppUserID string `json:"app_user_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
+		return
+	}
+	appUserID, err := uuid.Parse(body.AppUserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid app_user_id"))
+		return
+	}
+	if err := h.coupons.RedeemCoupon(c.Request.Context(), id, appUserID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.OK(nil))
 }
 
 func (h *appHandler) ListAds(c *gin.Context) {

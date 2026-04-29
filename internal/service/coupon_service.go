@@ -9,12 +9,14 @@ import (
 	"github.com/hhung06/digimap-backend/internal/repository"
 )
 
+
 type CouponService interface {
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.Coupon, error)
 	Create(ctx context.Context, c *domain.Coupon) error
 	Update(ctx context.Context, c *domain.Coupon) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	RedeemCoupon(ctx context.Context, couponID uuid.UUID, appUserID uuid.UUID) error
 }
 
 type couponService struct {
@@ -43,4 +45,15 @@ func (s *couponService) Update(ctx context.Context, c *domain.Coupon) error {
 
 func (s *couponService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *couponService) RedeemCoupon(ctx context.Context, couponID uuid.UUID, appUserID uuid.UUID) error {
+	c, err := s.repo.FindByID(ctx, couponID)
+	if err != nil {
+		return err
+	}
+	if c.RedeemedAt != nil {
+		return domain.NewConflict("coupon already redeemed")
+	}
+	return s.repo.Redeem(ctx, couponID, appUserID)
 }

@@ -86,6 +86,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 	themeRepo := postgresrepo.NewThemeRepository(pool)
 	productPlazaRepo := postgresrepo.NewProductPlazaRepository(pool)
 	appUserRepo := postgresrepo.NewAppUserRepository(pool)
+	languageRepo := postgresrepo.NewLanguageRepository(pool)
+	featuredZoneRepo := postgresrepo.NewFeaturedZoneRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
 	mailer := email.NewLogSender(logger)
@@ -119,6 +121,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
 	themeSvc := service.NewThemeService(themeRepo)
 	productPlazaSvc := service.NewProductPlazaService(productPlazaRepo)
+	languageSvc := service.NewLanguageService(languageRepo)
+	featuredZoneSvc := service.NewFeaturedZoneService(featuredZoneRepo)
 
 	enricherRegistry := enricher.NewRegistry(venueRepo)
 	tenants.RegisterAll(enricherRegistry)
@@ -151,6 +155,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 		LevelTypeService:        levelTypeSvc,
 		ThemeService:            themeSvc,
 		ProductPlazaService:     productPlazaSvc,
+		LanguageService:         languageSvc,
+		FeaturedZoneService:     featuredZoneSvc,
 		EnricherRegistry:        enricherRegistry,
 		UserRepo:                userRepo,
 		VenueRepo:               venueRepo,
