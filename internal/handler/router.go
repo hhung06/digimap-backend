@@ -51,7 +51,6 @@ type Dependencies struct {
 	ThemeService            service.ThemeService
 	ProductPlazaService     service.ProductPlazaService
 	LanguageService         service.LanguageService
-	FeaturedZoneService     service.FeaturedZoneService
 	EnricherRegistry        *enricher.Registry
 	UserRepo                repository.UserRepository
 	VenueRepo               repository.VenueRepository
@@ -359,14 +358,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.PUT("/:id/languages/:langID", editorAccess, langH.Update)
 		venues.DELETE("/:id/languages/:langID", editorAccess, langH.Delete)
 
-		// Featured zone sub-resources (management)
-		fzH := newFeaturedZoneHandler(deps.FeaturedZoneService)
-
-		venues.GET("/:id/featured-zones", viewerAccess, fzH.List)
-		venues.POST("/:id/featured-zones", editorAccess, fzH.Create)
-		venues.PUT("/:id/featured-zones/:zoneID", editorAccess, fzH.Update)
-		venues.DELETE("/:id/featured-zones/:zoneID", editorAccess, fzH.Delete)
-
 		// Analytics (protected — viewer access)
 		analyticsH := newAnalyticsHandler(deps.AnalyticsService)
 		// venues.GET("/:id/analytics/events", viewerAccess, analyticsH.ListEventLogs)
@@ -430,7 +421,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		deps.CouponService,
 		deps.AdvertisementService,
 		deps.SurveyService,
-		deps.FeaturedZoneService,
+		deps.LocationCategoryService,
 		deps.AnalyticsService,
 	)
 	appKey := r.Group("/app/v1", middleware.APIKeyAuth(venueKeyLookup{deps.VenueRepo}))

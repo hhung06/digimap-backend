@@ -380,13 +380,3 @@ type LanguageRepository interface {
 	Update(ctx context.Context, l *domain.Language) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
-
-// FeaturedZoneRepository handles featured zone CRUD per venue.
-type FeaturedZoneRepository interface {
-	FindByID(ctx context.Context, id uuid.UUID) (*domain.FeaturedZone, error)
-	List(ctx context.Context, venueID uuid.UUID) ([]*domain.FeaturedZone, error)
-	ListActive(ctx context.Context, venueID uuid.UUID) ([]*domain.FeaturedZone, error)
-	Create(ctx context.Context, z *domain.FeaturedZone) error
-	Update(ctx context.Context, z *domain.FeaturedZone) error
-	Delete(ctx context.Context, id uuid.UUID) error
-}

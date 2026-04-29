@@ -12,17 +12,17 @@ import (
 )
 
 type appHandler struct {
-	locations     service.LocationService
-	events        service.EventService
-	products      service.ProductService
-	productPlazas service.ProductPlazaService
-	articles      service.ArticleService
-	notifications service.NotificationService
-	coupons       service.CouponService
-	ads           service.AdvertisementService
-	surveys       service.SurveyService
-	featuredZones service.FeaturedZoneService
-	analytics     service.AnalyticsService
+	locations          service.LocationService
+	events             service.EventService
+	products           service.ProductService
+	productPlazas      service.ProductPlazaService
+	articles           service.ArticleService
+	notifications      service.NotificationService
+	coupons            service.CouponService
+	ads                service.AdvertisementService
+	surveys            service.SurveyService
+	locationCategories service.LocationCategoryService
+	analytics          service.AnalyticsService
 }
 
 func newAppHandler(
@@ -35,21 +35,21 @@ func newAppHandler(
 	coupons service.CouponService,
 	ads service.AdvertisementService,
 	surveys service.SurveyService,
-	featuredZones service.FeaturedZoneService,
+	locationCategories service.LocationCategoryService,
 	analytics service.AnalyticsService,
 ) *appHandler {
 	return &appHandler{
-		locations:     locations,
-		events:        events,
-		products:      products,
-		productPlazas: productPlazas,
-		articles:      articles,
-		notifications: notifications,
-		coupons:       coupons,
-		ads:           ads,
-		surveys:       surveys,
-		featuredZones: featuredZones,
-		analytics:     analytics,
+		locations:          locations,
+		events:             events,
+		products:           products,
+		productPlazas:      productPlazas,
+		articles:           articles,
+		notifications:      notifications,
+		coupons:            coupons,
+		ads:                ads,
+		surveys:            surveys,
+		locationCategories: locationCategories,
+		analytics:          analytics,
 	}
 }
 
@@ -199,14 +199,16 @@ func (h *appHandler) GetArticle(c *gin.Context) {
 
 func (h *appHandler) ListFeaturedZones(c *gin.Context) {
 	venueID := middleware.GetVenueID(c)
-	zones, err := h.featuredZones.ListActive(c.Request.Context(), venueID)
+	cats, err := h.locationCategories.List(c.Request.Context(), venueID)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	items := make([]dto.FeaturedZoneResponse, len(zones))
-	for i, z := range zones {
-		items[i] = dto.FeaturedZoneToResponse(z)
+	items := make([]dto.LocationCategoryResponse, 0, len(cats))
+	for _, cat := range cats {
+		if cat.Source == "external" {
+			items = append(items, dto.LocationCategoryToResponse(cat))
+		}
 	}
 	c.JSON(http.StatusOK, dto.OK(items))
 }
@@ -217,12 +219,12 @@ func (h *appHandler) GetFeaturedZone(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid zone id"))
 		return
 	}
-	z, err := h.featuredZones.Get(c.Request.Context(), id)
+	cat, err := h.locationCategories.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.FeaturedZoneToResponse(z)))
+	c.JSON(http.StatusOK, dto.OK(dto.LocationCategoryToResponse(cat)))
 }
 
 func (h *appHandler) ListNotifications(c *gin.Context) {

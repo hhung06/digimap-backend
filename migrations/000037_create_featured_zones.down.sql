@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS featured_zones CASCADE;
