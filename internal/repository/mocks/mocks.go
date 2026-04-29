@@ -332,6 +332,10 @@ func (m *CouponRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }
 
+func (m *CouponRepository) Redeem(ctx context.Context, id uuid.UUID, appUserID uuid.UUID) error {
+	return m.Called(ctx, id, appUserID).Error(0)
+}
+
 // ── VideoRepository ───────────────────────────────────────────────────────────
 
 // VideoRepository is a mock implementation of repository.VideoRepository.
@@ -831,4 +835,76 @@ func (m *AppUserRepository) FindByToken(ctx context.Context, venueID uuid.UUID, 
 
 func (m *AppUserRepository) Create(ctx context.Context, u *domain.AppUser) error {
 	return m.Called(ctx, u).Error(0)
+}
+
+// ── LanguageRepository ────────────────────────────────────────────────────────
+
+type LanguageRepository struct{ mock.Mock }
+
+func (m *LanguageRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Language, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Language); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LanguageRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.Language, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.Language); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LanguageRepository) Create(ctx context.Context, l *domain.Language) error {
+	return m.Called(ctx, l).Error(0)
+}
+
+func (m *LanguageRepository) Update(ctx context.Context, l *domain.Language) error {
+	return m.Called(ctx, l).Error(0)
+}
+
+func (m *LanguageRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── FeaturedZoneRepository ────────────────────────────────────────────────────
+
+type FeaturedZoneRepository struct{ mock.Mock }
+
+func (m *FeaturedZoneRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.FeaturedZone, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.FeaturedZone); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *FeaturedZoneRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.FeaturedZone, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.FeaturedZone); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *FeaturedZoneRepository) ListActive(ctx context.Context, venueID uuid.UUID) ([]*domain.FeaturedZone, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.FeaturedZone); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *FeaturedZoneRepository) Create(ctx context.Context, z *domain.FeaturedZone) error {
+	return m.Called(ctx, z).Error(0)
+}
+
+func (m *FeaturedZoneRepository) Update(ctx context.Context, z *domain.FeaturedZone) error {
+	return m.Called(ctx, z).Error(0)
+}
+
+func (m *FeaturedZoneRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
 }

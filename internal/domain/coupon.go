@@ -16,6 +16,8 @@ type Coupon struct {
 	Status       string
 	IssuedAt     *time.Time
 	ExpiredAt    *time.Time
+	RedeemedAt   *time.Time
+	RedeemedBy   *uuid.UUID
 	Localization json.RawMessage
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
