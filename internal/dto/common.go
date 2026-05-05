@@ -17,22 +17,16 @@ const (
 	CodeInternalError     AppCode = 1007 // Unexpected server-side error.
 )
 
-// Response is the standard envelope for single-resource and action endpoints.
+// Response is the standard envelope for all endpoints.
 //
-//	Success: {"code": 0, "data": {...}}
-//	Error:   {"code": 1003, "messages": ["venue not found"]}
+//	Success (single):   {"code": 0, "data": {...}}
+//	Success (list):     {"code": 0, "data": [...], "metadata": {"total_records": N, ...}}
+//	Error:              {"code": 1003, "messages": ["venue not found"]}
 type Response struct {
 	Code     AppCode     `json:"code"`
 	Data     interface{} `json:"data,omitempty"`
+	Metadata interface{} `json:"metadata,omitempty"`
 	Messages []string    `json:"messages,omitempty"`
-}
-
-// PaginatedData is the nested payload for list endpoints.
-//
-//	{"code": 0, "data": {"items": [...], "pagination": {...}}}
-type PaginatedData struct {
-	Items      interface{}  `json:"items"`
-	Pagination PaginationMeta `json:"pagination"`
 }
 
 // PaginationMeta holds page metadata returned with every list response.
@@ -63,15 +57,13 @@ func Paginated(items interface{}, total int64, page, pageSize int) Response {
 	}
 	return Response{
 		Code: CodeSuccess,
-		Data: PaginatedData{
-			Items: items,
-			Pagination: PaginationMeta{
-				TotalRecords: int(total),
-				TotalPages:   totalPages,
-				CurrentPage:  page,
-				PageSize:     pageSize,
-				HasNextPage:  page < totalPages,
-			},
+		Data: items,
+		Metadata: PaginationMeta{
+			TotalRecords: int(total),
+			TotalPages:   totalPages,
+			CurrentPage:  page,
+			PageSize:     pageSize,
+			HasNextPage:  page < totalPages,
 		},
 	}
 }

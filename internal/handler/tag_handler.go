@@ -112,12 +112,17 @@ func (h *tagHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid tag id"))
 		return
 	}
-	var req dto.TagRequest
+	var req dto.UpdateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	t := &domain.Tag{ID: id, Name: req.Name, Localization: req.Localization}
+	t, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	req.ApplyTo(t)
 	if err := h.svc.Update(c.Request.Context(), t); err != nil {
 		respondError(c, err)
 		return

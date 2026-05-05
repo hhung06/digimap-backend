@@ -51,6 +51,80 @@ type BeaconRequest struct {
 	TxPower   *int       `json:"tx_power"`
 }
 
+type UpdateBeaconRequest struct {
+	LevelID   *uuid.UUID `json:"level_id"`
+	ElementID *uuid.UUID `json:"element_id"`
+	Name      *string    `json:"name"`
+	HwID      *string    `json:"hw_id"`
+	VendorKey *string    `json:"vendor_key"`
+	LotKey    *string    `json:"lot_key"`
+	UUIDVal   *string    `json:"uuid"`
+	MAC       *string    `json:"mac"`
+	Radius    *int       `json:"radius"`
+	Battery   *int       `json:"battery"`
+	PositionX *float64   `json:"position_x"`
+	PositionY *float64   `json:"position_y"`
+	IsEnable  *bool      `json:"is_enable"`
+	Major     *int       `json:"major"`
+	Minor     *int       `json:"minor"`
+	Voltage   *int       `json:"voltage"`
+	TxPower   *int       `json:"tx_power"`
+}
+
+func (r UpdateBeaconRequest) ApplyTo(b *domain.Beacon) {
+	if r.LevelID != nil {
+		b.LevelID = r.LevelID
+	}
+	if r.ElementID != nil {
+		b.ElementID = r.ElementID
+	}
+	if r.Name != nil {
+		b.Name = *r.Name
+	}
+	if r.HwID != nil {
+		b.HwID = *r.HwID
+	}
+	if r.VendorKey != nil {
+		b.VendorKey = *r.VendorKey
+	}
+	if r.LotKey != nil {
+		b.LotKey = *r.LotKey
+	}
+	if r.UUIDVal != nil {
+		b.UUIDVal = *r.UUIDVal
+	}
+	if r.MAC != nil {
+		b.MAC = *r.MAC
+	}
+	if r.Radius != nil {
+		b.Radius = *r.Radius
+	}
+	if r.Battery != nil {
+		b.Battery = *r.Battery
+	}
+	if r.PositionX != nil {
+		b.PositionX = *r.PositionX
+	}
+	if r.PositionY != nil {
+		b.PositionY = *r.PositionY
+	}
+	if r.IsEnable != nil {
+		b.IsEnable = *r.IsEnable
+	}
+	if r.Major != nil {
+		b.Major = r.Major
+	}
+	if r.Minor != nil {
+		b.Minor = r.Minor
+	}
+	if r.Voltage != nil {
+		b.Voltage = r.Voltage
+	}
+	if r.TxPower != nil {
+		b.TxPower = r.TxPower
+	}
+}
+
 func BeaconToResponse(b *domain.Beacon) BeaconResponse {
 	return BeaconResponse{
 		ID: b.ID, VenueID: b.VenueID, LevelID: b.LevelID, ElementID: b.ElementID,

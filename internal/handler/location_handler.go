@@ -143,19 +143,17 @@ func (h *locationHandler) UpdateCategory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid category id"))
 		return
 	}
-	var req dto.LocationCategoryRequest
+	var req dto.UpdateLocationCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	cat := &domain.LocationCategory{
-		ID: id, ExternalID: req.ExternalID, Name: req.Name,
-		ShortName: req.ShortName, Color: req.Color, Icon: req.Icon,
-		IconDefault: req.IconDefault, SortIndex: req.SortIndex,
-		Visible: req.Visible, Description: req.Description,
-		Type: req.Type, Image: req.Image, Localization: req.Localization,
-		Source: req.Source,
+	cat, err := h.categorySvc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(cat)
 	if err := h.categorySvc.Update(c.Request.Context(), cat); err != nil {
 		respondError(c, err)
 		return
@@ -323,7 +321,12 @@ func (h *locationHandler) UpdateLocation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	l := locationFromUpdateRequest(id, req)
+	l, err := h.locationSvc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	req.ApplyTo(l)
 	if err := h.locationSvc.Update(c.Request.Context(), l, req.CategoryIDs); err != nil {
 		respondError(c, err)
 		return
@@ -551,18 +554,3 @@ func locationFromCreateRequest(venueID uuid.UUID, req dto.CreateLocationRequest)
 	}
 }
 
-func locationFromUpdateRequest(id uuid.UUID, req dto.UpdateLocationRequest) *domain.Location {
-	return &domain.Location{
-		ID: id, LevelID: req.LevelID, MainCategoryID: req.MainCategoryID,
-		ExternalID: req.ExternalID, CommonHidden: req.CommonHidden,
-		CommonName: req.CommonName, CommonShortName: req.CommonShortName,
-		CommonDescription: req.CommonDescription, CommonColor: req.CommonColor,
-		CommonLocationType: req.CommonLocationType, CommonLocationSubType: req.CommonLocationSubType,
-		CommonLatitude: req.CommonLatitude, CommonLongitude: req.CommonLongitude,
-		CommonAddress: req.CommonAddress, CommonLogo: req.CommonLogo,
-		CommonContactEmail: req.CommonContactEmail, CommonContactPhone: req.CommonContactPhone,
-		PlaceWorkHours: req.PlaceWorkHours, Custom: req.Custom, Localization: req.Localization,
-		Source: req.Source, StartTime: req.StartTime, EndTime: req.EndTime,
-		IsSearchable: req.IsSearchable,
-	}
-}

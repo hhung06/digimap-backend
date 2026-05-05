@@ -124,21 +124,17 @@ func (h *customerHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid customer id"))
 		return
 	}
-	var req dto.CustomerRequest
+	var req dto.UpdateCustomerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	cust := &domain.Customer{
-		ID:          id,
-		Name:        req.Name,
-		Image:       req.Image,
-		Phone:       req.Phone,
-		Email:       req.Email,
-		Address:     req.Address,
-		URL:         req.URL,
-		Description: req.Description,
+	cust, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(cust)
 	if err := h.svc.Update(c.Request.Context(), cust); err != nil {
 		respondError(c, err)
 		return

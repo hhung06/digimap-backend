@@ -105,15 +105,17 @@ func (h *levelHandler) UpdateMapGroup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid map group id"))
 		return
 	}
-	var req dto.MapGroupRequest
+	var req dto.UpdateMapGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	mg := &domain.MapGroup{
-		ID: mgID, Type: req.Type, Name: req.Name,
-		ShortName: req.ShortName, SortIndex: req.SortIndex,
+	mg, err := h.svc.GetMapGroup(c.Request.Context(), mgID)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(mg)
 	if err := h.svc.UpdateMapGroup(c.Request.Context(), mg); err != nil {
 		respondError(c, err)
 		return
@@ -267,14 +269,12 @@ func (h *levelHandler) UpdateLevel(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	l := &domain.Level{
-		ID: levelID, MapGroupID: req.MapGroupID,
-		Name: req.Name, ShortName: req.ShortName, ExternalID: req.ExternalID,
-		Type: req.Type, Latitude: req.Latitude, Longitude: req.Longitude, Bearing: req.Bearing,
-		Width: req.Width, Height: req.Height, Scale: req.Scale,
-		LevelWidth: req.LevelWidth, LevelHeight: req.LevelHeight,
-		FileIDs: req.FileIDs, Elevation: req.Elevation, IsPublished: req.IsPublished,
+	l, err := h.svc.Get(c.Request.Context(), levelID)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(l)
 	if err := h.svc.Update(c.Request.Context(), l); err != nil {
 		respondError(c, err)
 		return

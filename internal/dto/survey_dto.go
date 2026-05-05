@@ -82,16 +82,49 @@ type CreateSurveyRequest struct {
 }
 
 type UpdateSurveyRequest struct {
-	ExternalID     string          `json:"external_id"`
-	Title          string          `json:"title"`
-	Content        string          `json:"content"`
+	ExternalID     *string         `json:"external_id"`
+	Title          *string         `json:"title"`
+	Content        *string         `json:"content"`
 	StartDate      *time.Time      `json:"start_date"`
 	EndDate        *time.Time      `json:"end_date"`
-	Status         int             `json:"status"`
-	PublishType    int             `json:"publish_type"`
-	IsForced       bool            `json:"is_forced"`
-	App            string          `json:"app"`
+	Status         *int            `json:"status"`
+	PublishType    *int            `json:"publish_type"`
+	IsForced       *bool           `json:"is_forced"`
+	App            *string         `json:"app"`
 	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
+}
+
+func (r UpdateSurveyRequest) ApplyTo(s *domain.Survey) {
+	if r.ExternalID != nil {
+		s.ExternalID = *r.ExternalID
+	}
+	if r.Title != nil {
+		s.Title = *r.Title
+	}
+	if r.Content != nil {
+		s.Content = *r.Content
+	}
+	if r.StartDate != nil {
+		s.StartDate = r.StartDate
+	}
+	if r.EndDate != nil {
+		s.EndDate = r.EndDate
+	}
+	if r.Status != nil {
+		s.Status = *r.Status
+	}
+	if r.PublishType != nil {
+		s.PublishType = *r.PublishType
+	}
+	if r.IsForced != nil {
+		s.IsForced = *r.IsForced
+	}
+	if r.App != nil {
+		s.App = *r.App
+	}
+	if r.SegmentFilters != nil {
+		s.SegmentFilters = r.SegmentFilters
+	}
 }
 
 // ── Survey responses ──────────────────────────────────────────────────────────

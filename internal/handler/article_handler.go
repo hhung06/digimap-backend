@@ -137,21 +137,17 @@ func (h *articleHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid article id"))
 		return
 	}
-	var req dto.ArticleRequest
+	var req dto.UpdateArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	a := &domain.Article{
-		ID: id, ExternalID: req.ExternalID, LocationID: req.LocationID,
-		Placement: req.Placement, Navigate: req.Navigate,
-		Title: req.Title, Label: req.Label, Content: req.Content,
-		Status: req.Status,
-		PublishedAt: req.PublishedAt,
-		PublishedPeriodStart: req.PublishedPeriodStart,
-		PublishedPeriodEnd:   req.PublishedPeriodEnd,
-		Localization: req.Localization,
+	a, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(a)
 	if err := h.svc.Update(c.Request.Context(), a); err != nil {
 		respondError(c, err)
 		return

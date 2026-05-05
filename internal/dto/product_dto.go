@@ -85,17 +85,59 @@ type UpdateProductRequest struct {
 	LocationID     *uuid.UUID      `json:"location_id"`
 	MainCategoryID *uuid.UUID      `json:"main_category_id"`
 	CategoryIDs    []uuid.UUID     `json:"category_ids"`
-	Image          string          `json:"image"`
-	Name           string          `json:"name"`
-	ExternalID     string          `json:"external_id"`
-	Size           string          `json:"size"`
-	Price          string          `json:"price"`
-	OriginCountry  string          `json:"origin_country"`
-	Expiration     string          `json:"expiration"`
-	Description    string          `json:"description"`
+	Image          *string         `json:"image"`
+	Name           *string         `json:"name"`
+	ExternalID     *string         `json:"external_id"`
+	Size           *string         `json:"size"`
+	Price          *string         `json:"price"`
+	OriginCountry  *string         `json:"origin_country"`
+	Expiration     *string         `json:"expiration"`
+	Description    *string         `json:"description"`
 	Custom         json.RawMessage `json:"custom" swaggertype:"object"`
 	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
-	Source         string          `json:"source"`
+	Source         *string         `json:"source"`
+}
+
+func (r UpdateProductRequest) ApplyTo(p *domain.Product) {
+	if r.LocationID != nil {
+		p.LocationID = r.LocationID
+	}
+	if r.MainCategoryID != nil {
+		p.MainCategoryID = r.MainCategoryID
+	}
+	if r.Image != nil {
+		p.Image = *r.Image
+	}
+	if r.Name != nil {
+		p.Name = *r.Name
+	}
+	if r.ExternalID != nil {
+		p.ExternalID = *r.ExternalID
+	}
+	if r.Size != nil {
+		p.Size = *r.Size
+	}
+	if r.Price != nil {
+		p.Price = *r.Price
+	}
+	if r.OriginCountry != nil {
+		p.Country = *r.OriginCountry
+	}
+	if r.Expiration != nil {
+		p.Expiration = *r.Expiration
+	}
+	if r.Description != nil {
+		p.Description = *r.Description
+	}
+	if r.Custom != nil {
+		p.Custom = r.Custom
+	}
+	if r.Localization != nil {
+		p.Localization = r.Localization
+	}
+	if r.Source != nil {
+		p.Source = *r.Source
+	}
 }
 
 // Storage

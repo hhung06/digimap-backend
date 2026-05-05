@@ -141,7 +141,12 @@ func (h *venueHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	v := venueFromUpdateRequest(id, req)
+	v, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	req.ApplyTo(v)
 	if err := h.svc.Update(c.Request.Context(), v); err != nil {
 		respondError(c, err)
 		return
@@ -269,7 +274,6 @@ func venueFromCreateRequest(req dto.CreateVenueRequest) *domain.Venue {
 		Lat: req.Lat, Lng: req.Lng, Timezone: req.Timezone,
 		Telephone:   req.Telephone,
 		Description: req.Description,
-		Theme:       req.Theme, Plugins: req.Plugins,
 		Localization: req.Localization,
 		AppConfigs:   req.AppConfigs, AppDomains: req.AppDomains, SubDomains: req.SubDomains,
 		SEOTitle: req.SEOTitle, SEODescription: req.SEODescription, SEOKeywords: req.SEOKeywords,
@@ -278,25 +282,6 @@ func venueFromCreateRequest(req dto.CreateVenueRequest) *domain.Venue {
 	}
 }
 
-func venueFromUpdateRequest(id uuid.UUID, req dto.UpdateVenueRequest) *domain.Venue {
-	return &domain.Venue{
-		ID: id, Name: req.Name,
-		ExternalID: req.ExternalID, Type: req.Type,
-		Address: req.Address, City: req.City, State: req.State,
-		Country: req.Country, Postal: req.Postal,
-		Lat: req.Lat, Lng: req.Lng, Timezone: req.Timezone,
-		Telephone:   req.Telephone,
-		Description: req.Description,
-		Theme:       req.Theme, Plugins: req.Plugins,
-		Localization: req.Localization,
-		AppConfigs:   req.AppConfigs, AppDomains: req.AppDomains, SubDomains: req.SubDomains,
-		SEOTitle: req.SEOTitle, SEODescription: req.SEODescription, SEOKeywords: req.SEOKeywords,
-		HeadTag: req.HeadTag, BodyTag: req.BodyTag,
-		OriginalLogo: req.OriginalLogo, SmallLogo: req.SmallLogo,
-		MediumLogo: req.MediumLogo, LargeLogo: req.LargeLogo,
-		StartAt: req.StartAt, EndAt: req.EndAt,
-	}
-}
 
 func venuesToResponse(venues []*domain.Venue) []dto.VenueResponse {
 	items := make([]dto.VenueResponse, len(venues))

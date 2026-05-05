@@ -43,8 +43,6 @@ type Venue struct {
 	Timezone       string
 	Telephone      string
 	Description    string
-	Theme          json.RawMessage
-	Plugins        json.RawMessage
 	Localization   json.RawMessage
 	AppConfigs     json.RawMessage
 	AppDomains     json.RawMessage
@@ -63,6 +61,10 @@ type Venue struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      *time.Time
+	// Eagerly joined
+	CustomerName string
+	Languages    []string
+	FloorCount   int
 }
 
 // ── Level-related ─────────────────────────────────────────────────────────────

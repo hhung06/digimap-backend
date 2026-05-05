@@ -164,14 +164,12 @@ func (h *notificationHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	n := &domain.Notification{
-		ID: id, SurveyID: req.SurveyID,
-		Title: req.Title, Content: req.Content, Topic: req.Topic,
-		Kind: req.Kind, SendType: req.SendType,
-		Data: req.Data, LinkURL: req.LinkURL, ScheduledAt: req.ScheduledAt,
-		TargetApp: req.TargetApp, SegmentFilters: req.SegmentFilters,
-		DeviceTokens: req.DeviceTokens,
+	n, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(n)
 	if err := h.svc.Update(c.Request.Context(), n); err != nil {
 		respondError(c, err)
 		return

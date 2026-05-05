@@ -146,21 +146,17 @@ func (h *adHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid ad id"))
 		return
 	}
-	var req dto.AdvertisementRequest
+	var req dto.UpdateAdvertisementRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	a := &domain.Advertisement{
-		ID: id, LocationID: req.LocationID,
-		Type: req.Type, Navigate: req.Navigate,
-		ContentImageURL: req.ContentImageURL, ContentCTAURL: req.ContentCTAURL,
-		Placement: req.Placement,
-		SizeWidth: req.SizeWidth, SizeHeight: req.SizeHeight,
-		RewardType: req.RewardType, RewardAmount: req.RewardAmount,
-		DisplayDuration: req.DisplayDuration,
-		StartAt: req.StartAt, EndAt: req.EndAt,
+	a, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(a)
 	if err := h.svc.Update(c.Request.Context(), a); err != nil {
 		respondError(c, err)
 		return

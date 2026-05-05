@@ -280,14 +280,14 @@ func (h *productHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	prod := &domain.Product{
-		ID: id, LocationID: req.LocationID, MainCategoryID: req.MainCategoryID,
-		Image: req.Image, Name: req.Name, ExternalID: req.ExternalID, Size: req.Size,
-		Price: req.Price, Country: req.OriginCountry, Expiration: req.Expiration,
-		Description: req.Description, Custom: req.Custom, Localization: req.Localization,
-		Source: req.Source,
+	prod, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
-	if err := h.svc.Update(c.Request.Context(), prod, req.CategoryIDs); err != nil {
+	req.ApplyTo(prod)
+	categoryIDs := req.CategoryIDs
+	if err := h.svc.Update(c.Request.Context(), prod, categoryIDs); err != nil {
 		respondError(c, err)
 		return
 	}

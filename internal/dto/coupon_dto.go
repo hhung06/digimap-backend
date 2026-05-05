@@ -33,6 +33,40 @@ type CouponRequest struct {
 	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
+type UpdateCouponRequest struct {
+	ExternalID   *string         `json:"external_id"`
+	CouponName   *string         `json:"coupon_name"`
+	CouponCode   *string         `json:"coupon_code"`
+	Status       *string         `json:"status"`
+	IssuedAt     *time.Time      `json:"issued_at"`
+	ExpiredAt    *time.Time      `json:"expired_at"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
+}
+
+func (r UpdateCouponRequest) ApplyTo(c *domain.Coupon) {
+	if r.ExternalID != nil {
+		c.ExternalID = *r.ExternalID
+	}
+	if r.CouponName != nil {
+		c.CouponName = *r.CouponName
+	}
+	if r.CouponCode != nil {
+		c.CouponCode = *r.CouponCode
+	}
+	if r.Status != nil {
+		c.Status = *r.Status
+	}
+	if r.IssuedAt != nil {
+		c.IssuedAt = r.IssuedAt
+	}
+	if r.ExpiredAt != nil {
+		c.ExpiredAt = r.ExpiredAt
+	}
+	if r.Localization != nil {
+		c.Localization = r.Localization
+	}
+}
+
 func CouponToResponse(c *domain.Coupon) CouponResponse {
 	return CouponResponse{
 		ID: c.ID, VenueID: c.VenueID, ExternalID: c.ExternalID,

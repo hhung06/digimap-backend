@@ -48,17 +48,56 @@ type CreateNotificationRequest struct {
 
 type UpdateNotificationRequest struct {
 	SurveyID       *uuid.UUID      `json:"survey_id"`
-	Title          string          `json:"title"`
-	Content        string          `json:"content"`
-	Topic          string          `json:"topic"`
-	Kind           int             `json:"type"`
-	SendType       int             `json:"send_type"`
+	Title          *string         `json:"title"`
+	Content        *string         `json:"content"`
+	Topic          *string         `json:"topic"`
+	Kind           *int            `json:"type"`
+	SendType       *int            `json:"send_type"`
 	Data           json.RawMessage `json:"data" swaggertype:"object"`
-	LinkURL        string          `json:"link_url"`
+	LinkURL        *string         `json:"link_url"`
 	ScheduledAt    *time.Time      `json:"scheduled_at"`
-	TargetApp      string          `json:"target_app"`
+	TargetApp      *string         `json:"target_app"`
 	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
 	DeviceTokens   json.RawMessage `json:"device_tokens" swaggertype:"object"`
+}
+
+func (r UpdateNotificationRequest) ApplyTo(n *domain.Notification) {
+	if r.SurveyID != nil {
+		n.SurveyID = r.SurveyID
+	}
+	if r.Title != nil {
+		n.Title = *r.Title
+	}
+	if r.Content != nil {
+		n.Content = *r.Content
+	}
+	if r.Topic != nil {
+		n.Topic = *r.Topic
+	}
+	if r.Kind != nil {
+		n.Kind = *r.Kind
+	}
+	if r.SendType != nil {
+		n.SendType = *r.SendType
+	}
+	if r.Data != nil {
+		n.Data = r.Data
+	}
+	if r.LinkURL != nil {
+		n.LinkURL = *r.LinkURL
+	}
+	if r.ScheduledAt != nil {
+		n.ScheduledAt = r.ScheduledAt
+	}
+	if r.TargetApp != nil {
+		n.TargetApp = *r.TargetApp
+	}
+	if r.SegmentFilters != nil {
+		n.SegmentFilters = r.SegmentFilters
+	}
+	if r.DeviceTokens != nil {
+		n.DeviceTokens = r.DeviceTokens
+	}
 }
 
 func NotificationToResponse(n *domain.Notification) NotificationResponse {

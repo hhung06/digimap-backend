@@ -46,6 +46,64 @@ type LocationCategoryRequest struct {
 	Source       string          `json:"source"`
 }
 
+type UpdateLocationCategoryRequest struct {
+	ExternalID   *string         `json:"external_id"`
+	Name         *string         `json:"name"`
+	ShortName    *string         `json:"short_name"`
+	Color        *string         `json:"color"`
+	Icon         *string         `json:"icon"`
+	IconDefault  *string         `json:"icon_default"`
+	SortIndex    *int            `json:"sort_index"`
+	Visible      *bool           `json:"visible"`
+	Description  *string         `json:"description"`
+	Type         *string         `json:"type"`
+	Image        *string         `json:"image"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
+	Source       *string         `json:"source"`
+}
+
+func (r UpdateLocationCategoryRequest) ApplyTo(c *domain.LocationCategory) {
+	if r.ExternalID != nil {
+		c.ExternalID = *r.ExternalID
+	}
+	if r.Name != nil {
+		c.Name = *r.Name
+	}
+	if r.ShortName != nil {
+		c.ShortName = *r.ShortName
+	}
+	if r.Color != nil {
+		c.Color = *r.Color
+	}
+	if r.Icon != nil {
+		c.Icon = *r.Icon
+	}
+	if r.IconDefault != nil {
+		c.IconDefault = *r.IconDefault
+	}
+	if r.SortIndex != nil {
+		c.SortIndex = *r.SortIndex
+	}
+	if r.Visible != nil {
+		c.Visible = *r.Visible
+	}
+	if r.Description != nil {
+		c.Description = *r.Description
+	}
+	if r.Type != nil {
+		c.Type = *r.Type
+	}
+	if r.Image != nil {
+		c.Image = *r.Image
+	}
+	if r.Localization != nil {
+		c.Localization = r.Localization
+	}
+	if r.Source != nil {
+		c.Source = *r.Source
+	}
+}
+
 func LocationCategoryToResponse(c *domain.LocationCategory) LocationCategoryResponse {
 	return LocationCategoryResponse{
 		ID: c.ID, VenueID: c.VenueID, ExternalID: c.ExternalID,
@@ -179,30 +237,102 @@ type CreateLocationRequest struct {
 }
 
 type UpdateLocationRequest struct {
-	LevelID            *uuid.UUID      `json:"level_id"`
-	MainCategoryID     *uuid.UUID      `json:"main_category_id"`
-	CategoryIDs        []uuid.UUID     `json:"category_ids"`
-	ExternalID         string          `json:"external_id"`
-	CommonHidden       bool            `json:"common_hidden"`
-	CommonName         string          `json:"common_name" binding:"required"`
-	CommonShortName    string          `json:"common_short_name"`
-	CommonDescription  string          `json:"common_description"`
-	CommonColor        string          `json:"common_color"`
-	CommonLocationType    int             `json:"common_location_type"`
-	CommonLocationSubType int             `json:"common_location_sub_type"`
-	CommonLatitude        float64         `json:"common_latitude"`
-	CommonLongitude       float64         `json:"common_longitude"`
-	CommonAddress         string          `json:"common_address"`
-	CommonLogo            string          `json:"common_logo"`
-	CommonContactEmail string          `json:"common_contact_email"`
-	CommonContactPhone string          `json:"common_contact_phone"`
-	PlaceWorkHours     json.RawMessage `json:"place_work_hours" swaggertype:"object"`
-	Custom             json.RawMessage `json:"custom" swaggertype:"object"`
-	Localization       json.RawMessage `json:"localization" swaggertype:"object"`
-	Source             string          `json:"source"`
-	StartTime          *time.Time      `json:"start_time"`
-	EndTime            *time.Time      `json:"end_time"`
-	IsSearchable       bool            `json:"is_searchable"`
+	LevelID               *uuid.UUID      `json:"level_id"`
+	MainCategoryID        *uuid.UUID      `json:"main_category_id"`
+	CategoryIDs           []uuid.UUID     `json:"category_ids"`
+	ExternalID            *string         `json:"external_id"`
+	CommonHidden          *bool           `json:"common_hidden"`
+	CommonName            *string         `json:"common_name"`
+	CommonShortName       *string         `json:"common_short_name"`
+	CommonDescription     *string         `json:"common_description"`
+	CommonColor           *string         `json:"common_color"`
+	CommonLocationType    *int            `json:"common_location_type"`
+	CommonLocationSubType *int            `json:"common_location_sub_type"`
+	CommonLatitude        *float64        `json:"common_latitude"`
+	CommonLongitude       *float64        `json:"common_longitude"`
+	CommonAddress         *string         `json:"common_address"`
+	CommonLogo            *string         `json:"common_logo"`
+	CommonContactEmail    *string         `json:"common_contact_email"`
+	CommonContactPhone    *string         `json:"common_contact_phone"`
+	PlaceWorkHours        json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Custom                json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization          json.RawMessage `json:"localization" swaggertype:"object"`
+	Source                *string         `json:"source"`
+	StartTime             *time.Time      `json:"start_time"`
+	EndTime               *time.Time      `json:"end_time"`
+	IsSearchable          *bool           `json:"is_searchable"`
+}
+
+func (r UpdateLocationRequest) ApplyTo(l *domain.Location) {
+	if r.LevelID != nil {
+		l.LevelID = r.LevelID
+	}
+	if r.MainCategoryID != nil {
+		l.MainCategoryID = r.MainCategoryID
+	}
+	if r.ExternalID != nil {
+		l.ExternalID = *r.ExternalID
+	}
+	if r.CommonHidden != nil {
+		l.CommonHidden = *r.CommonHidden
+	}
+	if r.CommonName != nil {
+		l.CommonName = *r.CommonName
+	}
+	if r.CommonShortName != nil {
+		l.CommonShortName = *r.CommonShortName
+	}
+	if r.CommonDescription != nil {
+		l.CommonDescription = *r.CommonDescription
+	}
+	if r.CommonColor != nil {
+		l.CommonColor = *r.CommonColor
+	}
+	if r.CommonLocationType != nil {
+		l.CommonLocationType = *r.CommonLocationType
+	}
+	if r.CommonLocationSubType != nil {
+		l.CommonLocationSubType = *r.CommonLocationSubType
+	}
+	if r.CommonLatitude != nil {
+		l.CommonLatitude = *r.CommonLatitude
+	}
+	if r.CommonLongitude != nil {
+		l.CommonLongitude = *r.CommonLongitude
+	}
+	if r.CommonAddress != nil {
+		l.CommonAddress = *r.CommonAddress
+	}
+	if r.CommonLogo != nil {
+		l.CommonLogo = *r.CommonLogo
+	}
+	if r.CommonContactEmail != nil {
+		l.CommonContactEmail = *r.CommonContactEmail
+	}
+	if r.CommonContactPhone != nil {
+		l.CommonContactPhone = *r.CommonContactPhone
+	}
+	if r.PlaceWorkHours != nil {
+		l.PlaceWorkHours = r.PlaceWorkHours
+	}
+	if r.Custom != nil {
+		l.Custom = r.Custom
+	}
+	if r.Localization != nil {
+		l.Localization = r.Localization
+	}
+	if r.Source != nil {
+		l.Source = *r.Source
+	}
+	if r.StartTime != nil {
+		l.StartTime = r.StartTime
+	}
+	if r.EndTime != nil {
+		l.EndTime = r.EndTime
+	}
+	if r.IsSearchable != nil {
+		l.IsSearchable = *r.IsSearchable
+	}
 }
 
 type SetTopLocationRequest struct {

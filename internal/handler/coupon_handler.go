@@ -133,17 +133,17 @@ func (h *couponHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid coupon id"))
 		return
 	}
-	var req dto.CouponRequest
+	var req dto.UpdateCouponRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	cp := &domain.Coupon{
-		ID: id, ExternalID: req.ExternalID,
-		CouponName: req.CouponName, CouponCode: req.CouponCode,
-		Status: req.Status, IssuedAt: req.IssuedAt, ExpiredAt: req.ExpiredAt,
-		Localization: req.Localization,
+	cp, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(cp)
 	if err := h.svc.Update(c.Request.Context(), cp); err != nil {
 		respondError(c, err)
 		return

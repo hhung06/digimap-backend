@@ -133,17 +133,17 @@ func (h *connectionHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid connection id"))
 		return
 	}
-	var req dto.ConnectionRequest
+	var req dto.UpdateConnectionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	conn := &domain.Connection{
-		ID: id, ExternalID: req.ExternalID, Name: req.Name,
-		Type: req.Type, X: req.X, Y: req.Y,
-		State: req.State, Status: req.Status,
-		Accessible: req.Accessible, Active: req.Active,
+	conn, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(conn)
 	if err := h.svc.Update(c.Request.Context(), conn); err != nil {
 		respondError(c, err)
 		return

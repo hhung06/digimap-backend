@@ -135,19 +135,17 @@ func (h *beaconHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid beacon id"))
 		return
 	}
-	var req dto.BeaconRequest
+	var req dto.UpdateBeaconRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	b := &domain.Beacon{
-		ID: id, LevelID: req.LevelID, ElementID: req.ElementID,
-		Name: req.Name, HwID: req.HwID, VendorKey: req.VendorKey, LotKey: req.LotKey,
-		UUIDVal: req.UUIDVal, MAC: req.MAC,
-		Radius: req.Radius, Battery: req.Battery,
-		PositionX: req.PositionX, PositionY: req.PositionY, IsEnable: req.IsEnable,
-		Major: req.Major, Minor: req.Minor, Voltage: req.Voltage, TxPower: req.TxPower,
+	b, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(b)
 	if err := h.svc.Update(c.Request.Context(), b); err != nil {
 		respondError(c, err)
 		return

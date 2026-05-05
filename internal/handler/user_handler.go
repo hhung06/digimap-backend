@@ -58,14 +58,12 @@ func (h *userHandler) UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	u := &domain.User{
-		ID:        userID,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Phone:     req.Phone,
-		AvatarURL: req.AvatarURL,
-		IsActive:  true,
+	u, err := h.svc.GetProfile(c.Request.Context(), userID)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(u)
 	if err := h.svc.UpdateProfile(c.Request.Context(), u); err != nil {
 		respondError(c, err)
 		return

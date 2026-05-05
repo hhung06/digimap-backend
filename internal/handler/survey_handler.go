@@ -151,14 +151,12 @@ func (h *surveyHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	s := &domain.Survey{
-		ID: id, ExternalID: req.ExternalID,
-		Title: req.Title, Content: req.Content,
-		StartDate: req.StartDate, EndDate: req.EndDate,
-		Status: req.Status, PublishType: req.PublishType,
-		IsForced: req.IsForced, App: req.App,
-		SegmentFilters: req.SegmentFilters,
+	s, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(s)
 	if err := h.svc.Update(c.Request.Context(), s); err != nil {
 		respondError(c, err)
 		return

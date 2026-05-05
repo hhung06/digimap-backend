@@ -132,16 +132,17 @@ func (h *videoHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid video id"))
 		return
 	}
-	var req dto.VideoRequest
+	var req dto.UpdateVideoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	v := &domain.Video{
-		ID: id, Title: req.Title, Description: req.Description,
-		URL: req.URL, Thumbnail: req.Thumbnail, Duration: req.Duration,
-		Status: req.Status, PublishedAt: req.PublishedAt,
+	v, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
 	}
+	req.ApplyTo(v)
 	if err := h.svc.Update(c.Request.Context(), v); err != nil {
 		respondError(c, err)
 		return

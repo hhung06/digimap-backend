@@ -22,10 +22,25 @@ func UserToResponse(u *domain.User) UserResponse {
 }
 
 type UpdateProfileRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
-	AvatarURL string `json:"avatar_url"`
+	FirstName *string `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Phone     *string `json:"phone"`
+	AvatarURL *string `json:"avatar_url"`
+}
+
+func (r UpdateProfileRequest) ApplyTo(u *domain.User) {
+	if r.FirstName != nil {
+		u.FirstName = *r.FirstName
+	}
+	if r.LastName != nil {
+		u.LastName = *r.LastName
+	}
+	if r.Phone != nil {
+		u.Phone = *r.Phone
+	}
+	if r.AvatarURL != nil {
+		u.AvatarURL = *r.AvatarURL
+	}
 }
 
 // ── Venue user management ─────────────────────────────────────────────────────

@@ -22,6 +22,20 @@ type TagRequest struct {
 	Localization json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
+type UpdateTagRequest struct {
+	Name         *string         `json:"name"`
+	Localization json.RawMessage `json:"localization" swaggertype:"object"`
+}
+
+func (r UpdateTagRequest) ApplyTo(t *domain.Tag) {
+	if r.Name != nil {
+		t.Name = *r.Name
+	}
+	if r.Localization != nil {
+		t.Localization = r.Localization
+	}
+}
+
 type AttachTagRequest struct {
 	TagID      uuid.UUID `json:"tag_id" binding:"required"`
 	EntityType string    `json:"entity_type" binding:"required"`
