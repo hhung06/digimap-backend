@@ -14,6 +14,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	Create(ctx context.Context, u *domain.User) error
 	Update(ctx context.Context, u *domain.User) error
+	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
 
 	// Venue roles

@@ -68,6 +68,11 @@ func Paginated(items interface{}, total int64, page, pageSize int) Response {
 	}
 }
 
+// OKMessage returns a successful Response with no data, only a human-readable message.
+func OKMessage(msg string) Response {
+	return Response{Code: CodeSuccess, Messages: []string{msg}}
+}
+
 // Fail returns an error Response with a single message.
 func Fail(code AppCode, msg string) Response {
 	return Response{Code: code, Messages: []string{msg}}

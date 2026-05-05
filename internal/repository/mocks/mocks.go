@@ -41,6 +41,10 @@ func (m *UserRepository) Update(ctx context.Context, u *domain.User) error {
 	return m.Called(ctx, u).Error(0)
 }
 
+func (m *UserRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	return m.Called(ctx, id, passwordHash).Error(0)
+}
+
 func (m *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }

@@ -112,9 +112,11 @@ func (h *authHandler) RefreshToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.OK(dto.TokenResponse{
-		AccessToken:  pair.AccessToken,
-		RefreshToken: pair.RefreshToken,
-		TokenType:    "Bearer",
+		AccessToken:      pair.AccessToken,
+		AccessExpiresIn:  pair.AccessExpiresIn,
+		RefreshToken:     pair.RefreshToken,
+		RefreshExpiresIn: pair.RefreshExpiresIn,
+		TokenType:        "Bearer",
 	}))
 }
 
@@ -141,7 +143,7 @@ func (h *authHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "logged out"}))
+	c.JSON(http.StatusOK, dto.OKMessage("logged out"))
 }
 
 // @Summary     Request password reset
@@ -162,7 +164,7 @@ func (h *authHandler) RequestPasswordReset(c *gin.Context) {
 
 	// Always returns 200 — prevents email enumeration
 	_ = h.auth.RequestPasswordReset(c.Request.Context(), req.Email)
-	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "if the email exists a reset link has been sent"}))
+	c.JSON(http.StatusOK, dto.OKMessage("if the email exists a reset link has been sent"))
 }
 
 // @Summary     Confirm password reset
@@ -186,7 +188,7 @@ func (h *authHandler) ConfirmPasswordReset(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "password updated"}))
+	c.JSON(http.StatusOK, dto.OKMessage("password updated"))
 }
 
 // @Summary     Change password
@@ -213,7 +215,7 @@ func (h *authHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.OK(gin.H{"message": "password changed"}))
+	c.JSON(http.StatusOK, dto.OKMessage("password changed"))
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

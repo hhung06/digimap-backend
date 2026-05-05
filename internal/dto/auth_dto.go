@@ -68,7 +68,9 @@ type LoginResponse struct {
 }
 
 type TokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
+	AccessToken      string `json:"access_token"`
+	AccessExpiresIn  int    `json:"access_expires_in"`
+	RefreshToken     string `json:"refresh_token"`
+	RefreshExpiresIn int    `json:"refresh_expires_in"`
+	TokenType        string `json:"token_type"`
 }

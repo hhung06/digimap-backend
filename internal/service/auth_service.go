@@ -28,8 +28,10 @@ type Claims struct {
 
 // TokenPair holds both tokens issued at login or refresh.
 type TokenPair struct {
-	AccessToken  string
-	RefreshToken string
+	AccessToken      string
+	RefreshToken     string
+	AccessExpiresIn  int // seconds
+	RefreshExpiresIn int // seconds
 }
 
 // AuthService handles all authentication and session management.
@@ -131,11 +133,6 @@ func (s *authService) RefreshToken(ctx context.Context, rawRefreshToken string) 
 		return TokenPair{}, err
 	}
 
-	// Revoke the used token (rotation)
-	if err := s.tokens.RevokeRefreshToken(ctx, stored.ID); err != nil {
-		return TokenPair{}, fmt.Errorf("revoke old refresh token: %w", err)
-	}
-
 	u, err := s.users.FindByID(ctx, stored.UserID)
 	if err != nil {
 		return TokenPair{}, err
@@ -144,7 +141,17 @@ func (s *authService) RefreshToken(ctx context.Context, rawRefreshToken string) 
 		return TokenPair{}, domain.NewUnauthorized("account is disabled")
 	}
 
-	return s.issuePair(ctx, u)
+	accessToken, err := s.issueAccessToken(u)
+	if err != nil {
+		return TokenPair{}, err
+	}
+	remaining := time.Until(stored.ExpiresAt)
+	return TokenPair{
+		AccessToken:      accessToken,
+		RefreshToken:     rawRefreshToken,
+		AccessExpiresIn:  int(s.cfg.AccessExpiry.Seconds()),
+		RefreshExpiresIn: int(remaining.Seconds()),
+	}, nil
 }
 
 // ── Logout ────────────────────────────────────────────────────────────────────
@@ -234,8 +241,7 @@ func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
-	u.PasswordHash = string(hash)
-	return s.users.Update(ctx, u)
+	return s.users.UpdatePassword(ctx, userID, string(hash))
 }
 
 // ── JWT helpers ───────────────────────────────────────────────────────────────
@@ -290,7 +296,12 @@ func (s *authService) issuePair(ctx context.Context, u *domain.User) (TokenPair,
 		return TokenPair{}, fmt.Errorf("store refresh token: %w", err)
 	}
 
-	return TokenPair{AccessToken: accessToken, RefreshToken: rawRefresh}, nil
+	return TokenPair{
+		AccessToken:      accessToken,
+		RefreshToken:     rawRefresh,
+		AccessExpiresIn:  int(s.cfg.AccessExpiry.Seconds()),
+		RefreshExpiresIn: int(s.cfg.RefreshExpiry.Seconds()),
+	}, nil
 }
 
 // ── Utility ───────────────────────────────────────────────────────────────────

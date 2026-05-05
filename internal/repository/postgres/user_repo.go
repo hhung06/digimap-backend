@@ -90,6 +90,20 @@ func (r *userRepo) Update(ctx context.Context, u *domain.User) error {
 	return err
 }
 
+func (r *userRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE users SET password_hash = $2 WHERE id = $1 AND deleted_at IS NULL`,
+		id, passwordHash,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.NewNotFound("user not found")
+	}
+	return nil
+}
+
 func (r *userRepo) UpdateLastLogin(ctx context.Context, id uuid.UUID) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE users SET last_login_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
