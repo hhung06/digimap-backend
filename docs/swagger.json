@@ -1,13 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Digimap backend REST API",
-        "title": "Digimap Backend API",
-        "contact": {},
-        "version": "1.0"
+        "contact": {}
     },
-    "host": "localhost:8080",
-    "basePath": "/api/v1",
     "paths": {
         "/auth/login": {
             "post": {
@@ -406,7 +401,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -1287,7 +1286,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -1766,7 +1769,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2094,7 +2101,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2503,7 +2514,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2573,7 +2588,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2643,7 +2662,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -3139,7 +3162,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -3906,7 +3933,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -4468,7 +4499,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -5090,7 +5125,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -6498,7 +6537,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -7420,7 +7463,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -8101,7 +8148,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -8555,70 +8606,6 @@
                 }
             }
         },
-        "/venues/{id}/publish": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Publish or unpublish a venue (requires owner role)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "venues"
-                ],
-                "summary": "Publish venue",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Venue ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Published flag",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/venues/{id}/snapshots": {
             "get": {
                 "security": [
@@ -8667,7 +8654,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -8732,6 +8723,70 @@
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SnapshotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{id}/snapshots/auto-publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new auto snapshot and immediately publish it (system admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Auto-publish snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "allOf": [
                                 {
@@ -9188,6 +9243,160 @@
                 }
             }
         },
+        "/venues/{id}/snapshots/{snapshotID}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Publish a snapshot (system admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Publish snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Snapshot ID",
+                        "name": "snapshotID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SnapshotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{id}/snapshots/{snapshotID}/revert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revert a snapshot to published state (system admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Revert snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Snapshot ID",
+                        "name": "snapshotID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SnapshotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/venues/{id}/surveys": {
             "get": {
                 "security": [
@@ -9236,7 +9445,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -10082,7 +10295,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -10480,7 +10697,11 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -11603,6 +11824,9 @@
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_sub_type": {
+                    "type": "integer"
+                },
                 "common_location_type": {
                     "type": "integer"
                 },
@@ -11614,9 +11838,6 @@
                 },
                 "common_short_name": {
                     "type": "string"
-                },
-                "common_sub_type": {
-                    "type": "integer"
                 },
                 "custom": {
                     "type": "object"
@@ -11842,9 +12063,6 @@
                 "name": {
                     "type": "string"
                 },
-                "plugins": {
-                    "type": "object"
-                },
                 "postal": {
                     "type": "string"
                 },
@@ -11871,9 +12089,6 @@
                 },
                 "telephone": {
                     "type": "string"
-                },
-                "theme": {
-                    "type": "object"
                 },
                 "timezone": {
                     "type": "string"
@@ -12526,6 +12741,9 @@
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_sub_type": {
+                    "type": "integer"
+                },
                 "common_location_type": {
                     "type": "integer"
                 },
@@ -12546,9 +12764,6 @@
                 },
                 "common_small_logo": {
                     "type": "string"
-                },
-                "common_sub_type": {
-                    "type": "integer"
                 },
                 "created_at": {
                     "type": "string"
@@ -12794,15 +13009,6 @@
                 },
                 "question_id": {
                     "type": "string"
-                }
-            }
-        },
-        "dto.PaginatedData": {
-            "type": "object",
-            "properties": {
-                "items": {},
-                "pagination": {
-                    "$ref": "#/definitions/dto.PaginationMeta"
                 }
             }
         },
@@ -13224,7 +13430,8 @@
                     "items": {
                         "type": "string"
                     }
-                }
+                },
+                "metadata": {}
             }
         },
         "dto.SetTopLocationRequest": {
@@ -13587,9 +13794,6 @@
         },
         "dto.UpdateLocationRequest": {
             "type": "object",
-            "required": [
-                "common_name"
-            ],
             "properties": {
                 "category_ids": {
                     "type": "array",
@@ -13618,6 +13822,9 @@
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_sub_type": {
+                    "type": "integer"
+                },
                 "common_location_type": {
                     "type": "integer"
                 },
@@ -13632,9 +13839,6 @@
                 },
                 "common_short_name": {
                     "type": "string"
-                },
-                "common_sub_type": {
-                    "type": "integer"
                 },
                 "custom": {
                     "type": "object"
@@ -13813,9 +14017,6 @@
         },
         "dto.UpdateVenueRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "address": {
                     "type": "string"
@@ -13835,9 +14036,6 @@
                 "country": {
                     "type": "string"
                 },
-                "custom_data": {
-                    "type": "object"
-                },
                 "description": {
                     "type": "string"
                 },
@@ -13849,9 +14047,6 @@
                 },
                 "head_tag": {
                     "type": "string"
-                },
-                "is_published": {
-                    "type": "boolean"
                 },
                 "large_logo": {
                     "type": "string"
@@ -13874,9 +14069,6 @@
                 "original_logo": {
                     "type": "string"
                 },
-                "plugins": {
-                    "type": "object"
-                },
                 "postal": {
                     "type": "string"
                 },
@@ -13887,9 +14079,6 @@
                     "type": "string"
                 },
                 "seo_title": {
-                    "type": "string"
-                },
-                "slug": {
                     "type": "string"
                 },
                 "small_logo": {
@@ -13907,20 +14096,11 @@
                 "telephone": {
                     "type": "string"
                 },
-                "theme": {
-                    "type": "object"
-                },
                 "timezone": {
                     "type": "string"
                 },
-                "translations": {
-                    "type": "object"
-                },
                 "type": {
                     "type": "integer"
-                },
-                "work_hours": {
-                    "type": "string"
                 }
             }
         },
@@ -13962,6 +14142,17 @@
                 }
             }
         },
+        "dto.VenueBriefCustomer": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.VenueKeyResponse": {
             "type": "object",
             "properties": {
@@ -13997,11 +14188,8 @@
                 "created_at": {
                     "type": "string"
                 },
-                "custom_data": {
-                    "type": "object"
-                },
-                "customer_id": {
-                    "type": "string"
+                "customer": {
+                    "$ref": "#/definitions/dto.VenueBriefCustomer"
                 },
                 "description": {
                     "type": "string"
@@ -14012,14 +14200,20 @@
                 "external_id": {
                     "type": "string"
                 },
+                "floor_count": {
+                    "type": "integer"
+                },
                 "head_tag": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "is_published": {
-                    "type": "boolean"
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "large_logo": {
                     "type": "string"
@@ -14042,9 +14236,6 @@
                 "original_logo": {
                     "type": "string"
                 },
-                "plugins": {
-                    "type": "object"
-                },
                 "postal": {
                     "type": "string"
                 },
@@ -14058,9 +14249,6 @@
                     "type": "string"
                 },
                 "seo_title": {
-                    "type": "string"
-                },
-                "slug": {
                     "type": "string"
                 },
                 "small_logo": {
@@ -14078,22 +14266,16 @@
                 "telephone": {
                     "type": "string"
                 },
-                "theme": {
-                    "type": "object"
-                },
                 "timezone": {
                     "type": "string"
-                },
-                "translations": {
-                    "type": "object"
                 },
                 "type": {
                     "type": "integer"
                 },
-                "updated_at": {
+                "type_display_name": {
                     "type": "string"
                 },
-                "work_hours": {
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -14164,14 +14346,6 @@
                     "type": "string"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
         }
     }
 }

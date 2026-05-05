@@ -196,7 +196,7 @@ func (h *locationHandler) DeleteCategory(c *gin.Context) {
 // @Param       id        path     string true  "Venue ID"
 // @Param       page      query    int    false "Page number"
 // @Param       page_size query    int    false "Page size"
-// @Success     200       {object} dto.Response{data=dto.PaginatedData}
+// @Success     200       {object} dto.Response{data=[]interface{},metadata=dto.PaginationMeta}
 // @Failure     400       {object} dto.Response
 // @Failure     401       {object} dto.Response
 // @Router      /venues/{id}/locations [get]

@@ -1,4 +1,3 @@
-basePath: /api/v1
 definitions:
   dto.AcceptInvitationRequest:
     properties:
@@ -550,6 +549,8 @@ definitions:
         type: boolean
       common_latitude:
         type: number
+      common_location_sub_type:
+        type: integer
       common_location_type:
         type: integer
       common_longitude:
@@ -558,8 +559,6 @@ definitions:
         type: string
       common_short_name:
         type: string
-      common_sub_type:
-        type: integer
       custom:
         type: object
       end_time:
@@ -707,8 +706,6 @@ definitions:
         type: object
       name:
         type: string
-      plugins:
-        type: object
       postal:
         type: string
       seo_description:
@@ -727,8 +724,6 @@ definitions:
         type: string
       telephone:
         type: string
-      theme:
-        type: object
       timezone:
         type: string
       translations:
@@ -1160,6 +1155,8 @@ definitions:
         type: string
       common_latitude:
         type: number
+      common_location_sub_type:
+        type: integer
       common_location_type:
         type: integer
       common_logo:
@@ -1174,8 +1171,6 @@ definitions:
         type: string
       common_small_logo:
         type: string
-      common_sub_type:
-        type: integer
       created_at:
         type: string
       custom:
@@ -1337,12 +1332,6 @@ definitions:
         type: string
       question_id:
         type: string
-    type: object
-  dto.PaginatedData:
-    properties:
-      items: {}
-      pagination:
-        $ref: '#/definitions/dto.PaginationMeta'
     type: object
   dto.PaginationMeta:
     properties:
@@ -1621,6 +1610,7 @@ definitions:
         items:
           type: string
         type: array
+      metadata: {}
     type: object
   dto.SetTopLocationRequest:
     properties:
@@ -1876,6 +1866,8 @@ definitions:
         type: boolean
       common_latitude:
         type: number
+      common_location_sub_type:
+        type: integer
       common_location_type:
         type: integer
       common_logo:
@@ -1886,8 +1878,6 @@ definitions:
         type: string
       common_short_name:
         type: string
-      common_sub_type:
-        type: integer
       custom:
         type: object
       end_time:
@@ -1908,8 +1898,6 @@ definitions:
         type: string
       start_time:
         type: string
-    required:
-    - common_name
     type: object
   dto.UpdateNotificationRequest:
     properties:
@@ -2019,8 +2007,6 @@ definitions:
         type: string
       country:
         type: string
-      custom_data:
-        type: object
       description:
         type: string
       end_at:
@@ -2029,8 +2015,6 @@ definitions:
         type: string
       head_tag:
         type: string
-      is_published:
-        type: boolean
       large_logo:
         type: string
       lat:
@@ -2045,8 +2029,6 @@ definitions:
         type: string
       original_logo:
         type: string
-      plugins:
-        type: object
       postal:
         type: string
       seo_description:
@@ -2054,8 +2036,6 @@ definitions:
       seo_keywords:
         type: string
       seo_title:
-        type: string
-      slug:
         type: string
       small_logo:
         type: string
@@ -2067,18 +2047,10 @@ definitions:
         type: string
       telephone:
         type: string
-      theme:
-        type: object
       timezone:
         type: string
-      translations:
-        type: object
       type:
         type: integer
-      work_hours:
-        type: string
-    required:
-    - name
     type: object
   dto.UserResponse:
     properties:
@@ -2105,6 +2077,13 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.VenueBriefCustomer:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   dto.VenueKeyResponse:
     properties:
       private_key:
@@ -2128,22 +2107,24 @@ definitions:
         type: string
       created_at:
         type: string
-      custom_data:
-        type: object
-      customer_id:
-        type: string
+      customer:
+        $ref: '#/definitions/dto.VenueBriefCustomer'
       description:
         type: string
       end_at:
         type: string
       external_id:
         type: string
+      floor_count:
+        type: integer
       head_tag:
         type: string
       id:
         type: string
-      is_published:
-        type: boolean
+      languages:
+        items:
+          type: string
+        type: array
       large_logo:
         type: string
       lat:
@@ -2158,8 +2139,6 @@ definitions:
         type: string
       original_logo:
         type: string
-      plugins:
-        type: object
       postal:
         type: string
       public_key:
@@ -2169,8 +2148,6 @@ definitions:
       seo_keywords:
         type: string
       seo_title:
-        type: string
-      slug:
         type: string
       small_logo:
         type: string
@@ -2182,17 +2159,13 @@ definitions:
         type: string
       telephone:
         type: string
-      theme:
-        type: object
       timezone:
         type: string
-      translations:
-        type: object
       type:
         type: integer
-      updated_at:
+      type_display_name:
         type: string
-      work_hours:
+      updated_at:
         type: string
     type: object
   dto.VideoRequest:
@@ -2239,12 +2212,8 @@ definitions:
       venue_id:
         type: string
     type: object
-host: localhost:8080
 info:
   contact: {}
-  description: Digimap backend REST API
-  title: Digimap Backend API
-  version: "1.0"
 paths:
   /auth/login:
     post:
@@ -2489,7 +2458,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "401":
           description: Unauthorized
@@ -3021,7 +2993,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "401":
           description: Unauthorized
@@ -3313,7 +3288,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -3512,7 +3490,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -3765,7 +3746,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -3807,7 +3791,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -3849,7 +3836,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -4156,7 +4146,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -4626,7 +4619,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -4973,7 +4969,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -5355,7 +5354,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -6224,7 +6226,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -6795,7 +6800,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -7215,7 +7223,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -7499,47 +7510,6 @@ paths:
       summary: Delete product attachment
       tags:
       - products
-  /venues/{id}/publish:
-    post:
-      consumes:
-      - application/json
-      description: Publish or unpublish a venue (requires owner role)
-      parameters:
-      - description: Venue ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Published flag
-        in: body
-        name: body
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/dto.Response'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/dto.Response'
-      security:
-      - BearerAuth: []
-      summary: Publish venue
-      tags:
-      - venues
   /venues/{id}/snapshots:
     get:
       description: List snapshots for a venue (system admin only)
@@ -7567,7 +7537,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -7849,6 +7822,139 @@ paths:
       summary: Delete level bundle
       tags:
       - snapshots
+  /venues/{id}/snapshots/{snapshotID}/publish:
+    post:
+      description: Publish a snapshot (system admin only)
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Snapshot ID
+        in: path
+        name: snapshotID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SnapshotResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Publish snapshot
+      tags:
+      - snapshots
+  /venues/{id}/snapshots/{snapshotID}/revert:
+    post:
+      description: Revert a snapshot to published state (system admin only)
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Snapshot ID
+        in: path
+        name: snapshotID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SnapshotResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Revert snapshot
+      tags:
+      - snapshots
+  /venues/{id}/snapshots/auto-publish:
+    post:
+      description: Create a new auto snapshot and immediately publish it (system admin
+        only)
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SnapshotResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Auto-publish snapshot
+      tags:
+      - snapshots
   /venues/{id}/snapshots/recent:
     get:
       description: Get the most recent published snapshot for a venue (system admin
@@ -7919,7 +8025,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -8448,7 +8557,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -8694,7 +8806,10 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/dto.PaginatedData'
+                  items: {}
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
               type: object
         "400":
           description: Bad Request
@@ -8882,10 +8997,4 @@ paths:
       summary: Update video
       tags:
       - videos
-securityDefinitions:
-  BearerAuth:
-    description: Type "Bearer" followed by a space and JWT token.
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

@@ -412,7 +412,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -1293,7 +1297,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -1772,7 +1780,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2100,7 +2112,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2509,7 +2525,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2579,7 +2599,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -2649,7 +2673,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -3145,7 +3173,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -3912,7 +3944,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -4474,7 +4510,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -5096,7 +5136,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -6504,7 +6548,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -7426,7 +7474,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -8107,7 +8159,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -8561,70 +8617,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/venues/{id}/publish": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Publish or unpublish a venue (requires owner role)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "venues"
-                ],
-                "summary": "Publish venue",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Venue ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Published flag",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/venues/{id}/snapshots": {
             "get": {
                 "security": [
@@ -8673,7 +8665,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -8738,6 +8734,70 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SnapshotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{id}/snapshots/auto-publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new auto snapshot and immediately publish it (system admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Auto-publish snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "allOf": [
                                 {
@@ -9194,6 +9254,160 @@ const docTemplate = `{
                 }
             }
         },
+        "/venues/{id}/snapshots/{snapshotID}/publish": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Publish a snapshot (system admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Publish snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Snapshot ID",
+                        "name": "snapshotID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SnapshotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/venues/{id}/snapshots/{snapshotID}/revert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revert a snapshot to published state (system admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Revert snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Snapshot ID",
+                        "name": "snapshotID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SnapshotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/venues/{id}/surveys": {
             "get": {
                 "security": [
@@ -9242,7 +9456,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -10088,7 +10306,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -10486,7 +10708,11 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/dto.PaginatedData"
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/dto.PaginationMeta"
                                         }
                                     }
                                 }
@@ -11609,6 +11835,9 @@ const docTemplate = `{
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_sub_type": {
+                    "type": "integer"
+                },
                 "common_location_type": {
                     "type": "integer"
                 },
@@ -11620,9 +11849,6 @@ const docTemplate = `{
                 },
                 "common_short_name": {
                     "type": "string"
-                },
-                "common_sub_type": {
-                    "type": "integer"
                 },
                 "custom": {
                     "type": "object"
@@ -11848,9 +12074,6 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "plugins": {
-                    "type": "object"
-                },
                 "postal": {
                     "type": "string"
                 },
@@ -11877,9 +12100,6 @@ const docTemplate = `{
                 },
                 "telephone": {
                     "type": "string"
-                },
-                "theme": {
-                    "type": "object"
                 },
                 "timezone": {
                     "type": "string"
@@ -12532,6 +12752,9 @@ const docTemplate = `{
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_sub_type": {
+                    "type": "integer"
+                },
                 "common_location_type": {
                     "type": "integer"
                 },
@@ -12552,9 +12775,6 @@ const docTemplate = `{
                 },
                 "common_small_logo": {
                     "type": "string"
-                },
-                "common_sub_type": {
-                    "type": "integer"
                 },
                 "created_at": {
                     "type": "string"
@@ -12800,15 +13020,6 @@ const docTemplate = `{
                 },
                 "question_id": {
                     "type": "string"
-                }
-            }
-        },
-        "dto.PaginatedData": {
-            "type": "object",
-            "properties": {
-                "items": {},
-                "pagination": {
-                    "$ref": "#/definitions/dto.PaginationMeta"
                 }
             }
         },
@@ -13230,7 +13441,8 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
+                },
+                "metadata": {}
             }
         },
         "dto.SetTopLocationRequest": {
@@ -13593,9 +13805,6 @@ const docTemplate = `{
         },
         "dto.UpdateLocationRequest": {
             "type": "object",
-            "required": [
-                "common_name"
-            ],
             "properties": {
                 "category_ids": {
                     "type": "array",
@@ -13624,6 +13833,9 @@ const docTemplate = `{
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_sub_type": {
+                    "type": "integer"
+                },
                 "common_location_type": {
                     "type": "integer"
                 },
@@ -13638,9 +13850,6 @@ const docTemplate = `{
                 },
                 "common_short_name": {
                     "type": "string"
-                },
-                "common_sub_type": {
-                    "type": "integer"
                 },
                 "custom": {
                     "type": "object"
@@ -13819,9 +14028,6 @@ const docTemplate = `{
         },
         "dto.UpdateVenueRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "address": {
                     "type": "string"
@@ -13841,9 +14047,6 @@ const docTemplate = `{
                 "country": {
                     "type": "string"
                 },
-                "custom_data": {
-                    "type": "object"
-                },
                 "description": {
                     "type": "string"
                 },
@@ -13855,9 +14058,6 @@ const docTemplate = `{
                 },
                 "head_tag": {
                     "type": "string"
-                },
-                "is_published": {
-                    "type": "boolean"
                 },
                 "large_logo": {
                     "type": "string"
@@ -13880,9 +14080,6 @@ const docTemplate = `{
                 "original_logo": {
                     "type": "string"
                 },
-                "plugins": {
-                    "type": "object"
-                },
                 "postal": {
                     "type": "string"
                 },
@@ -13893,9 +14090,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "seo_title": {
-                    "type": "string"
-                },
-                "slug": {
                     "type": "string"
                 },
                 "small_logo": {
@@ -13913,20 +14107,11 @@ const docTemplate = `{
                 "telephone": {
                     "type": "string"
                 },
-                "theme": {
-                    "type": "object"
-                },
                 "timezone": {
                     "type": "string"
                 },
-                "translations": {
-                    "type": "object"
-                },
                 "type": {
                     "type": "integer"
-                },
-                "work_hours": {
-                    "type": "string"
                 }
             }
         },
@@ -13968,6 +14153,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.VenueBriefCustomer": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.VenueKeyResponse": {
             "type": "object",
             "properties": {
@@ -14003,11 +14199,8 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "custom_data": {
-                    "type": "object"
-                },
-                "customer_id": {
-                    "type": "string"
+                "customer": {
+                    "$ref": "#/definitions/dto.VenueBriefCustomer"
                 },
                 "description": {
                     "type": "string"
@@ -14018,14 +14211,20 @@ const docTemplate = `{
                 "external_id": {
                     "type": "string"
                 },
+                "floor_count": {
+                    "type": "integer"
+                },
                 "head_tag": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "is_published": {
-                    "type": "boolean"
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "large_logo": {
                     "type": "string"
@@ -14048,9 +14247,6 @@ const docTemplate = `{
                 "original_logo": {
                     "type": "string"
                 },
-                "plugins": {
-                    "type": "object"
-                },
                 "postal": {
                     "type": "string"
                 },
@@ -14064,9 +14260,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "seo_title": {
-                    "type": "string"
-                },
-                "slug": {
                     "type": "string"
                 },
                 "small_logo": {
@@ -14084,22 +14277,16 @@ const docTemplate = `{
                 "telephone": {
                     "type": "string"
                 },
-                "theme": {
-                    "type": "object"
-                },
                 "timezone": {
                     "type": "string"
-                },
-                "translations": {
-                    "type": "object"
                 },
                 "type": {
                     "type": "integer"
                 },
-                "updated_at": {
+                "type_display_name": {
                     "type": "string"
                 },
-                "work_hours": {
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -14171,25 +14358,17 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "localhost:8080",
-	BasePath:         "/api/v1",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Digimap Backend API",
-	Description:      "Digimap backend REST API",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
