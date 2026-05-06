@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/firebase"
 )
 
 // ── UserRepository ────────────────────────────────────────────────────────────
@@ -475,9 +476,20 @@ func (m *LevelBundleRepository) Delete(ctx context.Context, id uuid.UUID) error 
 // VenueRepository is a mock implementation of repository.VenueRepository.
 type VenueRepository struct{ mock.Mock }
 
-func (m *VenueRepository) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
-	args := m.Called(ctx, venueID)
-	return args.Get(0).(uuid.UUID), args.Error(1)
+func (m *VenueRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Venue, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Venue); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *VenueRepository) FindByPublicKey(ctx context.Context, publicKey string) (*domain.Venue, error) {
+	args := m.Called(ctx, publicKey)
+	if v, ok := args.Get(0).(*domain.Venue); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *VenueRepository) FindByPrivateKey(ctx context.Context, privateKey string) (*domain.Venue, error) {
@@ -486,6 +498,43 @@ func (m *VenueRepository) FindByPrivateKey(ctx context.Context, privateKey strin
 		return v, args.Error(1)
 	}
 	return nil, args.Error(1)
+}
+
+func (m *VenueRepository) List(ctx context.Context, customerID uuid.UUID, p domain.Pagination) ([]*domain.Venue, int64, error) {
+	args := m.Called(ctx, customerID, p)
+	if v, ok := args.Get(0).([]*domain.Venue); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *VenueRepository) ListAll(ctx context.Context, p domain.Pagination) ([]*domain.Venue, int64, error) {
+	args := m.Called(ctx, p)
+	if v, ok := args.Get(0).([]*domain.Venue); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *VenueRepository) Create(ctx context.Context, v *domain.Venue) error {
+	return m.Called(ctx, v).Error(0)
+}
+
+func (m *VenueRepository) Update(ctx context.Context, v *domain.Venue) error {
+	return m.Called(ctx, v).Error(0)
+}
+
+func (m *VenueRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *VenueRepository) UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, privateKey string) error {
+	return m.Called(ctx, id, publicKey, privateKey).Error(0)
+}
+
+func (m *VenueRepository) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
+	args := m.Called(ctx, venueID)
+	return args.Get(0).(uuid.UUID), args.Error(1)
 }
 
 // ── StorerMock ────────────────────────────────────────────────────────────────
@@ -871,4 +920,471 @@ func (m *LanguageRepository) Update(ctx context.Context, l *domain.Language) err
 
 func (m *LanguageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
+}
+
+// ── LevelRepository ───────────────────────────────────────────────────────────
+
+type LevelRepository struct{ mock.Mock }
+
+func (m *LevelRepository) FindMapGroupByID(ctx context.Context, id uuid.UUID) (*domain.MapGroup, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.MapGroup); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelRepository) ListMapGroups(ctx context.Context, venueID uuid.UUID) ([]*domain.MapGroup, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.MapGroup); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelRepository) CreateMapGroup(ctx context.Context, mg *domain.MapGroup) error {
+	return m.Called(ctx, mg).Error(0)
+}
+
+func (m *LevelRepository) UpdateMapGroup(ctx context.Context, mg *domain.MapGroup) error {
+	return m.Called(ctx, mg).Error(0)
+}
+
+func (m *LevelRepository) DeleteMapGroup(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *LevelRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Level, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Level); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.Level, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.Level); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelRepository) Create(ctx context.Context, l *domain.Level) error {
+	return m.Called(ctx, l).Error(0)
+}
+
+func (m *LevelRepository) Update(ctx context.Context, l *domain.Level) error {
+	return m.Called(ctx, l).Error(0)
+}
+
+func (m *LevelRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *LevelRepository) UpsertPerspective(ctx context.Context, p *domain.Perspective) error {
+	return m.Called(ctx, p).Error(0)
+}
+
+func (m *LevelRepository) ListGeoReferences(ctx context.Context, levelID uuid.UUID) ([]*domain.GeoReference, error) {
+	args := m.Called(ctx, levelID)
+	if v, ok := args.Get(0).([]*domain.GeoReference); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LevelRepository) CreateGeoReference(ctx context.Context, g *domain.GeoReference) error {
+	return m.Called(ctx, g).Error(0)
+}
+
+func (m *LevelRepository) DeleteGeoReference(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── NotificationRepository ────────────────────────────────────────────────────
+
+type NotificationRepository struct{ mock.Mock }
+
+func (m *NotificationRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Notification, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Notification); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *NotificationRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Notification, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if v, ok := args.Get(0).([]*domain.Notification); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *NotificationRepository) Create(ctx context.Context, n *domain.Notification) error {
+	return m.Called(ctx, n).Error(0)
+}
+
+func (m *NotificationRepository) Update(ctx context.Context, n *domain.Notification) error {
+	return m.Called(ctx, n).Error(0)
+}
+
+func (m *NotificationRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *NotificationRepository) MarkSent(ctx context.Context, id uuid.UUID, publishedAt time.Time) error {
+	return m.Called(ctx, id, publishedAt).Error(0)
+}
+
+func (m *NotificationRepository) MarkFailed(ctx context.Context, id uuid.UUID, errInfos []byte) error {
+	return m.Called(ctx, id, errInfos).Error(0)
+}
+
+// ── SurveyRepository ──────────────────────────────────────────────────────────
+
+type SurveyRepository struct{ mock.Mock }
+
+func (m *SurveyRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Survey, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Survey); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SurveyRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if v, ok := args.Get(0).([]*domain.Survey); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *SurveyRepository) Create(ctx context.Context, s *domain.Survey) error {
+	return m.Called(ctx, s).Error(0)
+}
+
+func (m *SurveyRepository) Update(ctx context.Context, s *domain.Survey) error {
+	return m.Called(ctx, s).Error(0)
+}
+
+func (m *SurveyRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *SurveyRepository) FindQuestionByID(ctx context.Context, id uuid.UUID) (*domain.Question, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Question); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SurveyRepository) ListQuestions(ctx context.Context, surveyID uuid.UUID) ([]*domain.Question, error) {
+	args := m.Called(ctx, surveyID)
+	if v, ok := args.Get(0).([]*domain.Question); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SurveyRepository) CreateQuestion(ctx context.Context, q *domain.Question) error {
+	return m.Called(ctx, q).Error(0)
+}
+
+func (m *SurveyRepository) UpdateQuestion(ctx context.Context, q *domain.Question) error {
+	return m.Called(ctx, q).Error(0)
+}
+
+func (m *SurveyRepository) DeleteQuestion(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *SurveyRepository) CreateOption(ctx context.Context, o *domain.Option) error {
+	return m.Called(ctx, o).Error(0)
+}
+
+func (m *SurveyRepository) UpdateOption(ctx context.Context, o *domain.Option) error {
+	return m.Called(ctx, o).Error(0)
+}
+
+func (m *SurveyRepository) DeleteOption(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *SurveyRepository) ListActive(ctx context.Context, venueID uuid.UUID, publishTypes []int) ([]*domain.Survey, error) {
+	args := m.Called(ctx, venueID, publishTypes)
+	if v, ok := args.Get(0).([]*domain.Survey); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SurveyRepository) ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error) {
+	args := m.Called(ctx, surveyID, p)
+	if v, ok := args.Get(0).([]*domain.SurveyResponse); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *SurveyRepository) CreateResponse(ctx context.Context, r *domain.SurveyResponse) error {
+	return m.Called(ctx, r).Error(0)
+}
+
+// ── EventRepository ───────────────────────────────────────────────────────────
+
+type EventRepository struct{ mock.Mock }
+
+func (m *EventRepository) FindTagByID(ctx context.Context, id uuid.UUID) (*domain.EventTag, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.EventTag); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *EventRepository) ListTags(ctx context.Context) ([]*domain.EventTag, error) {
+	args := m.Called(ctx)
+	if v, ok := args.Get(0).([]*domain.EventTag); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *EventRepository) CreateTag(ctx context.Context, t *domain.EventTag) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *EventRepository) UpdateTag(ctx context.Context, t *domain.EventTag) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *EventRepository) DeleteTag(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *EventRepository) FindEventTypeByID(ctx context.Context, id uuid.UUID) (*domain.EventType, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.EventType); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *EventRepository) ListEventTypes(ctx context.Context, venueID uuid.UUID) ([]*domain.EventType, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.EventType); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *EventRepository) CreateEventType(ctx context.Context, t *domain.EventType) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *EventRepository) UpdateEventType(ctx context.Context, t *domain.EventType) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *EventRepository) DeleteEventType(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *EventRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Event); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *EventRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Event, int64, error) {
+	args := m.Called(ctx, venueID, p)
+	if v, ok := args.Get(0).([]*domain.Event); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *EventRepository) Create(ctx context.Context, e *domain.Event) error {
+	return m.Called(ctx, e).Error(0)
+}
+
+func (m *EventRepository) Update(ctx context.Context, e *domain.Event) error {
+	return m.Called(ctx, e).Error(0)
+}
+
+func (m *EventRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *EventRepository) SetTags(ctx context.Context, eventID uuid.UUID, tagIDs []uuid.UUID) error {
+	return m.Called(ctx, eventID, tagIDs).Error(0)
+}
+
+func (m *EventRepository) SetLocations(ctx context.Context, eventID uuid.UUID, locationIDs []uuid.UUID) error {
+	return m.Called(ctx, eventID, locationIDs).Error(0)
+}
+
+func (m *EventRepository) CreateImage(ctx context.Context, img *domain.EventImage) error {
+	return m.Called(ctx, img).Error(0)
+}
+
+func (m *EventRepository) DeleteImage(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── ConnectionRepository ──────────────────────────────────────────────────────
+
+type ConnectionRepository struct{ mock.Mock }
+
+func (m *ConnectionRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Connection, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if v, ok := args.Get(0).([]*domain.Connection); ok {
+		return v, args.Int(1), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *ConnectionRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Connection, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Connection); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ConnectionRepository) Create(ctx context.Context, c *domain.Connection) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *ConnectionRepository) Update(ctx context.Context, c *domain.Connection) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *ConnectionRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *ConnectionRepository) ListLevels(ctx context.Context, connectionID uuid.UUID) ([]*domain.ConnectionLevel, error) {
+	args := m.Called(ctx, connectionID)
+	if v, ok := args.Get(0).([]*domain.ConnectionLevel); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ConnectionRepository) AddLevel(ctx context.Context, cl *domain.ConnectionLevel) error {
+	return m.Called(ctx, cl).Error(0)
+}
+
+func (m *ConnectionRepository) RemoveLevel(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── ArticleRepository ─────────────────────────────────────────────────────────
+
+type ArticleRepository struct{ mock.Mock }
+
+func (m *ArticleRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Article, int, error) {
+	args := m.Called(ctx, venueID, p)
+	if v, ok := args.Get(0).([]*domain.Article); ok {
+		return v, args.Int(1), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *ArticleRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Article, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Article); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ArticleRepository) Create(ctx context.Context, a *domain.Article) error {
+	return m.Called(ctx, a).Error(0)
+}
+
+func (m *ArticleRepository) Update(ctx context.Context, a *domain.Article) error {
+	return m.Called(ctx, a).Error(0)
+}
+
+func (m *ArticleRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *ArticleRepository) CreateImage(ctx context.Context, img *domain.ArticleImage) error {
+	return m.Called(ctx, img).Error(0)
+}
+
+func (m *ArticleRepository) DeleteImage(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+// ── TagRepository ─────────────────────────────────────────────────────────────
+
+type TagRepository struct{ mock.Mock }
+
+func (m *TagRepository) List(ctx context.Context, p domain.Pagination) ([]*domain.Tag, int, error) {
+	args := m.Called(ctx, p)
+	if v, ok := args.Get(0).([]*domain.Tag); ok {
+		return v, args.Int(1), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *TagRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Tag, error) {
+	args := m.Called(ctx, id)
+	if v, ok := args.Get(0).(*domain.Tag); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *TagRepository) Create(ctx context.Context, t *domain.Tag) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *TagRepository) Update(ctx context.Context, t *domain.Tag) error {
+	return m.Called(ctx, t).Error(0)
+}
+
+func (m *TagRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *TagRepository) AttachTag(ctx context.Context, et *domain.EntityTag) error {
+	return m.Called(ctx, et).Error(0)
+}
+
+func (m *TagRepository) DetachTag(ctx context.Context, tagID uuid.UUID, entityType string, entityID uuid.UUID) error {
+	return m.Called(ctx, tagID, entityType, entityID).Error(0)
+}
+
+func (m *TagRepository) ListEntityTags(ctx context.Context, entityType string, entityID uuid.UUID) ([]*domain.Tag, error) {
+	args := m.Called(ctx, entityType, entityID)
+	if v, ok := args.Get(0).([]*domain.Tag); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+// ── MockPusher ────────────────────────────────────────────────────────────────
+
+// MockPusher is a testify/mock implementation of firebase.Pusher.
+type MockPusher struct{ mock.Mock }
+
+func (m *MockPusher) Send(ctx context.Context, msg firebase.Message) (string, error) {
+	args := m.Called(ctx, msg)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockPusher) SendMulticast(ctx context.Context, tokens []string, title, body string, data map[string]string) (int, int, error) {
+	args := m.Called(ctx, tokens, title, body, data)
+	return args.Int(0), args.Int(1), args.Error(2)
 }

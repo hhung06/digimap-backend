@@ -221,7 +221,7 @@ func TestAuthService_ChangePassword_Success(t *testing.T) {
 	}
 
 	userRepo.On("FindByID", ctx, userID).Return(user, nil)
-	userRepo.On("Update", ctx, mockAny).Return(nil)
+	userRepo.On("UpdatePassword", ctx, userID, mockAny).Return(nil)
 
 	err := svc.ChangePassword(ctx, userID, "old-password", "new-password-123")
 	require.NoError(t, err)

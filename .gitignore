@@ -43,7 +43,11 @@ docs/superpowers/
 # .idea/
 # .vscode/
 
-# Claude
+# AI
 .claude/
+.codex/
 CLAUDE.md
 AGENTS.md
+AIDLC.md
+aidlc-docs
+.aidlc-rule-details
