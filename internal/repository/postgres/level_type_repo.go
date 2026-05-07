@@ -18,7 +18,7 @@ func NewLevelTypeRepository(pool *pgxpool.Pool) repository.LevelTypeRepository {
 	return &levelTypeRepo{pool: pool}
 }
 
-const levelTypeSelectCols = `id, venue_id, name, icon, created_at, updated_at`
+const levelTypeSelectCols = `id, name, icon, created_at, updated_at`
 
 func (r *levelTypeRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelType, error) {
 	q := `SELECT ` + levelTypeSelectCols + ` FROM level_types WHERE id = $1 AND deleted_at IS NULL`
@@ -29,9 +29,9 @@ func (r *levelTypeRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Lev
 	return lt, err
 }
 
-func (r *levelTypeRepo) List(ctx context.Context, venueID uuid.UUID) ([]*domain.LevelType, error) {
-	q := `SELECT ` + levelTypeSelectCols + ` FROM level_types WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY name`
-	rows, err := r.pool.Query(ctx, q, venueID)
+func (r *levelTypeRepo) List(ctx context.Context) ([]*domain.LevelType, error) {
+	q := `SELECT ` + levelTypeSelectCols + ` FROM level_types WHERE deleted_at IS NULL ORDER BY name`
+	rows, err := r.pool.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +54,9 @@ func (r *levelTypeRepo) Create(ctx context.Context, lt *domain.LevelType) error 
 	}
 	const q = `
 		INSERT INTO level_types (id, venue_id, name, icon)
-		VALUES ($1, $2, $3, $4)
+		VALUES ($1, NULL, $2, $3)
 		RETURNING created_at, updated_at`
-	return r.pool.QueryRow(ctx, q, lt.ID, lt.VenueID, lt.Name, lt.Icon).Scan(&lt.CreatedAt, &lt.UpdatedAt)
+	return r.pool.QueryRow(ctx, q, lt.ID, lt.Name, lt.Icon).Scan(&lt.CreatedAt, &lt.UpdatedAt)
 }
 
 func (r *levelTypeRepo) Update(ctx context.Context, lt *domain.LevelType) error {
@@ -77,6 +77,6 @@ func (r *levelTypeRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 func scanLevelType(row scanner) (*domain.LevelType, error) {
 	var lt domain.LevelType
-	err := row.Scan(&lt.ID, &lt.VenueID, &lt.Name, &lt.Icon, &lt.CreatedAt, &lt.UpdatedAt)
+	err := row.Scan(&lt.ID, &lt.Name, &lt.Icon, &lt.CreatedAt, &lt.UpdatedAt)
 	return &lt, err
 }

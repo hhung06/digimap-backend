@@ -17,12 +17,7 @@ func newLevelTypeHandler(svc service.LevelTypeService) *levelTypeHandler {
 }
 
 func (h *levelTypeHandler) List(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
-		return
-	}
-	types, err := h.svc.List(c.Request.Context(), venueID)
+	types, err := h.svc.List(c.Request.Context())
 	if err != nil {
 		respondError(c, err)
 		return
@@ -35,17 +30,12 @@ func (h *levelTypeHandler) List(c *gin.Context) {
 }
 
 func (h *levelTypeHandler) Create(c *gin.Context) {
-	venueID, err := parseVenueID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
-		return
-	}
 	var req dto.LevelTypeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	lt, err := h.svc.Create(c.Request.Context(), venueID, req.Name, req.Icon)
+	lt, err := h.svc.Create(c.Request.Context(), req.Name, req.Icon)
 	if err != nil {
 		respondError(c, err)
 		return

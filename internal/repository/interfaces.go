@@ -343,7 +343,7 @@ type AssetRepository interface {
 // LevelTypeRepository handles level type CRUD.
 type LevelTypeRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelType, error)
-	List(ctx context.Context, venueID uuid.UUID) ([]*domain.LevelType, error)
+	List(ctx context.Context) ([]*domain.LevelType, error)
 	Create(ctx context.Context, lt *domain.LevelType) error
 	Update(ctx context.Context, lt *domain.LevelType) error
 	Delete(ctx context.Context, id uuid.UUID) error

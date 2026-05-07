@@ -8,7 +8,6 @@ import (
 
 type LevelType struct {
 	ID        uuid.UUID
-	VenueID   uuid.UUID
 	Name      string
 	Icon      string
 	CreatedAt time.Time

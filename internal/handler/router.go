@@ -146,10 +146,10 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.DELETE("/venues/:id/assets/:assetID", assetH.Delete)
 
 		ltH := newLevelTypeHandler(deps.LevelTypeService)
-		adminOnly.GET("/venues/:id/level-types", ltH.List)
-		adminOnly.POST("/venues/:id/level-types", ltH.Create)
-		adminOnly.PUT("/venues/:id/level-types/:typeID", ltH.Update)
-		adminOnly.DELETE("/venues/:id/level-types/:typeID", ltH.Delete)
+		adminOnly.GET("/level-types", ltH.List)
+		adminOnly.POST("/level-types", ltH.Create)
+		adminOnly.PUT("/level-types/:typeID", ltH.Update)
+		adminOnly.DELETE("/level-types/:typeID", ltH.Delete)
 
 		themeH := newThemeHandler(deps.ThemeService)
 		adminOnly.GET("/venues/:id/themes", themeH.List)

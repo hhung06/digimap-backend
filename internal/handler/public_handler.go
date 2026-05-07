@@ -30,9 +30,20 @@ func (h *publicHandler) VenueInformation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid venue id"))
 		return
 	}
+
+	key := c.Query("public_key")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "public_key is required"))
+		return
+	}
+
 	v, err := h.venues.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
+		return
+	}
+	if v.PublicKey != key {
+		c.JSON(http.StatusUnauthorized, dto.Fail(dto.CodeAuthRequired, "invalid public_key"))
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.VenueToResponse(v)))

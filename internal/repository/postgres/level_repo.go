@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/database"
 	"github.com/hhung06/digimap-backend/internal/repository"
 )
 
@@ -88,7 +89,19 @@ func (r *levelRepo) UpdateMapGroup(ctx context.Context, mg *domain.MapGroup) err
 }
 
 func (r *levelRepo) DeleteMapGroup(ctx context.Context, id uuid.UUID) error {
-	return softDelete(ctx, r.pool, "map_groups", id.String())
+	return database.WithTransaction(ctx, r.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE levels SET map_group_id = NULL, updated_at = NOW() WHERE map_group_id = $1 AND deleted_at IS NULL`,
+			id,
+		); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx,
+			`UPDATE map_groups SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
+			id,
+		)
+		return err
+	})
 }
 
 // ── Levels ────────────────────────────────────────────────────────────────────

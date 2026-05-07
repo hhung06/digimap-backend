@@ -19,14 +19,28 @@ func TestLevelTypeService_Create(t *testing.T) {
 	svc := service.NewLevelTypeService(repo)
 	ctx := context.Background()
 
-	venueID := uuid.New()
 	repo.On("Create", ctx, mock.AnythingOfType("*domain.LevelType")).Return(nil)
 
-	result, err := svc.Create(ctx, venueID, "Floor", "floor-icon")
+	result, err := svc.Create(ctx, "Floor", "floor-icon")
 
 	require.NoError(t, err)
 	assert.Equal(t, "Floor", result.Name)
-	assert.Equal(t, venueID, result.VenueID)
+	repo.AssertExpectations(t)
+}
+
+func TestLevelTypeService_List_Global(t *testing.T) {
+	repo := &mocks.LevelTypeRepository{}
+	svc := service.NewLevelTypeService(repo)
+	ctx := context.Background()
+	expected := []*domain.LevelType{{Name: "Floor"}, {Name: "Basement"}}
+
+	repo.On("List", ctx).Return(expected, nil)
+
+	got, err := svc.List(ctx)
+
+	require.NoError(t, err)
+	assert.Len(t, got, 2)
+	assert.Equal(t, "Floor", got[0].Name)
 	repo.AssertExpectations(t)
 }
 

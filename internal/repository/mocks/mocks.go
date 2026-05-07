@@ -612,8 +612,8 @@ func (m *LevelTypeRepository) FindByID(ctx context.Context, id uuid.UUID) (*doma
 	return nil, args.Error(1)
 }
 
-func (m *LevelTypeRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.LevelType, error) {
-	args := m.Called(ctx, venueID)
+func (m *LevelTypeRepository) List(ctx context.Context) ([]*domain.LevelType, error) {
+	args := m.Called(ctx)
 	if lt, ok := args.Get(0).([]*domain.LevelType); ok {
 		return lt, args.Error(1)
 	}
