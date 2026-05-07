@@ -1,0 +1,68 @@
+{
+  "name": "digimap-backend-load-tests",
+  "tool": "k6",
+  "target": {
+    "base_url_env": "TARGET_BASE_URL",
+    "allowed_environments": ["local", "staging", "develop"],
+    "production_guard_env": "ALLOW_PRODUCTION_LOAD_TEST"
+  },
+  "auth": {
+    "bearer_token_env": "AUTH_TOKEN",
+    "api_public_key_env": "API_PUBLIC_KEY",
+    "api_private_key_env": "API_PRIVATE_KEY",
+    "api_key_header_format": "ApiKey <public_key>:<private_key>"
+  },
+  "profiles": {
+    "normal": {
+      "purpose": "Baseline steady traffic",
+      "duration": "2m",
+      "traffic": "Low steady virtual users"
+    },
+    "peak": {
+      "purpose": "Sustained high traffic",
+      "duration": "5m",
+      "traffic": "Ramping virtual users"
+    },
+    "burst": {
+      "purpose": "Short traffic surge",
+      "duration": "2m",
+      "traffic": "Ramping arrival rate"
+    },
+    "error_retry": {
+      "purpose": "Failure handling and retry behavior",
+      "duration": "2m",
+      "traffic": "Low steady virtual users"
+    }
+  },
+  "scenarios": {
+    "full": ["public", "app", "admin"],
+    "public": ["health", "version", "public venue info", "visitor surveys", "analytics tracking"],
+    "app": ["app listing", "app detail", "search options", "promotions"],
+    "admin": ["profile", "venues", "venue content", "analytics searches"],
+    "error_retry": ["missing auth", "invalid API key", "invalid login", "invalid UUID", "retry wrapper"]
+  },
+  "data_file": "load-tests/data/test-data.json",
+  "env_examples": [
+    "load-tests/env/local.env.example",
+    "load-tests/env/staging.env.example"
+  ],
+  "reports": {
+    "json": "load-tests/reports/<profile>-<scenario>-summary.json",
+    "html": "load-tests/reports/<profile>-<scenario>-summary.html",
+    "required_metrics": [
+      "requests_per_second",
+      "average_latency",
+      "p95_latency",
+      "p99_latency",
+      "error_rate",
+      "failed_requests",
+      "endpoint_tags"
+    ]
+  },
+  "safety": {
+    "writes_default": false,
+    "writes_env": "ALLOW_WRITES",
+    "production_default": false,
+    "notes": "Run against local, develop, or staging only unless explicitly approved."
+  }
+}

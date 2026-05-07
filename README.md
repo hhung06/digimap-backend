@@ -43,6 +43,9 @@ make serve
 | `make test` | Run unit tests |
 | `make test-coverage` | Run tests and print total coverage |
 | `make test-integration` | Run integration tests (requires Docker) |
+| `make load-test-local` | Run local k6 public load test (requires Docker) |
+| `make load-test-staging` | Run staging k6 load test (requires Docker) |
+| `make load-test-scenario ENV=staging SCENARIO=app PROFILE=peak` | Run one load scenario/profile |
 | `make migrate-up` | Apply all pending migrations |
 | `make migrate-down` | Revert last migration |
 | `make migrate-create NAME=xxx` | Scaffold next numbered migration pair |
@@ -95,3 +98,31 @@ Handler → Service → Repository → Domain
 ## Environment Variables
 
 See `config/env/local.env.example` for all available configuration options.
+
+## EC2 Monitoring (Prometheus + Grafana)
+
+Infrastructure monitoring is defined in `deploy/stack-infra.yml` and includes:
+- `node-exporter` (host metrics per EC2 node)
+- `prometheus` (metrics scrape + storage)
+- `grafana` (dashboards + alerting UI)
+
+Setup:
+
+```bash
+cp deploy/.env.deploy.example deploy/.env.deploy
+# edit deploy/.env.deploy:
+# - PROMETHEUS_HOST
+# - GRAFANA_HOST
+# - GRAFANA_ADMIN_PASSWORD
+```
+
+Deploy/update infra stack:
+
+```bash
+docker network create --driver overlay --attachable traefik-public
+docker stack deploy -c deploy/stack-infra.yml digimap-infra
+```
+
+After deploy:
+- Prometheus: `https://$PROMETHEUS_HOST`
+- Grafana: `https://$GRAFANA_HOST` (user: `admin`, password: `GRAFANA_ADMIN_PASSWORD`)

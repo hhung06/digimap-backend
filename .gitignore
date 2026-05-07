@@ -28,6 +28,8 @@ go.work.sum
 bin/
 tmp/
 build-errors.log
+load-tests/reports/*
+!load-tests/reports/.gitkeep
 
 # env file
 .env

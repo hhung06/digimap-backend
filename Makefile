@@ -1,5 +1,6 @@
 .PHONY: build build-alpine run serve clean test test-integration \
         migrate-up migrate-down migrate-version migrate-create \
+        load-test-local load-test-staging load-test-scenario load-test-full \
         docker-build docker-up docker-down \
         swarm-init swarm-deploy-infra swarm-deploy swarm-rollback swarm-status \
         help
@@ -10,6 +11,10 @@ GIT_COMMIT = $(shell git rev-parse HEAD)
 GIT_DIRTY  = $(shell test -n "`git status --porcelain`" && echo "+CHANGES" || true)
 BUILD_DATE = $(shell date '+%Y-%m-%d-%H:%M:%S')
 IMAGE_NAME = hungnh14/digimap-backend
+K6_IMAGE   = grafana/k6:0.54.0
+PROFILE   ?= normal
+SCENARIO  ?= full
+LOCAL_LOAD_ENV_FILE = $(shell test -f load-tests/env/local.env && echo load-tests/env/local.env || echo load-tests/env/local.env.example)
 
 LDFLAGS = -X github.com/hhung06/digimap-backend/version.GitCommit=$(GIT_COMMIT)$(GIT_DIRTY) \
           -X github.com/hhung06/digimap-backend/version.BuildDate=$(BUILD_DATE)
@@ -30,6 +35,10 @@ help:
 	@echo '  make docker-up        Start local docker-compose stack'
 	@echo '  make docker-down      Stop local docker-compose stack'
 	@echo '  make docker-build     Build production Docker image'
+	@echo '  make load-test-local  Run local k6 load test via Docker'
+	@echo '  make load-test-staging Run staging k6 load test via Docker'
+	@echo '  make load-test-scenario ENV=staging SCENARIO=app PROFILE=peak'
+	@echo '  make load-test-full ENV=staging Run normal, peak, burst, and error profiles'
 	@echo '  make swarm-init       One-time Swarm + network setup'
 	@echo '  make swarm-deploy-infra  Deploy Traefik + Postgres + Redis stack'
 	@echo '  make swarm-deploy TAG=x  Blue-green deploy with image tag'
@@ -62,6 +71,41 @@ test-coverage:
 
 test-integration:
 	go test ./tests/integration/... -count=1 -tags integration -v
+
+# ── Load testing ──────────────────────────────────────────────────────────────
+load-test-local:
+	@mkdir -p load-tests/reports
+	docker run --rm \
+		--env-file $(LOCAL_LOAD_ENV_FILE) \
+		-v $(PWD)/load-tests:/load-tests \
+		-w /load-tests \
+		$(K6_IMAGE) run scenarios/main.js
+
+load-test-staging:
+	@mkdir -p load-tests/reports
+	docker run --rm \
+		--env-file load-tests/env/staging.env \
+		-v $(PWD)/load-tests:/load-tests \
+		-w /load-tests \
+		$(K6_IMAGE) run scenarios/main.js
+
+load-test-scenario:
+	@[ "$(ENV)" ] || (echo "usage: make load-test-scenario ENV=local|staging SCENARIO=app PROFILE=normal" && exit 1)
+	@mkdir -p load-tests/reports
+	docker run --rm \
+		--env-file load-tests/env/$(ENV).env \
+		-e PROFILE=$(PROFILE) \
+		-e SCENARIO=$(SCENARIO) \
+		-v $(PWD)/load-tests:/load-tests \
+		-w /load-tests \
+		$(K6_IMAGE) run scenarios/main.js
+
+load-test-full:
+	@[ "$(ENV)" ] || (echo "usage: make load-test-full ENV=local|staging" && exit 1)
+	$(MAKE) load-test-scenario ENV=$(ENV) PROFILE=normal SCENARIO=full
+	$(MAKE) load-test-scenario ENV=$(ENV) PROFILE=peak SCENARIO=full
+	$(MAKE) load-test-scenario ENV=$(ENV) PROFILE=burst SCENARIO=full
+	$(MAKE) load-test-scenario ENV=$(ENV) PROFILE=error_retry SCENARIO=error_retry
 
 # ── Migrations ────────────────────────────────────────────────────────────────
 migrate-up:

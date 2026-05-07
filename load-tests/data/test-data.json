@@ -1,0 +1,56 @@
+{
+  "ids": {
+    "venue_id": "00000000-0000-0000-0000-000000000001",
+    "location_id": "00000000-0000-0000-0000-000000000002",
+    "product_id": "00000000-0000-0000-0000-000000000003",
+    "survey_id": "00000000-0000-0000-0000-000000000004"
+  },
+  "payloads": {
+    "track_event_valid": {
+      "name": "load_test_page_view",
+      "params": {
+        "screen": "home",
+        "source": "k6"
+      },
+      "device_id": "k6-device",
+      "user_id": "k6-user"
+    },
+    "track_search_valid": {
+      "term": "coffee",
+      "device_id": "k6-device",
+      "user_id": "k6-user"
+    },
+    "login_invalid": {
+      "email": "load-test-invalid@example.com",
+      "password": "incorrect-password"
+    },
+    "category_valid": {
+      "name": "Load Test Category",
+      "short_name": "Load Test",
+      "color": "#336699",
+      "visible": true,
+      "source": "internal"
+    },
+    "location_valid": {
+      "common_name": "Load Test Location",
+      "common_short_name": "LT Location",
+      "common_location_type": 1,
+      "common_latitude": 10.7769,
+      "common_longitude": 106.7009,
+      "common_address": "Load test address",
+      "is_searchable": true,
+      "source": "internal"
+    },
+    "survey_response_valid": {
+      "answers": [
+        {
+          "question_id": "00000000-0000-0000-0000-000000000005",
+          "answer_text": "load test answer"
+        }
+      ]
+    },
+    "survey_response_invalid": {
+      "answers": []
+    }
+  }
+}
