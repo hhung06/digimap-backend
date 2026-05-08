@@ -553,4 +553,3 @@ func locationFromCreateRequest(venueID uuid.UUID, req dto.CreateLocationRequest)
 		IsSearchable: req.IsSearchable,
 	}
 }
-

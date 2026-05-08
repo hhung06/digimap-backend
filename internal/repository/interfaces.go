@@ -100,6 +100,7 @@ type LocationRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	SetCategories(ctx context.Context, locationID uuid.UUID, categoryIDs []uuid.UUID) error
 	SetTopLocation(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error
+	ListTopLocations(ctx context.Context, venueID uuid.UUID) ([]*domain.Location, error)
 	GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error)
 	FindByExternalID(ctx context.Context, venueID uuid.UUID, externalID string, locationType int) (*domain.Location, error)
 

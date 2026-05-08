@@ -2,11 +2,14 @@ package service_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
@@ -15,15 +18,15 @@ import (
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
-func newTestLocationService(repo *mocks.LocationRepository) service.LocationService {
-	return service.NewLocationService(repo)
+func newTestLocationService(repo *mocks.LocationRepository, storer *mocks.StorerMock) service.LocationService {
+	return service.NewLocationService(repo, storer, "test")
 }
 
 // ── Get ───────────────────────────────────────────────────────────────────────
 
 func TestLocationService_Get_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -39,7 +42,7 @@ func TestLocationService_Get_Success(t *testing.T) {
 
 func TestLocationService_Get_NotFound(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -56,7 +59,7 @@ func TestLocationService_Get_NotFound(t *testing.T) {
 
 func TestLocationService_List_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	venueID := uuid.New()
@@ -76,7 +79,7 @@ func TestLocationService_List_Success(t *testing.T) {
 
 func TestLocationService_Create_DefaultsSource(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	l := &domain.Location{CommonName: "Shop"}
@@ -91,7 +94,7 @@ func TestLocationService_Create_DefaultsSource(t *testing.T) {
 
 func TestLocationService_Create_WithCategories(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	catID := uuid.New()
@@ -112,7 +115,7 @@ func TestLocationService_Create_WithCategories(t *testing.T) {
 
 func TestLocationService_Update_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	l := &domain.Location{ID: uuid.New(), CommonName: "Updated Shop"}
@@ -130,7 +133,7 @@ func TestLocationService_Update_Success(t *testing.T) {
 
 func TestLocationService_Delete_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -146,7 +149,7 @@ func TestLocationService_Delete_Success(t *testing.T) {
 
 func TestLocationService_Duplicate_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -171,7 +174,7 @@ func TestLocationService_Duplicate_Success(t *testing.T) {
 
 func TestLocationService_Duplicate_NotFound(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -188,23 +191,46 @@ func TestLocationService_Duplicate_NotFound(t *testing.T) {
 
 func TestLocationService_SetTop_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	storer := &mocks.StorerMock{}
+	svc := newTestLocationService(repo, storer)
 
 	ctx := context.Background()
 	id := uuid.New()
+	venueID := uuid.New()
 	sortIdx := 1
+	topID := uuid.New()
+	expected := []map[string]any{{
+		"id":              topID.String(),
+		"top_logo":        "logo.png",
+		"top_logo_type":   "image/png",
+		"is_top_location": true,
+	}}
 
-	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id}, nil)
+	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
 	repo.On("SetTopLocation", ctx, id, true, &sortIdx).Return(nil)
+	repo.On("ListTopLocations", ctx, venueID).Return([]*domain.Location{{
+		ID:            topID,
+		TopLogo:       "logo.png",
+		TopLogoType:   "image/png",
+		IsTopLocation: true,
+	}}, nil)
+	storer.On("PutObject", ctx, fmt.Sprintf("test/top_location/public/%s.digimap", venueID), mockAny).Run(func(args mock.Arguments) {
+		var got []map[string]any
+		err := json.Unmarshal(args.Get(2).([]byte), &got)
+		require.NoError(t, err)
+		assert.Equal(t, expected, got)
+	}).Return(nil)
 
 	err := svc.SetTop(ctx, id, true, &sortIdx)
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
+	storer.AssertExpectations(t)
 }
 
 func TestLocationService_SetTop_NotFound(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	storer := &mocks.StorerMock{}
+	svc := newTestLocationService(repo, storer)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -215,13 +241,78 @@ func TestLocationService_SetTop_NotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, domain.ErrNotFound))
 	repo.AssertExpectations(t)
+	storer.AssertNotCalled(t, "PutObject")
+}
+
+func TestLocationService_SetTop_DoesNotUploadWhenUpdateFails(t *testing.T) {
+	repo := &mocks.LocationRepository{}
+	storer := &mocks.StorerMock{}
+	svc := newTestLocationService(repo, storer)
+
+	ctx := context.Background()
+	id := uuid.New()
+	venueID := uuid.New()
+	sortIdx := 2
+
+	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
+	repo.On("SetTopLocation", ctx, id, false, &sortIdx).Return(assert.AnError)
+
+	err := svc.SetTop(ctx, id, false, &sortIdx)
+	require.ErrorIs(t, err, assert.AnError)
+	repo.AssertExpectations(t)
+	storer.AssertNotCalled(t, "PutObject")
+}
+
+func TestLocationService_SetTop_ReturnsUploadError(t *testing.T) {
+	repo := &mocks.LocationRepository{}
+	storer := &mocks.StorerMock{}
+	svc := newTestLocationService(repo, storer)
+
+	ctx := context.Background()
+	id := uuid.New()
+	venueID := uuid.New()
+	topID := uuid.New()
+
+	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
+	repo.On("SetTopLocation", ctx, id, true, (*int)(nil)).Return(nil)
+	repo.On("ListTopLocations", ctx, venueID).Return([]*domain.Location{{
+		ID:            topID,
+		TopLogo:       "logo.png",
+		TopLogoType:   "image/png",
+		IsTopLocation: true,
+	}}, nil)
+	storer.On("PutObject", ctx, fmt.Sprintf("test/top_location/public/%s.digimap", venueID), mockAny).Return(assert.AnError)
+
+	err := svc.SetTop(ctx, id, true, nil)
+	require.ErrorIs(t, err, assert.AnError)
+	repo.AssertExpectations(t)
+	storer.AssertExpectations(t)
+}
+
+func TestLocationService_SetTop_SkipsUploadWhenNoTopLocationsRemain(t *testing.T) {
+	repo := &mocks.LocationRepository{}
+	storer := &mocks.StorerMock{}
+	svc := newTestLocationService(repo, storer)
+
+	ctx := context.Background()
+	id := uuid.New()
+	venueID := uuid.New()
+
+	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
+	repo.On("SetTopLocation", ctx, id, false, (*int)(nil)).Return(nil)
+	repo.On("ListTopLocations", ctx, venueID).Return([]*domain.Location{}, nil)
+
+	err := svc.SetTop(ctx, id, false, nil)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+	storer.AssertNotCalled(t, "PutObject")
 }
 
 // ── DeleteImage ───────────────────────────────────────────────────────────────
 
 func TestLocationService_DeleteImage_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	locID := uuid.New()
@@ -238,7 +329,7 @@ func TestLocationService_DeleteImage_Success(t *testing.T) {
 
 func TestLocationService_DeleteImage_NotFound(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	svc := newTestLocationService(repo)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	locID := uuid.New()
@@ -257,7 +348,7 @@ func TestLocationService_DeleteImage_NotFound(t *testing.T) {
 func TestLocationService_Create_SourceDefaultInvariant(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		repo := &mocks.LocationRepository{}
-		svc := newTestLocationService(repo)
+		svc := newTestLocationService(repo, nil)
 
 		ctx := context.Background()
 		l := &domain.Location{

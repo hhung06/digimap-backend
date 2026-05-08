@@ -240,6 +240,32 @@ func (r *locationRepo) SetTopLocation(ctx context.Context, id uuid.UUID, isTop b
 	return nil
 }
 
+func (r *locationRepo) ListTopLocations(ctx context.Context, venueID uuid.UUID) ([]*domain.Location, error) {
+	q := `SELECT ` + locationSelectCols + `
+		FROM locations
+		WHERE venue_id = $1
+		  AND is_top_location = TRUE
+		  AND common_location_type != $2
+		  AND deleted_at IS NULL
+		ORDER BY updated_at DESC`
+
+	rows, err := r.pool.Query(ctx, q, venueID, domain.LocationTypeMemo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var locations []*domain.Location
+	for rows.Next() {
+		loc, err := scanLocation(rows)
+		if err != nil {
+			return nil, err
+		}
+		locations = append(locations, loc)
+	}
+	return locations, rows.Err()
+}
+
 // ── Images ────────────────────────────────────────────────────────────────────
 
 func (r *locationRepo) ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error) {

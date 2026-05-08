@@ -706,6 +706,14 @@ func (m *LocationRepository) SetTopLocation(ctx context.Context, id uuid.UUID, i
 	return m.Called(ctx, id, isTop, sortIndex).Error(0)
 }
 
+func (m *LocationRepository) ListTopLocations(ctx context.Context, venueID uuid.UUID) ([]*domain.Location, error) {
+	args := m.Called(ctx, venueID)
+	if items, ok := args.Get(0).([]*domain.Location); ok {
+		return items, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *LocationRepository) GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error) {
 	args := m.Called(ctx, lat, lng, radiusKm, venueID)
 	if locs, ok := args.Get(0).([]*domain.Location); ok {

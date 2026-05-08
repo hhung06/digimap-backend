@@ -17,6 +17,10 @@ import (
 // The rate string follows the ulule/limiter format: "<count>-<period>" e.g. "60-M" (60/min).
 // Counters are stored in Redis so limits apply across all replicas.
 func RateLimitByIP(client *redis.Client, rate string) gin.HandlerFunc {
+	if client == nil {
+		return func(c *gin.Context) { c.Next() }
+	}
+
 	r, err := limiter.NewRateFromFormatted(rate)
 	if err != nil {
 		panic("ratelimit: invalid rate format: " + rate)
@@ -46,6 +50,10 @@ func RateLimitByIP(client *redis.Client, rate string) gin.HandlerFunc {
 // Falls back to IP-based keying for unauthenticated requests.
 // Must be placed after AuthRequired in the middleware chain.
 func RateLimitByUser(client *redis.Client, rate string) gin.HandlerFunc {
+	if client == nil {
+		return func(c *gin.Context) { c.Next() }
+	}
+
 	r, err := limiter.NewRateFromFormatted(rate)
 	if err != nil {
 		panic("ratelimit: invalid rate format: " + rate)

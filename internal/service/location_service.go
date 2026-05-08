@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	"github.com/hhung06/digimap-backend/internal/repository"
 )
 
@@ -70,11 +73,13 @@ type LocationService interface {
 }
 
 type locationService struct {
-	repo repository.LocationRepository
+	repo   repository.LocationRepository
+	storer storage.Storer
+	env    string
 }
 
-func NewLocationService(repo repository.LocationRepository) LocationService {
-	return &locationService{repo: repo}
+func NewLocationService(repo repository.LocationRepository, storer storage.Storer, env string) LocationService {
+	return &locationService{repo: repo, storer: storer, env: env}
 }
 
 func (s *locationService) Get(ctx context.Context, id uuid.UUID) (*domain.Location, error) {
@@ -151,10 +156,55 @@ func (s *locationService) Duplicate(ctx context.Context, id uuid.UUID) (*domain.
 }
 
 func (s *locationService) SetTop(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error {
-	if _, err := s.repo.FindByID(ctx, id); err != nil {
+	loc, err := s.repo.FindByID(ctx, id)
+	if err != nil {
 		return err
 	}
-	return s.repo.SetTopLocation(ctx, id, isTop, sortIndex)
+	if err := s.repo.SetTopLocation(ctx, id, isTop, sortIndex); err != nil {
+		return err
+	}
+	if s.storer == nil {
+		return nil
+	}
+	return s.publishTopLocations(ctx, loc.VenueID)
+}
+
+type topLocationBundleItem struct {
+	ID            uuid.UUID `json:"id"`
+	TopLogo       string    `json:"top_logo"`
+	TopLogoType   string    `json:"top_logo_type"`
+	IsTopLocation bool      `json:"is_top_location"`
+}
+
+func (s *locationService) publishTopLocations(ctx context.Context, venueID uuid.UUID) error {
+	locations, err := s.repo.ListTopLocations(ctx, venueID)
+	if err != nil {
+		return err
+	}
+	if len(locations) == 0 {
+		return nil
+	}
+
+	payload := make([]topLocationBundleItem, len(locations))
+	for i, loc := range locations {
+		payload[i] = topLocationBundleItem{
+			ID:            loc.ID,
+			TopLogo:       loc.TopLogo,
+			TopLogoType:   loc.TopLogoType,
+			IsTopLocation: loc.IsTopLocation,
+		}
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal top locations: %w", err)
+	}
+
+	key := fmt.Sprintf("%s/top_location/public/%s.digimap", s.env, venueID)
+	if err := s.storer.PutObject(ctx, key, data); err != nil {
+		return fmt.Errorf("upload top-location bundle: %w", err)
+	}
+	return nil
 }
 
 func (s *locationService) ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error) {
