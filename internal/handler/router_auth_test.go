@@ -158,3 +158,36 @@ func TestNewRouter_PublicSurveySubmitDoesNotRequireAuth(t *testing.T) {
 	assert.NotContains(t, rec.Body.String(), "API key required")
 	assert.NotContains(t, rec.Body.String(), "Authorization")
 }
+
+func TestNewRouter_MountsVisitorSurveyPostRoute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := NewRouter(newRouterTestConfig(), newRouterTestLogger(), Dependencies{
+		AuthService: &authServiceStub{},
+	})
+
+	found := false
+	for _, route := range router.Routes() {
+		if route.Method == http.MethodPost && route.Path == "/public/v1/visitor-surveys" {
+			found = true
+			break
+		}
+	}
+
+	assert.True(t, found, "visitor survey POST route should be mounted")
+}
+
+func TestNewRouter_DoesNotMountVisitorSurveyGetRoute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := NewRouter(newRouterTestConfig(), newRouterTestLogger(), Dependencies{
+		AuthService: &authServiceStub{},
+	})
+
+	for _, route := range router.Routes() {
+		assert.False(t,
+			route.Method == http.MethodGet && route.Path == "/public/v1/visitor-surveys",
+			"visitor survey GET route should not be mounted",
+		)
+	}
+}

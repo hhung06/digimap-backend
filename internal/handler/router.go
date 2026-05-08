@@ -447,14 +447,15 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	}
 
 	// ── Public API (no auth) ──────────────────────────────────────────────────
-	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService, deps.AppUserRepo)
+	visitorSurveySvc := service.NewVisitorSurveySubmissionService(deps.VenueRepo, deps.AppUserRepo)
+	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService, deps.AppUserRepo, visitorSurveySvc)
 	publicAPI := r.Group("/public/v1")
 	{
 		publicAPI.GET("/venues/:id/information", publicH.VenueInformation)
 		publicAPI.GET("/surveys/:id", publicH.GetSurvey)
 		publicAPI.POST("/surveys/:id/submit-response", publicH.SubmitSurveyResponse)
 		publicAPI.GET("/venue-info", publicH.VenueInfo)
-		publicAPI.GET("/visitor-surveys", publicH.VisitorSurveys)
+		publicAPI.POST("/visitor-surveys", publicH.SubmitVisitorSurvey)
 	}
 
 	return r

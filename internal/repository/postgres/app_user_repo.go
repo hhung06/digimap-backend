@@ -49,20 +49,22 @@ func (r *appUserRepo) Create(ctx context.Context, u *domain.AppUser) error {
 	}
 	interests := u.Interests
 	if interests == nil {
-		interests = json.RawMessage("{}")
+		interests = json.RawMessage("[]")
 	}
 	const q = `
 		INSERT INTO app_users (
 			id, venue_id, external_id, source, type,
 			first_name, last_name, email, phone, token, token_expiration,
-			survey_flag, is_consented, interests
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			survey_flag, is_consented, interests, visitor_type, other_interests,
+			ip_address, user_agent, business_name
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 		RETURNING created_at, updated_at`
 	return r.pool.QueryRow(ctx, q,
 		u.ID, u.VenueID, nullStr(u.ExternalID), u.Source, u.Type,
 		nullStr(u.FirstName), nullStr(u.LastName), nullStr(u.Email), nullStr(u.Phone),
 		nullStr(u.Token), u.TokenExpiration,
-		u.SurveyFlag, u.IsConsented, interests,
+		u.SurveyFlag, u.IsConsented, interests, u.VisitorType, nullStr(u.OtherInterests),
+		nullStr(u.IPAddress), nullStr(u.UserAgent), nullStr(u.BusinessName),
 	).Scan(&u.CreatedAt, &u.UpdatedAt)
 }
 
@@ -73,9 +75,9 @@ func scanAppUser(row pgx.Row) (*domain.AppUser, error) {
 		email, phone, companyName, companyNameEn                 *string
 		department, position, positionEn, app, token             *string
 		otherInterests, ipAddress, userAgent, businessName       *string
-		section, visitorType                                      *int
+		section, visitorType                                     *int
 		tokenExpiration, deletedAt                               *time.Time
-		interests                                                 []byte
+		interests                                                []byte
 	)
 	err := row.Scan(
 		&u.ID, &u.VenueID, &externalID, &u.Source, &u.Type,

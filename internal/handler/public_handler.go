@@ -14,14 +14,15 @@ import (
 )
 
 type publicHandler struct {
-	venues        service.VenueService
-	surveys       service.SurveyService
-	productPlazas service.ProductPlazaService
-	appUsers      repository.AppUserRepository
+	venues         service.VenueService
+	surveys        service.SurveyService
+	productPlazas  service.ProductPlazaService
+	appUsers       repository.AppUserRepository
+	visitorSurveys service.VisitorSurveySubmissionService
 }
 
-func newPublicHandler(venues service.VenueService, surveys service.SurveyService, productPlazas service.ProductPlazaService, appUsers repository.AppUserRepository) *publicHandler {
-	return &publicHandler{venues: venues, surveys: surveys, productPlazas: productPlazas, appUsers: appUsers}
+func newPublicHandler(venues service.VenueService, surveys service.SurveyService, productPlazas service.ProductPlazaService, appUsers repository.AppUserRepository, visitorSurveys service.VisitorSurveySubmissionService) *publicHandler {
+	return &publicHandler{venues: venues, surveys: surveys, productPlazas: productPlazas, appUsers: appUsers, visitorSurveys: visitorSurveys}
 }
 
 func (h *publicHandler) VenueInformation(c *gin.Context) {
@@ -106,36 +107,32 @@ func (h *publicHandler) VenueInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.VenueToResponse(v)))
 }
 
-func (h *publicHandler) VisitorSurveys(c *gin.Context) {
-	key := c.Query("public_key")
-	if key == "" {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "public_key is required"))
+func (h *publicHandler) SubmitVisitorSurvey(c *gin.Context) {
+	var req dto.SubmitVisitorSurveyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	venue, err := h.venues.GetByPublicKey(c.Request.Context(), key)
+	visitor, err := h.visitorSurveys.Submit(c.Request.Context(), service.VisitorSurveySubmission{
+		PublicKey:      req.PublicKey,
+		FullName:       req.FullName,
+		Email:          req.Email,
+		PhoneNumber:    req.PhoneNumber,
+		VisitorType:    req.VisitorType,
+		BusinessName:   req.BusinessName,
+		Interests:      req.Interests,
+		OtherInterests: req.OtherInterests,
+		IsConsented:    req.IsConsented,
+		IPAddress:      c.ClientIP(),
+		UserAgent:      strings.TrimSpace(c.GetHeader("User-Agent")),
+	})
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-
-	// Authenticate visitor by token if provided; visitor token is optional.
-	token := strings.TrimPrefix(c.GetHeader("Authorization"), "Token ")
-	if token != "" {
-		if _, err := h.appUsers.FindByToken(c.Request.Context(), venue.ID, token); err != nil {
-			c.JSON(http.StatusUnauthorized, dto.Fail(dto.CodeAuthRequired, "invalid visitor token"))
-			return
-		}
-	}
-
-	surveys, err := h.surveys.ListActive(c.Request.Context(), venue.ID,
-		[]int{domain.SurveyPublishInApp, domain.SurveyPublishBoth})
-	if err != nil {
-		respondError(c, err)
+	if visitor == nil {
+		c.JSON(http.StatusInternalServerError, dto.Fail(dto.CodeInternalError, "visitor submission returned no app user"))
 		return
 	}
-	items := make([]dto.SurveyResponse, len(surveys))
-	for i, s := range surveys {
-		items[i] = dto.SurveyToResponse(s)
-	}
-	c.JSON(http.StatusOK, dto.OK(items))
+	c.JSON(http.StatusCreated, dto.OK(gin.H{"app_user_id": visitor.ID}))
 }
