@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -178,6 +179,61 @@ func TestNotificationService_Send_FCMError(t *testing.T) {
 
 	err := svc.Send(ctx, id)
 	require.Error(t, err)
+	repo.AssertExpectations(t)
+	pusher.AssertExpectations(t)
+}
+
+func TestNotificationService_Send_BySegmentFiltersTopics_Success(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	pusher := &mocks.MockPusher{}
+	svc := newTestNotificationService(repo, pusher)
+
+	ctx := context.Background()
+	id := uuid.New()
+	n := &domain.Notification{
+		ID:             id,
+		Title:          "Survey",
+		Content:        "Please answer",
+		SendStatus:     domain.NotifSendPending,
+		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"},{"key":"all_users","type":null}]`),
+	}
+
+	repo.On("FindByID", ctx, id).Return(n, nil)
+	pusher.On("Send", ctx, firebase.Message{Topic: "visitors_vip", Title: "Survey", Body: "Please answer"}).Return("msg-1", nil)
+	pusher.On("Send", ctx, firebase.Message{Topic: "all_users", Title: "Survey", Body: "Please answer"}).Return("msg-2", nil)
+	repo.On("MarkSent", ctx, id, mockAny).Return(nil)
+
+	err := svc.Send(ctx, id)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+	pusher.AssertExpectations(t)
+}
+
+func TestNotificationService_SendDueScheduled_SendsReadyNotifications(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	pusher := &mocks.MockPusher{}
+	svc := newTestNotificationService(repo, pusher)
+
+	ctx := context.Background()
+	now := time.Now()
+	id := uuid.New()
+	n := &domain.Notification{
+		ID:         id,
+		Title:      "Scheduled",
+		Content:    "Due now",
+		Topic:      "venue-123",
+		SendType:   domain.NotifTypeScheduled,
+		SendStatus: domain.NotifSendPending,
+	}
+
+	repo.On("ListDueScheduled", ctx, now).Return([]*domain.Notification{{ID: id}}, nil)
+	repo.On("FindByID", ctx, id).Return(n, nil)
+	pusher.On("Send", ctx, firebase.Message{Topic: "venue-123", Title: "Scheduled", Body: "Due now"}).Return("msg-id", nil)
+	repo.On("MarkSent", ctx, id, mockAny).Return(nil)
+
+	count, err := svc.SendDueScheduled(ctx, now)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
 	repo.AssertExpectations(t)
 	pusher.AssertExpectations(t)
 }

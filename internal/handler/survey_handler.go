@@ -14,7 +14,7 @@ import (
 )
 
 type surveyHandler struct {
-	svc      service.SurveyService
+	svc       service.SurveyService
 	enrichers *enricher.Registry
 }
 
@@ -478,6 +478,11 @@ func (h *surveyHandler) ListResponses(c *gin.Context) {
 // @Failure     400      {object} dto.Response
 // @Router      /venues/{id}/surveys/{surveyID}/responses [post]
 func (h *surveyHandler) SubmitResponse(c *gin.Context) {
+	venueID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
+		return
+	}
 	surveyID, err := uuid.Parse(c.Param("surveyID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
@@ -494,7 +499,7 @@ func (h *surveyHandler) SubmitResponse(c *gin.Context) {
 			QuestionID: a.QuestionID, OptionID: a.OptionID, AnswerText: a.AnswerText,
 		})
 	}
-	if err := h.svc.SubmitResponse(c.Request.Context(), resp); err != nil {
+	if err := h.svc.SubmitVenueResponse(c.Request.Context(), venueID, resp); err != nil {
 		respondError(c, err)
 		return
 	}

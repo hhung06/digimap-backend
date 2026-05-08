@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 
@@ -15,8 +17,22 @@ import (
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
-func newTestSurveyService(repo *mocks.SurveyRepository) service.SurveyService {
-	return service.NewSurveyService(repo)
+type mockNotificationSender struct{ mock.Mock }
+
+func (m *mockNotificationSender) Send(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func newTestSurveyService(repo *mocks.SurveyRepository, extras ...any) service.SurveyService {
+	var notifRepo *mocks.NotificationRepository
+	var sender *mockNotificationSender
+	if len(extras) > 0 && extras[0] != nil {
+		notifRepo = extras[0].(*mocks.NotificationRepository)
+	}
+	if len(extras) > 1 && extras[1] != nil {
+		sender = extras[1].(*mockNotificationSender)
+	}
+	return service.NewSurveyService(repo, notifRepo, sender)
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -152,18 +168,466 @@ func TestSurveyService_DeleteQuestion_Success(t *testing.T) {
 
 // ── Responses ─────────────────────────────────────────────────────────────────
 
-func TestSurveyService_SubmitResponse_Success(t *testing.T) {
+func TestSurveyService_SubmitVenueResponse_Success(t *testing.T) {
 	repo := &mocks.SurveyRepository{}
 	svc := newTestSurveyService(repo)
 
 	ctx := context.Background()
-	r := &domain.SurveyResponse{SurveyID: uuid.New()}
+	venueID := uuid.New()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	r := &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "hello"}},
+	}
+	repo.On("FindByID", ctx, surveyID).Return(&domain.Survey{
+		ID:      surveyID,
+		VenueID: &venueID,
+		Status:  domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{ID: questionID, SurveyID: surveyID, QuestionType: "paragraph", IsRequired: true},
+		},
+	}, nil)
 
 	repo.On("CreateResponse", ctx, r).Return(nil)
 
-	err := svc.SubmitResponse(ctx, r)
+	err := svc.SubmitVenueResponse(ctx, venueID, r)
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitPublicResponse_ValidatesSurveyAndAnswers(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	optionID := uuid.New()
+	resp := &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers: []*domain.SurveyAnswer{
+			{QuestionID: questionID, OptionID: &optionID},
+		},
+	}
+	survey := &domain.Survey{
+		ID:     surveyID,
+		Status: domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{
+				ID:           questionID,
+				SurveyID:     surveyID,
+				QuestionType: "single_choice",
+				IsRequired:   true,
+				Options: []*domain.Option{
+					{ID: optionID, QuestionID: questionID},
+				},
+			},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+	repo.On("CreateResponse", ctx, resp).Return(nil)
+
+	err := svc.SubmitPublicResponse(ctx, resp)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitPublicResponse_RejectsMissingRequiredAnswer(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	survey := &domain.Survey{
+		ID:     surveyID,
+		Status: domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{
+				ID:           uuid.New(),
+				SurveyID:     surveyID,
+				QuestionType: "paragraph",
+				IsRequired:   true,
+			},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+
+	err := svc.SubmitPublicResponse(ctx, &domain.SurveyResponse{SurveyID: surveyID})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrValidation)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitPublicResponse_RejectsQuestionOutsideSurvey(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	otherQuestionID := uuid.New()
+	survey := &domain.Survey{
+		ID:     surveyID,
+		Status: domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{
+				ID:           uuid.New(),
+				SurveyID:     surveyID,
+				QuestionType: "paragraph",
+			},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+
+	err := svc.SubmitPublicResponse(ctx, &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers:  []*domain.SurveyAnswer{{QuestionID: otherQuestionID, AnswerText: "hello"}},
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrValidation)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitPublicResponse_RejectsOptionOutsideQuestion(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	validOptionID := uuid.New()
+	invalidOptionID := uuid.New()
+	survey := &domain.Survey{
+		ID:     surveyID,
+		Status: domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{
+				ID:           questionID,
+				SurveyID:     surveyID,
+				QuestionType: "single_choice",
+				Options: []*domain.Option{
+					{ID: validOptionID, QuestionID: questionID},
+				},
+			},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+
+	err := svc.SubmitPublicResponse(ctx, &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, OptionID: &invalidOptionID}},
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrValidation)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitPublicResponse_RejectsInvalidTextOptionCombination(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	survey := &domain.Survey{
+		ID:     surveyID,
+		Status: domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{
+				ID:           questionID,
+				SurveyID:     surveyID,
+				QuestionType: "paragraph",
+			},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+
+	err := svc.SubmitPublicResponse(ctx, &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID}},
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrValidation)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitPublicResponse_AllowsRepeatedPayloads(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	survey := &domain.Survey{
+		ID:     surveyID,
+		Status: domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{
+				ID:           questionID,
+				SurveyID:     surveyID,
+				QuestionType: "paragraph",
+				IsRequired:   true,
+			},
+		},
+	}
+	resp1 := &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "first"}},
+	}
+	resp2 := &domain.SurveyResponse{
+		SurveyID: surveyID,
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "first"}},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil).Twice()
+	repo.On("CreateResponse", ctx, resp1).Return(nil).Once()
+	repo.On("CreateResponse", ctx, resp2).Return(nil).Once()
+
+	require.NoError(t, svc.SubmitPublicResponse(ctx, resp1))
+	require.NoError(t, svc.SubmitPublicResponse(ctx, resp2))
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitAppResponse_RequiresExternalID(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	err := svc.SubmitAppResponse(context.Background(), uuid.New(), &domain.SurveyResponse{
+		SurveyID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrValidation)
+}
+
+func TestSurveyService_SubmitAppResponse_RejectsSurveyFromDifferentVenue(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	otherVenueID := uuid.New()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	survey := &domain.Survey{
+		ID:      surveyID,
+		VenueID: &otherVenueID,
+		Status:  domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{ID: questionID, SurveyID: surveyID, QuestionType: "paragraph", IsRequired: true},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+
+	err := svc.SubmitAppResponse(ctx, venueID, &domain.SurveyResponse{
+		SurveyID:   surveyID,
+		ExternalID: "visitor-1",
+		Answers:    []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "hello"}},
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrValidation)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_SubmitAppResponse_PassesExternalIDToRepository(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	survey := &domain.Survey{
+		ID:      surveyID,
+		VenueID: &venueID,
+		Status:  domain.SurveyStatusActive,
+		Questions: []*domain.Question{
+			{ID: questionID, SurveyID: surveyID, QuestionType: "paragraph", IsRequired: true},
+		},
+	}
+	resp := &domain.SurveyResponse{
+		SurveyID:   surveyID,
+		ExternalID: "visitor-1",
+		Answers:    []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "hello"}},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+	repo.On("CreateResponse", ctx, resp).Return(nil)
+
+	err := svc.SubmitAppResponse(ctx, venueID, resp)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_Create_ActiveCMSCreatesImmediateNotification(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	notifRepo := &mocks.NotificationRepository{}
+	sender := &mockNotificationSender{}
+	svc := newTestSurveyService(repo, notifRepo, sender)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	userID := uuid.New()
+	s := &domain.Survey{
+		Title:          "Customer Feedback",
+		Content:        "Please answer",
+		VenueID:        &venueID,
+		CreatedBy:      &userID,
+		Status:         domain.SurveyStatusActive,
+		Source:         domain.SurveySourceCMS,
+		PublishType:    domain.SurveyPublishBoth,
+		StartDate:      ptrTime(time.Now().Add(-time.Minute)),
+		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"}]`),
+	}
+
+	repo.On("Create", ctx, s).Return(nil)
+	notifRepo.On("Create", ctx, mock.MatchedBy(func(n *domain.Notification) bool {
+		return n.SurveyID != nil &&
+			*n.SurveyID == s.ID &&
+			n.SendType == domain.NotifTypeImmediate &&
+			n.Kind == domain.NotifKindSurvey &&
+			n.Title == s.Title
+	})).Return(nil)
+	sender.On("Send", ctx, mock.AnythingOfType("uuid.UUID")).Return(nil)
+
+	err := svc.Create(ctx, s)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+	notifRepo.AssertExpectations(t)
+	sender.AssertExpectations(t)
+}
+
+func TestSurveyService_Create_ActiveCMSCreatesScheduledNotification(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	notifRepo := &mocks.NotificationRepository{}
+	sender := &mockNotificationSender{}
+	svc := newTestSurveyService(repo, notifRepo, sender)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	userID := uuid.New()
+	startAt := time.Now().Add(time.Hour)
+	s := &domain.Survey{
+		Title:       "Customer Feedback",
+		Content:     "Please answer",
+		VenueID:     &venueID,
+		CreatedBy:   &userID,
+		Status:      domain.SurveyStatusActive,
+		Source:      domain.SurveySourceCMS,
+		PublishType: domain.SurveyPublishBoth,
+		StartDate:   &startAt,
+	}
+
+	repo.On("Create", ctx, s).Return(nil)
+	notifRepo.On("Create", ctx, mock.MatchedBy(func(n *domain.Notification) bool {
+		return n.SurveyID != nil &&
+			*n.SurveyID == s.ID &&
+			n.SendType == domain.NotifTypeScheduled &&
+			n.ScheduledAt != nil &&
+			n.ScheduledAt.Equal(startAt)
+	})).Return(nil)
+
+	err := svc.Create(ctx, s)
+	require.NoError(t, err)
+	sender.AssertNotCalled(t, "Send")
+	repo.AssertExpectations(t)
+	notifRepo.AssertExpectations(t)
+}
+
+func TestSurveyService_Update_TransitionToActiveCreatesNotification(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	notifRepo := &mocks.NotificationRepository{}
+	sender := &mockNotificationSender{}
+	svc := newTestSurveyService(repo, notifRepo, sender)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	userID := uuid.New()
+	surveyID := uuid.New()
+	before := &domain.Survey{
+		ID:        surveyID,
+		VenueID:   &venueID,
+		CreatedBy: &userID,
+		Status:    domain.SurveyStatusInactive,
+		Source:    domain.SurveySourceCMS,
+	}
+	after := &domain.Survey{
+		ID:        surveyID,
+		VenueID:   &venueID,
+		CreatedBy: &userID,
+		Title:     "Activated survey",
+		Content:   "Now live",
+		Status:    domain.SurveyStatusActive,
+		Source:    domain.SurveySourceCMS,
+		StartDate: ptrTime(time.Now().Add(-time.Minute)),
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(before, nil)
+	repo.On("Update", ctx, after).Return(nil)
+	notifRepo.On("Create", ctx, mock.MatchedBy(func(n *domain.Notification) bool {
+		return n.SurveyID != nil && *n.SurveyID == surveyID
+	})).Return(nil)
+	sender.On("Send", ctx, mock.AnythingOfType("uuid.UUID")).Return(nil)
+
+	err := svc.Update(ctx, after)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+	notifRepo.AssertExpectations(t)
+	sender.AssertExpectations(t)
+}
+
+func TestSurveyService_ProcessScheduledTransitions_ActivatesAndCloses(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	notifRepo := &mocks.NotificationRepository{}
+	sender := &mockNotificationSender{}
+	svc := newTestSurveyService(repo, notifRepo, sender)
+
+	ctx := context.Background()
+	now := time.Now()
+	venueID := uuid.New()
+	userID := uuid.New()
+	activate := &domain.Survey{
+		ID:        uuid.New(),
+		VenueID:   &venueID,
+		CreatedBy: &userID,
+		Title:     "Activate me",
+		Content:   "Now",
+		Status:    domain.SurveyStatusInactive,
+		Source:    domain.SurveySourceCMS,
+		StartDate: &now,
+	}
+	closeSurvey := &domain.Survey{
+		ID:      uuid.New(),
+		VenueID: &venueID,
+		Status:  domain.SurveyStatusActive,
+		EndDate: &now,
+	}
+
+	repo.On("ListDueActivation", ctx, now).Return([]*domain.Survey{activate}, nil)
+	repo.On("Update", ctx, mock.MatchedBy(func(s *domain.Survey) bool {
+		return s.ID == activate.ID && s.Status == domain.SurveyStatusActive
+	})).Return(nil).Once()
+	notifRepo.On("Create", ctx, mock.MatchedBy(func(n *domain.Notification) bool {
+		return n.SurveyID != nil && *n.SurveyID == activate.ID
+	})).Return(nil)
+	sender.On("Send", ctx, mock.AnythingOfType("uuid.UUID")).Return(nil)
+	repo.On("ListDueClosure", ctx, now).Return([]*domain.Survey{closeSurvey}, nil)
+	repo.On("Update", ctx, mock.MatchedBy(func(s *domain.Survey) bool {
+		return s.ID == closeSurvey.ID && s.Status == domain.SurveyStatusClosed
+	})).Return(nil).Once()
+
+	activated, closed, err := svc.ProcessScheduledTransitions(ctx, now)
+	require.NoError(t, err)
+	assert.Equal(t, 1, activated)
+	assert.Equal(t, 1, closed)
+	repo.AssertExpectations(t)
+	notifRepo.AssertExpectations(t)
+	sender.AssertExpectations(t)
 }
 
 // ── PBT: create defaults invariant ───────────────────────────────────────────
@@ -187,4 +651,8 @@ func TestSurveyService_Create_DefaultsInvariant(t *testing.T) {
 		assert.NotZero(rt, s.Status, "status must always be non-zero after Create")
 		assert.NotZero(rt, s.Source, "source must always be non-zero after Create")
 	})
+}
+
+func ptrTime(v time.Time) *time.Time {
+	return &v
 }

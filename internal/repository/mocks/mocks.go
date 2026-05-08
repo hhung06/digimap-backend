@@ -1030,6 +1030,14 @@ func (m *NotificationRepository) List(ctx context.Context, venueID uuid.UUID, p 
 	return nil, 0, args.Error(2)
 }
 
+func (m *NotificationRepository) ListDueScheduled(ctx context.Context, now time.Time) ([]*domain.Notification, error) {
+	args := m.Called(ctx, now)
+	if v, ok := args.Get(0).([]*domain.Notification); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *NotificationRepository) Create(ctx context.Context, n *domain.Notification) error {
 	return m.Called(ctx, n).Error(0)
 }
@@ -1068,6 +1076,22 @@ func (m *SurveyRepository) List(ctx context.Context, venueID uuid.UUID, p domain
 		return v, args.Get(1).(int64), args.Error(2)
 	}
 	return nil, 0, args.Error(2)
+}
+
+func (m *SurveyRepository) ListDueActivation(ctx context.Context, now time.Time) ([]*domain.Survey, error) {
+	args := m.Called(ctx, now)
+	if v, ok := args.Get(0).([]*domain.Survey); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *SurveyRepository) ListDueClosure(ctx context.Context, now time.Time) ([]*domain.Survey, error) {
+	args := m.Called(ctx, now)
+	if v, ok := args.Get(0).([]*domain.Survey); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *SurveyRepository) Create(ctx context.Context, s *domain.Survey) error {

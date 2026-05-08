@@ -14,10 +14,10 @@ const (
 	SurveyStatusInactive = 3
 	SurveyStatusClosed   = 4
 
-	SurveyPublishPush    = 1
-	SurveyPublishInApp   = 2
-	SurveyPublishBoth    = 3
-	SurveyPublishPromo   = 4
+	SurveyPublishPush  = 1
+	SurveyPublishInApp = 2
+	SurveyPublishBoth  = 3
+	SurveyPublishPromo = 4
 
 	SurveySourceCMS    = 1
 	SurveySourceApp    = 2
@@ -73,6 +73,7 @@ type Option struct {
 type SurveyResponse struct {
 	ID          uuid.UUID
 	SurveyID    uuid.UUID
+	ExternalID  string
 	SubmittedAt time.Time
 	Answers     []*SurveyAnswer
 	CreatedAt   time.Time

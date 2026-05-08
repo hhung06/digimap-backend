@@ -140,6 +140,7 @@ type ProductRepository interface {
 type NotificationRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Notification, error)
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Notification, int64, error)
+	ListDueScheduled(ctx context.Context, now time.Time) ([]*domain.Notification, error)
 	Create(ctx context.Context, n *domain.Notification) error
 	Update(ctx context.Context, n *domain.Notification) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -152,6 +153,8 @@ type SurveyRepository interface {
 	// Surveys
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Survey, error)
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error)
+	ListDueActivation(ctx context.Context, now time.Time) ([]*domain.Survey, error)
+	ListDueClosure(ctx context.Context, now time.Time) ([]*domain.Survey, error)
 	Create(ctx context.Context, s *domain.Survey) error
 	Update(ctx context.Context, s *domain.Survey) error
 	Delete(ctx context.Context, id uuid.UUID) error

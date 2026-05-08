@@ -106,7 +106,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	eventSvc := service.NewEventService(eventRepo)
 	userSvc := service.NewUserService(userRepo, mailer)
 	notificationSvc := service.NewNotificationService(notificationRepo, pusher)
-	surveySvc := service.NewSurveyService(surveyRepo)
+	surveySvc := service.NewSurveyService(surveyRepo, notificationRepo, notificationSvc)
 	beaconSvc := service.NewBeaconService(beaconRepo)
 	connectionSvc := service.NewConnectionService(connectionRepo)
 	adSvc := service.NewAdvertisementService(adRepo)

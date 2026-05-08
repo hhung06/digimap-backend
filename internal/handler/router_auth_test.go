@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -105,4 +106,55 @@ func TestNewRouter_ProfileRejectsNonSystemAdmin(t *testing.T) {
 
 	require.Equal(t, http.StatusForbidden, rec.Code)
 	assert.Contains(t, rec.Body.String(), "system admin access required")
+}
+
+func TestNewRouter_MountsAppSurveySubmitRoute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := NewRouter(newRouterTestConfig(), newRouterTestLogger(), Dependencies{
+		AuthService: &authServiceStub{},
+	})
+
+	found := false
+	for _, route := range router.Routes() {
+		if route.Method == http.MethodPost && route.Path == "/app/v1/surveys/:surveyID/submit-response" {
+			found = true
+			break
+		}
+	}
+
+	assert.True(t, found, "app survey submit route should be mounted")
+}
+
+func TestNewRouter_AppSurveySubmitRequiresAPIKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := NewRouter(newRouterTestConfig(), newRouterTestLogger(), Dependencies{
+		AuthService: &authServiceStub{},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/app/v1/surveys/"+uuid.New().String()+"/submit-response", strings.NewReader(`{"external_id":"visitor-1","answers":[]}`))
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.Contains(t, rec.Body.String(), "API key required")
+}
+
+func TestNewRouter_PublicSurveySubmitDoesNotRequireAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := NewRouter(newRouterTestConfig(), newRouterTestLogger(), Dependencies{
+		AuthService: &authServiceStub{},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/public/v1/surveys/not-a-uuid/submit-response", strings.NewReader(`{"answers":[]}`))
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "API key required")
+	assert.NotContains(t, rec.Body.String(), "Authorization")
 }

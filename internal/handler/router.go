@@ -440,6 +440,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.PUT("/coupons/:couponID/redeem", appH.RedeemCoupon)
 		appKey.GET("/ads", appH.ListAds)
 		appKey.GET("/surveys/:surveyID", appH.GetSurvey)
+		appKey.POST("/surveys/:surveyID/submit-response", appH.SubmitSurveyResponse)
 		appKey.GET("/top-search", appH.TopSearch)
 		appKey.GET("/search-options", appH.SearchOptions)
 		appKey.GET("/promotions", appH.Promotions)

@@ -62,6 +62,27 @@ func (r *notificationRepo) List(ctx context.Context, venueID uuid.UUID, p domain
 	return ns, total, rows.Err()
 }
 
+func (r *notificationRepo) ListDueScheduled(ctx context.Context, now time.Time) ([]*domain.Notification, error) {
+	q := `SELECT ` + notifSelectCols + ` FROM notifications
+		WHERE send_type = $1 AND status = $2 AND send_status = ANY($3) AND scheduled_at IS NOT NULL AND scheduled_at <= $4 AND deleted_at IS NULL
+		ORDER BY scheduled_at ASC`
+	rows, err := r.pool.Query(ctx, q, domain.NotifTypeScheduled, domain.NotifStatusUnsent, []int16{domain.NotifSendPending, domain.NotifSendFailed}, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*domain.Notification
+	for rows.Next() {
+		n, err := scanNotification(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, n)
+	}
+	return out, rows.Err()
+}
+
 func (r *notificationRepo) Create(ctx context.Context, n *domain.Notification) error {
 	if n.ID == uuid.Nil {
 		n.ID = newID()

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
 	"github.com/hhung06/digimap-backend/internal/service"
@@ -337,6 +338,36 @@ func (h *appHandler) GetSurvey(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.SurveyToResponse(s)))
+}
+
+func (h *appHandler) SubmitSurveyResponse(c *gin.Context) {
+	surveyID, err := uuid.Parse(c.Param("surveyID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
+		return
+	}
+	var req dto.SubmitAppSurveyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
+		return
+	}
+	resp := &domain.SurveyResponse{
+		SurveyID:   surveyID,
+		ExternalID: req.ExternalID,
+		Answers:    make([]*domain.SurveyAnswer, len(req.Answers)),
+	}
+	for i, a := range req.Answers {
+		resp.Answers[i] = &domain.SurveyAnswer{
+			QuestionID: a.QuestionID,
+			OptionID:   a.OptionID,
+			AnswerText: a.AnswerText,
+		}
+	}
+	if err := h.surveys.SubmitAppResponse(c.Request.Context(), middleware.GetVenueID(c), resp); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, dto.OK(dto.SurveyResponseToResponse(resp)))
 }
 
 func (h *appHandler) TopSearch(c *gin.Context) {

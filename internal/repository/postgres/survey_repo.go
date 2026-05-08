@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -66,6 +67,48 @@ func (r *surveyRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagin
 		surveys = append(surveys, s)
 	}
 	return surveys, total, rows.Err()
+}
+
+func (r *surveyRepo) ListDueActivation(ctx context.Context, now time.Time) ([]*domain.Survey, error) {
+	q := `SELECT ` + surveySelectCols + ` FROM surveys
+		WHERE status = $1 AND start_date IS NOT NULL AND start_date <= $2 AND deleted_at IS NULL
+		ORDER BY start_date ASC`
+	rows, err := r.pool.Query(ctx, q, domain.SurveyStatusInactive, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var surveys []*domain.Survey
+	for rows.Next() {
+		s, err := scanSurvey(rows)
+		if err != nil {
+			return nil, err
+		}
+		surveys = append(surveys, s)
+	}
+	return surveys, rows.Err()
+}
+
+func (r *surveyRepo) ListDueClosure(ctx context.Context, now time.Time) ([]*domain.Survey, error) {
+	q := `SELECT ` + surveySelectCols + ` FROM surveys
+		WHERE status = $1 AND end_date IS NOT NULL AND end_date <= $2 AND deleted_at IS NULL
+		ORDER BY end_date ASC`
+	rows, err := r.pool.Query(ctx, q, domain.SurveyStatusActive, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var surveys []*domain.Survey
+	for rows.Next() {
+		s, err := scanSurvey(rows)
+		if err != nil {
+			return nil, err
+		}
+		surveys = append(surveys, s)
+	}
+	return surveys, rows.Err()
 }
 
 func (r *surveyRepo) Create(ctx context.Context, s *domain.Survey) error {
@@ -234,7 +277,7 @@ func (r *surveyRepo) ListResponses(ctx context.Context, surveyID uuid.UUID, p do
 		return nil, 0, err
 	}
 
-	const q = `SELECT id, survey_id, submitted_at, created_at FROM survey_responses WHERE survey_id = $1 AND deleted_at IS NULL ORDER BY submitted_at DESC LIMIT $2 OFFSET $3`
+	const q = `SELECT id, survey_id, external_id, submitted_at, created_at FROM survey_responses WHERE survey_id = $1 AND deleted_at IS NULL ORDER BY submitted_at DESC LIMIT $2 OFFSET $3`
 	rows, err := r.pool.Query(ctx, q, surveyID, p.PageSize, p.Offset())
 	if err != nil {
 		return nil, 0, err
@@ -244,9 +287,11 @@ func (r *surveyRepo) ListResponses(ctx context.Context, surveyID uuid.UUID, p do
 	var responses []*domain.SurveyResponse
 	for rows.Next() {
 		var sr domain.SurveyResponse
-		if err := rows.Scan(&sr.ID, &sr.SurveyID, &sr.SubmittedAt, &sr.CreatedAt); err != nil {
+		var externalID *string
+		if err := rows.Scan(&sr.ID, &sr.SurveyID, &externalID, &sr.SubmittedAt, &sr.CreatedAt); err != nil {
 			return nil, 0, err
 		}
+		derefStr(&sr.ExternalID, externalID)
 		responses = append(responses, &sr)
 	}
 	return responses, total, rows.Err()
@@ -256,8 +301,11 @@ func (r *surveyRepo) CreateResponse(ctx context.Context, resp *domain.SurveyResp
 	if resp.ID == uuid.Nil {
 		resp.ID = newID()
 	}
-	const q = `INSERT INTO survey_responses (id, survey_id, submitted_at) VALUES ($1,$2,NOW()) RETURNING submitted_at, created_at`
-	if err := r.pool.QueryRow(ctx, q, resp.ID, resp.SurveyID).Scan(&resp.SubmittedAt, &resp.CreatedAt); err != nil {
+	const q = `INSERT INTO survey_responses (id, survey_id, external_id, submitted_at) VALUES ($1,$2,$3,NOW()) RETURNING submitted_at, created_at`
+	if err := r.pool.QueryRow(ctx, q, resp.ID, resp.SurveyID, nullStr(resp.ExternalID)).Scan(&resp.SubmittedAt, &resp.CreatedAt); err != nil {
+		if IsUniqueViolation(err) && resp.ExternalID != "" {
+			return domain.NewConflict("survey response already exists for external_id")
+		}
 		return err
 	}
 	for _, ans := range resp.Answers {

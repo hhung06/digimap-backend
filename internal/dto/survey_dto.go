@@ -39,11 +39,11 @@ type QuestionResponse struct {
 }
 
 type QuestionRequest struct {
-	QuestionNumber int            `json:"question_number"`
-	QuestionType   string         `json:"question_type" binding:"required"`
-	QuestionText   string         `json:"question_text" binding:"required"`
-	IsRequired     bool           `json:"is_required"`
-	IsOther        bool           `json:"is_other"`
+	QuestionNumber int             `json:"question_number"`
+	QuestionType   string          `json:"question_type" binding:"required"`
+	QuestionText   string          `json:"question_text" binding:"required"`
+	IsRequired     bool            `json:"is_required"`
+	IsOther        bool            `json:"is_other"`
 	Options        []OptionRequest `json:"options"`
 }
 
@@ -132,6 +132,7 @@ func (r UpdateSurveyRequest) ApplyTo(s *domain.Survey) {
 type SurveyResponseResponse struct {
 	ID          uuid.UUID              `json:"id"`
 	SurveyID    uuid.UUID              `json:"survey_id"`
+	ExternalID  string                 `json:"external_id,omitempty"`
 	SubmittedAt time.Time              `json:"submitted_at"`
 	Answers     []SurveyAnswerResponse `json:"answers,omitempty"`
 	CreatedAt   time.Time              `json:"created_at"`
@@ -146,6 +147,11 @@ type SurveyAnswerResponse struct {
 
 type SubmitSurveyRequest struct {
 	Answers []SurveyAnswerRequest `json:"answers" binding:"required"`
+}
+
+type SubmitAppSurveyRequest struct {
+	ExternalID string                `json:"external_id" binding:"required"`
+	Answers    []SurveyAnswerRequest `json:"answers" binding:"required"`
 }
 
 type SurveyAnswerRequest struct {
@@ -164,7 +170,7 @@ func SurveyToResponse(s *domain.Survey) SurveyResponse {
 		Status: s.Status, PublishType: s.PublishType,
 		IsForced: s.IsForced, Source: s.Source, App: s.App,
 		SegmentFilters: s.SegmentFilters,
-		CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt,
+		CreatedAt:      s.CreatedAt, UpdatedAt: s.UpdatedAt,
 	}
 	for _, q := range s.Questions {
 		r.Questions = append(r.Questions, questionToResponse(q))
@@ -191,6 +197,7 @@ func questionToResponse(q *domain.Question) QuestionResponse {
 func SurveyResponseToResponse(sr *domain.SurveyResponse) SurveyResponseResponse {
 	r := SurveyResponseResponse{
 		ID: sr.ID, SurveyID: sr.SurveyID,
+		ExternalID:  sr.ExternalID,
 		SubmittedAt: sr.SubmittedAt, CreatedAt: sr.CreatedAt,
 	}
 	for _, a := range sr.Answers {

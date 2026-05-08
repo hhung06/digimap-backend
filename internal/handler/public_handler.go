@@ -85,11 +85,11 @@ func (h *publicHandler) SubmitSurveyResponse(c *gin.Context) {
 			AnswerText: a.AnswerText,
 		}
 	}
-	if err := h.surveys.SubmitResponse(c.Request.Context(), resp); err != nil {
+	if err := h.surveys.SubmitPublicResponse(c.Request.Context(), resp); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(nil))
+	c.JSON(http.StatusCreated, dto.OK(dto.SurveyResponseToResponse(resp)))
 }
 
 func (h *publicHandler) VenueInfo(c *gin.Context) {
