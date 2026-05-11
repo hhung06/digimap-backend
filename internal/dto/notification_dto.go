@@ -33,8 +33,8 @@ type NotificationResponse struct {
 
 type CreateNotificationRequest struct {
 	SurveyID       *uuid.UUID      `json:"survey_id"`
-	Title          string          `json:"title"`
-	Content        string          `json:"content"`
+	Title          string          `json:"title" binding:"required"`
+	Content        string          `json:"content" binding:"required"`
 	Topic          string          `json:"topic"`
 	Kind           int             `json:"type"`
 	SendType       int             `json:"send_type"`

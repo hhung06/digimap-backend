@@ -48,6 +48,7 @@ docs/superpowers/
 # AI
 .claude/
 .codex/
+.planning/
 CLAUDE.md
 AGENTS.md
 AIDLC.md

@@ -173,6 +173,28 @@ func runServe(_ *cobra.Command, _ []string) error {
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
+	schedulerCtx, cancelScheduler := context.WithCancel(context.Background())
+	defer cancelScheduler()
+
+	go func() {
+		logger.Info("notification scheduler started")
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-schedulerCtx.Done():
+				return
+			case t := <-ticker.C:
+				sent, err := notificationSvc.SendDueScheduled(schedulerCtx, t)
+				if err != nil {
+					logger.Errorf("notification scheduler: %v", err)
+				} else if sent > 0 {
+					logger.Infof("notification scheduler: sent %d notification(s)", sent)
+				}
+			}
+		}
+	}()
+
 	go func() {
 		logger.Infof("listening on :%d", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -184,6 +206,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	logger.Info("shutting down server...")
+	cancelScheduler()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

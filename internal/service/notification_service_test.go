@@ -22,20 +22,195 @@ func newTestNotificationService(repo *mocks.NotificationRepository, pusher *mock
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
-func TestNotificationService_Create_SetsDefaults(t *testing.T) {
+func TestNotificationService_Create_DraftWithTopic(t *testing.T) {
 	repo := &mocks.NotificationRepository{}
 	svc := newTestNotificationService(repo, nil)
 
 	ctx := context.Background()
 	venueID := uuid.New()
-	n := &domain.Notification{Title: "Flash Sale", VenueID: &venueID}
+	n := &domain.Notification{
+		Title:    "Flash Sale",
+		Content:  "50% off",
+		VenueID:  &venueID,
+		Topic:    "venue-promo",
+		Kind:     domain.NotifKindNormal,
+		SendType: domain.NotifTypeDraft,
+	}
 
 	repo.On("Create", ctx, n).Return(nil)
 
 	err := svc.Create(ctx, n)
 	require.NoError(t, err)
-	assert.Equal(t, domain.NotifStatusUnsent, n.Status, "status must be set to Unsent")
-	assert.Equal(t, domain.NotifSendPending, n.SendStatus, "send status must be set to Pending")
+	assert.Equal(t, domain.NotifStatusUnsent, n.Status)
+	assert.Equal(t, domain.NotifSendPending, n.SendStatus)
+	repo.AssertExpectations(t)
+}
+
+func TestNotificationService_Create_ImmediateAutoDispatches(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	pusher := &mocks.MockPusher{}
+	svc := newTestNotificationService(repo, pusher)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	id := uuid.New()
+	n := &domain.Notification{
+		ID:       id,
+		Title:    "Flash Sale",
+		Content:  "50% off",
+		VenueID:  &venueID,
+		Topic:    "venue-promo",
+		Kind:     domain.NotifKindNormal,
+		SendType: domain.NotifTypeImmediate,
+	}
+	stored := &domain.Notification{
+		ID:         id,
+		Title:      "Flash Sale",
+		Content:    "50% off",
+		Topic:      "venue-promo",
+		SendStatus: domain.NotifSendPending,
+	}
+
+	repo.On("Create", ctx, n).Return(nil)
+	repo.On("FindByID", ctx, id).Return(stored, nil)
+	pusher.On("Send", ctx, firebase.Message{Topic: "venue-promo", Title: "Flash Sale", Body: "50% off"}).Return("msg-id", nil)
+	repo.On("MarkSent", ctx, id, mockAny).Return(nil)
+
+	err := svc.Create(ctx, n)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+	pusher.AssertExpectations(t)
+}
+
+func TestNotificationService_Create_ScheduledRequiresScheduledAt(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:    "Promo",
+		Content:  "Deal",
+		VenueID:  &venueID,
+		Topic:    "venue-promo",
+		Kind:     domain.NotifKindNormal,
+		SendType: domain.NotifTypeScheduled,
+		// ScheduledAt intentionally missing
+	}
+
+	err := svc.Create(ctx, n)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestNotificationService_Create_ScheduledRequiresFutureScheduledAt(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	past := time.Now().Add(-time.Hour)
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:       "Promo",
+		Content:     "Deal",
+		VenueID:     &venueID,
+		Topic:       "venue-promo",
+		Kind:        domain.NotifKindNormal,
+		SendType:    domain.NotifTypeScheduled,
+		ScheduledAt: &past,
+	}
+
+	err := svc.Create(ctx, n)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestNotificationService_Create_RequiresDeliveryTarget(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:    "Promo",
+		Content:  "Deal",
+		VenueID:  &venueID,
+		Kind:     domain.NotifKindNormal,
+		SendType: domain.NotifTypeDraft,
+		// No Topic, DeviceTokens, or SegmentFilters
+	}
+
+	err := svc.Create(ctx, n)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestNotificationService_Create_RejectsInvalidSendType(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:    "Promo",
+		Content:  "Deal",
+		VenueID:  &venueID,
+		Topic:    "venue-promo",
+		Kind:     domain.NotifKindNormal,
+		SendType: 99,
+	}
+
+	err := svc.Create(ctx, n)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestNotificationService_Create_RejectsInvalidKind(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:    "Promo",
+		Content:  "Deal",
+		VenueID:  &venueID,
+		Topic:    "venue-promo",
+		Kind:     99,
+		SendType: domain.NotifTypeDraft,
+	}
+
+	err := svc.Create(ctx, n)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestNotificationService_Create_ScheduledFuture(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	future := time.Now().Add(time.Hour)
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:       "Promo",
+		Content:     "Deal",
+		VenueID:     &venueID,
+		Topic:       "venue-promo",
+		Kind:        domain.NotifKindNormal,
+		SendType:    domain.NotifTypeScheduled,
+		ScheduledAt: &future,
+	}
+
+	repo.On("Create", ctx, n).Return(nil)
+
+	err := svc.Create(ctx, n)
+	require.NoError(t, err)
 	repo.AssertExpectations(t)
 }
 

@@ -44,9 +44,47 @@ func (s *notificationService) Get(ctx context.Context, id uuid.UUID) (*domain.No
 }
 
 func (s *notificationService) Create(ctx context.Context, n *domain.Notification) error {
+	if errs := validateNotification(n); len(errs) > 0 {
+		return domain.NewValidation(errs)
+	}
+
 	n.Status = domain.NotifStatusUnsent
 	n.SendStatus = domain.NotifSendPending
-	return s.repo.Create(ctx, n)
+	if err := s.repo.Create(ctx, n); err != nil {
+		return err
+	}
+	if n.SendType == domain.NotifTypeImmediate {
+		return s.Send(ctx, n.ID)
+	}
+	return nil
+}
+
+func validateNotification(n *domain.Notification) map[string]string {
+	errs := map[string]string{}
+
+	switch n.SendType {
+	case domain.NotifTypeDraft, domain.NotifTypeScheduled, domain.NotifTypeImmediate:
+	default:
+		errs["send_type"] = "must be 1 (draft), 2 (scheduled), or 3 (immediate)"
+	}
+
+	switch n.Kind {
+	case domain.NotifKindNormal, domain.NotifKindSurvey:
+	default:
+		errs["type"] = "must be 1 (normal) or 2 (survey)"
+	}
+
+	if n.SendType == domain.NotifTypeScheduled {
+		if n.ScheduledAt == nil || !n.ScheduledAt.After(time.Now()) {
+			errs["scheduled_at"] = "required and must be in the future for scheduled notifications"
+		}
+	}
+
+	if n.Topic == "" && len(n.DeviceTokens) == 0 && len(n.SegmentFilters) == 0 {
+		errs["delivery_target"] = "one of topic, device_tokens, or segment_filters is required"
+	}
+
+	return errs
 }
 
 func (s *notificationService) Update(ctx context.Context, n *domain.Notification) error {
