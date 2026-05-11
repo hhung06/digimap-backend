@@ -783,6 +783,38 @@ func (m *LocationRepository) FindMemoByID(ctx context.Context, id uuid.UUID) (*d
 	return nil, args.Error(1)
 }
 
+// ── LocationCategoryRepository ────────────────────────────────────────────────
+
+type LocationCategoryRepository struct{ mock.Mock }
+
+func (m *LocationCategoryRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error) {
+	args := m.Called(ctx, id)
+	if c, ok := args.Get(0).(*domain.LocationCategory); ok {
+		return c, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationCategoryRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.LocationCategory, error) {
+	args := m.Called(ctx, venueID)
+	if cats, ok := args.Get(0).([]*domain.LocationCategory); ok {
+		return cats, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationCategoryRepository) Create(ctx context.Context, c *domain.LocationCategory) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *LocationCategoryRepository) Update(ctx context.Context, c *domain.LocationCategory) error {
+	return m.Called(ctx, c).Error(0)
+}
+
+func (m *LocationCategoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
 // ── ProductPlazaRepository ────────────────────────────────────────────────────
 
 type ProductPlazaRepository struct{ mock.Mock }

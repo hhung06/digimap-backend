@@ -2,9 +2,7 @@ package service_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,13 +12,17 @@ import (
 	"pgregory.net/rapid"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/cdn"
+	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	"github.com/hhung06/digimap-backend/internal/repository/mocks"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 func newTestLocationService(repo *mocks.LocationRepository, _ *mocks.StorerMock) service.LocationService {
-	// publishTopLocations runs in a goroutine; pass no-op deps so goroutine exits cleanly.
-	return service.NewLocationService(repo, &mocks.VenueRepository{}, storage.NewLogStorer(), cdn.NewLogInvalidator(), nil, "test")
+	// publishTopLocations runs in a goroutine; venue mock returns an error so the goroutine exits cleanly.
+	venueRepo := &mocks.VenueRepository{}
+	venueRepo.On("FindByID", mock.Anything, mock.Anything).Return((*domain.Venue)(nil), domain.NewNotFound("venue not found"))
+	return service.NewLocationService(repo, venueRepo, storage.NewLogStorer(), cdn.NewLogInvalidator(), nil, "test")
 }
 
 // ── Get ───────────────────────────────────────────────────────────────────────
@@ -189,49 +191,29 @@ func TestLocationService_Duplicate_NotFound(t *testing.T) {
 }
 
 // ── SetTop ────────────────────────────────────────────────────────────────────
+// Note: publishTopLocations runs in a background goroutine (Django parity).
+// These tests cover the synchronous path only; the async publish is verified via integration tests.
 
 func TestLocationService_SetTop_Success(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	storer := &mocks.StorerMock{}
-	svc := newTestLocationService(repo, storer)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
 	venueID := uuid.New()
 	sortIdx := 1
-	topID := uuid.New()
-	expected := []map[string]any{{
-		"id":              topID.String(),
-		"top_logo":        "logo.png",
-		"top_logo_type":   "image/png",
-		"is_top_location": true,
-	}}
 
 	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
 	repo.On("SetTopLocation", ctx, id, true, &sortIdx).Return(nil)
-	repo.On("ListTopLocations", ctx, venueID).Return([]*domain.Location{{
-		ID:            topID,
-		TopLogo:       "logo.png",
-		TopLogoType:   "image/png",
-		IsTopLocation: true,
-	}}, nil)
-	storer.On("PutObject", ctx, fmt.Sprintf("test/top_location/public/%s.digimap", venueID), mockAny).Run(func(args mock.Arguments) {
-		var got []map[string]any
-		err := json.Unmarshal(args.Get(2).([]byte), &got)
-		require.NoError(t, err)
-		assert.Equal(t, expected, got)
-	}).Return(nil)
 
 	err := svc.SetTop(ctx, id, true, &sortIdx)
 	require.NoError(t, err)
 	repo.AssertExpectations(t)
-	storer.AssertExpectations(t)
 }
 
 func TestLocationService_SetTop_NotFound(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	storer := &mocks.StorerMock{}
-	svc := newTestLocationService(repo, storer)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -242,13 +224,11 @@ func TestLocationService_SetTop_NotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, domain.ErrNotFound))
 	repo.AssertExpectations(t)
-	storer.AssertNotCalled(t, "PutObject")
 }
 
-func TestLocationService_SetTop_DoesNotUploadWhenUpdateFails(t *testing.T) {
+func TestLocationService_SetTop_DoesNotLaunchGoroutineWhenUpdateFails(t *testing.T) {
 	repo := &mocks.LocationRepository{}
-	storer := &mocks.StorerMock{}
-	svc := newTestLocationService(repo, storer)
+	svc := newTestLocationService(repo, nil)
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -261,52 +241,6 @@ func TestLocationService_SetTop_DoesNotUploadWhenUpdateFails(t *testing.T) {
 	err := svc.SetTop(ctx, id, false, &sortIdx)
 	require.ErrorIs(t, err, assert.AnError)
 	repo.AssertExpectations(t)
-	storer.AssertNotCalled(t, "PutObject")
-}
-
-func TestLocationService_SetTop_ReturnsUploadError(t *testing.T) {
-	repo := &mocks.LocationRepository{}
-	storer := &mocks.StorerMock{}
-	svc := newTestLocationService(repo, storer)
-
-	ctx := context.Background()
-	id := uuid.New()
-	venueID := uuid.New()
-	topID := uuid.New()
-
-	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
-	repo.On("SetTopLocation", ctx, id, true, (*int)(nil)).Return(nil)
-	repo.On("ListTopLocations", ctx, venueID).Return([]*domain.Location{{
-		ID:            topID,
-		TopLogo:       "logo.png",
-		TopLogoType:   "image/png",
-		IsTopLocation: true,
-	}}, nil)
-	storer.On("PutObject", ctx, fmt.Sprintf("test/top_location/public/%s.digimap", venueID), mockAny).Return(assert.AnError)
-
-	err := svc.SetTop(ctx, id, true, nil)
-	require.ErrorIs(t, err, assert.AnError)
-	repo.AssertExpectations(t)
-	storer.AssertExpectations(t)
-}
-
-func TestLocationService_SetTop_SkipsUploadWhenNoTopLocationsRemain(t *testing.T) {
-	repo := &mocks.LocationRepository{}
-	storer := &mocks.StorerMock{}
-	svc := newTestLocationService(repo, storer)
-
-	ctx := context.Background()
-	id := uuid.New()
-	venueID := uuid.New()
-
-	repo.On("FindByID", ctx, id).Return(&domain.Location{ID: id, VenueID: venueID}, nil)
-	repo.On("SetTopLocation", ctx, id, false, (*int)(nil)).Return(nil)
-	repo.On("ListTopLocations", ctx, venueID).Return([]*domain.Location{}, nil)
-
-	err := svc.SetTop(ctx, id, false, nil)
-	require.NoError(t, err)
-	repo.AssertExpectations(t)
-	storer.AssertNotCalled(t, "PutObject")
 }
 
 // ── DeleteImage ───────────────────────────────────────────────────────────────

@@ -11,14 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
-	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	"github.com/hhung06/digimap-backend/internal/repository/mocks"
-	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 func TestSnapshotService_Publish(t *testing.T) {
 	repo := &mocks.SnapshotRepository{}
-	svc := service.NewSnapshotService(repo, &storage.LogStorer{}, "test")
+	svc := newTestSnapshotSvc(repo)
 
 	snapID := uuid.New()
 	venueID := uuid.New()
@@ -41,7 +39,7 @@ func TestSnapshotService_Publish(t *testing.T) {
 
 func TestSnapshotService_Publish_NotFound(t *testing.T) {
 	repo := &mocks.SnapshotRepository{}
-	svc := service.NewSnapshotService(repo, &storage.LogStorer{}, "test")
+	svc := newTestSnapshotSvc(repo)
 
 	snapID := uuid.New()
 	notFound := domain.NewNotFound("snapshot not found")
@@ -58,7 +56,7 @@ func TestSnapshotService_Publish_NotFound(t *testing.T) {
 
 func TestSnapshotService_Revert(t *testing.T) {
 	repo := &mocks.SnapshotRepository{}
-	svc := service.NewSnapshotService(repo, &storage.LogStorer{}, "test")
+	svc := newTestSnapshotSvc(repo)
 	ctx := context.Background()
 
 	venueID := uuid.New()
@@ -80,20 +78,48 @@ func TestSnapshotService_Revert(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-func TestSnapshotService_AutoPublish(t *testing.T) {
+// TestSnapshotService_AutoPublish_ReturnsErrorWhenNoDraft verifies that AutoPublish
+// returns an error when there is no existing draft for the venue (new behavior).
+func TestSnapshotService_AutoPublish_ReturnsErrorWhenNoDraft(t *testing.T) {
 	repo := &mocks.SnapshotRepository{}
-	svc := service.NewSnapshotService(repo, &storage.LogStorer{}, "test")
+	svc := newTestSnapshotSvc(repo)
 	ctx := context.Background()
 	venueID := uuid.New()
 	userID := uuid.New()
 
-	repo.On("Create", ctx, mock.AnythingOfType("*domain.Snapshot")).Return(nil)
+	repo.On("LatestDraft", ctx, venueID).Return((*domain.Snapshot)(nil), nil)
+
+	_, err := svc.AutoPublish(ctx, venueID, userID)
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrNotFound))
+	repo.AssertExpectations(t)
+}
+
+// TestSnapshotService_AutoPublish_PublishesExistingDraft verifies that AutoPublish
+// republishes the latest existing draft snapshot.
+func TestSnapshotService_AutoPublish_PublishesExistingDraft(t *testing.T) {
+	repo := &mocks.SnapshotRepository{}
+	svc := newTestSnapshotSvc(repo)
+	ctx := context.Background()
+	venueID := uuid.New()
+	snapID := uuid.New()
+	userID := uuid.New()
+
+	draft := &domain.Snapshot{
+		ID:      snapID,
+		VenueID: venueID,
+		State:   domain.SnapshotStateDraft,
+	}
+
+	repo.On("LatestDraft", ctx, venueID).Return(draft, nil)
 	repo.On("UnpublishVenue", ctx, venueID).Return(nil)
-	repo.On("UpdateState", ctx, mock.AnythingOfType("uuid.UUID"), domain.SnapshotStatePublic, mock.AnythingOfType("*time.Time")).Return(nil)
+	repo.On("UpdateState", ctx, snapID, domain.SnapshotStatePublic, mock.AnythingOfType("*time.Time")).Return(nil)
 
 	result, err := svc.AutoPublish(ctx, venueID, userID)
 
 	require.NoError(t, err)
 	assert.Equal(t, domain.SnapshotStatePublic, result.State)
+	assert.Equal(t, snapID, result.ID)
 	repo.AssertExpectations(t)
 }
