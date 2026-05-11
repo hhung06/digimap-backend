@@ -1,7 +1,7 @@
 CREATE TYPE venue_role AS ENUM ('owner', 'editor', 'viewer');
 
 CREATE TABLE venue_user_roles (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id    UUID        NOT NULL REFERENCES venues (id),
     user_id     UUID        NOT NULL REFERENCES users (id),
     role        venue_role  NOT NULL,
@@ -23,7 +23,7 @@ CREATE TRIGGER set_venue_user_roles_updated_at
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'cancelled');
 
 CREATE TABLE venue_invitations (
-    id           UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID              PRIMARY KEY DEFAULT uuidv7(),
     venue_id     UUID              NOT NULL REFERENCES venues (id),
     email        TEXT              NOT NULL,
     role         venue_role        NOT NULL,

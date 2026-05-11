@@ -9,13 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/repository/mocks"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
-func newTestAnalyticsService(eventRepo *mocks.EventLogRepository, searchRepo *mocks.SearchQueryRepository) service.AnalyticsService {
+func newTestAnalyticsService(eventRepo *mocks.EventLogRepository, searchRepo *mocks.SearchQueryRepository, venueRepo *mocks.VenueRepository) service.AnalyticsService {
 	// nil redis client — analytics service only uses it for future caching, not in current logic
-	return service.NewAnalyticsService(eventRepo, searchRepo, nil)
+	return service.NewAnalyticsService(eventRepo, searchRepo, venueRepo, nil)
 }
 
 // ── LogEvent ──────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ func newTestAnalyticsService(eventRepo *mocks.EventLogRepository, searchRepo *mo
 func TestAnalyticsService_LogEvent_Success(t *testing.T) {
 	eventRepo := &mocks.EventLogRepository{}
 	searchRepo := &mocks.SearchQueryRepository{}
-	svc := newTestAnalyticsService(eventRepo, searchRepo)
+	svc := newTestAnalyticsService(eventRepo, searchRepo, &mocks.VenueRepository{})
 
 	ctx := context.Background()
 	venueID := uuid.New()
@@ -44,7 +45,7 @@ func TestAnalyticsService_LogEvent_Success(t *testing.T) {
 func TestAnalyticsService_LogEvent_RepoError(t *testing.T) {
 	eventRepo := &mocks.EventLogRepository{}
 	searchRepo := &mocks.SearchQueryRepository{}
-	svc := newTestAnalyticsService(eventRepo, searchRepo)
+	svc := newTestAnalyticsService(eventRepo, searchRepo, &mocks.VenueRepository{})
 
 	ctx := context.Background()
 	venueID := uuid.New()
@@ -62,7 +63,7 @@ func TestAnalyticsService_LogEvent_RepoError(t *testing.T) {
 func TestAnalyticsService_ListEventLogs(t *testing.T) {
 	eventRepo := &mocks.EventLogRepository{}
 	searchRepo := &mocks.SearchQueryRepository{}
-	svc := newTestAnalyticsService(eventRepo, searchRepo)
+	svc := newTestAnalyticsService(eventRepo, searchRepo, &mocks.VenueRepository{})
 
 	ctx := context.Background()
 	venueID := uuid.New()
@@ -87,31 +88,39 @@ func TestAnalyticsService_ListEventLogs(t *testing.T) {
 func TestAnalyticsService_TrackSearch_Success(t *testing.T) {
 	eventRepo := &mocks.EventLogRepository{}
 	searchRepo := &mocks.SearchQueryRepository{}
-	svc := newTestAnalyticsService(eventRepo, searchRepo)
+	venueRepo := &mocks.VenueRepository{}
+	svc := newTestAnalyticsService(eventRepo, searchRepo, venueRepo)
 
 	ctx := context.Background()
 	venueID := uuid.New()
+	venue := &domain.Venue{ID: venueID, ExternalID: "foodex_mar_2026"}
 
-	searchRepo.On("Upsert", ctx, venueID, "coffee shop").Return(nil)
+	venueRepo.On("FindByID", ctx, venueID).Return(venue, nil)
+	searchRepo.On("Upsert", ctx, venueID, "coffee shop", "product", "foodex").Return(nil)
 
-	err := svc.TrackSearch(ctx, venueID, "coffee shop")
+	err := svc.TrackSearch(ctx, venueID, "coffee shop", "product")
 	require.NoError(t, err)
+	venueRepo.AssertExpectations(t)
 	searchRepo.AssertExpectations(t)
 }
 
 func TestAnalyticsService_TrackSearch_EmptyTerm(t *testing.T) {
 	eventRepo := &mocks.EventLogRepository{}
 	searchRepo := &mocks.SearchQueryRepository{}
-	svc := newTestAnalyticsService(eventRepo, searchRepo)
+	venueRepo := &mocks.VenueRepository{}
+	svc := newTestAnalyticsService(eventRepo, searchRepo, venueRepo)
 
 	ctx := context.Background()
 	venueID := uuid.New()
+	venue := &domain.Venue{ID: venueID, ExternalID: ""}
 
+	venueRepo.On("FindByID", ctx, venueID).Return(venue, nil)
 	// Service delegates directly to repo — empty term is repo's concern
-	searchRepo.On("Upsert", ctx, venueID, "").Return(nil)
+	searchRepo.On("Upsert", ctx, venueID, "", "", "").Return(nil)
 
-	err := svc.TrackSearch(ctx, venueID, "")
+	err := svc.TrackSearch(ctx, venueID, "", "")
 	require.NoError(t, err)
+	venueRepo.AssertExpectations(t)
 	searchRepo.AssertExpectations(t)
 }
 
@@ -120,11 +129,12 @@ func TestAnalyticsService_TrackSearch_EmptyTerm(t *testing.T) {
 func TestAnalyticsService_ListSearchQueries(t *testing.T) {
 	eventRepo := &mocks.EventLogRepository{}
 	searchRepo := &mocks.SearchQueryRepository{}
-	svc := newTestAnalyticsService(eventRepo, searchRepo)
+	svc := newTestAnalyticsService(eventRepo, searchRepo, &mocks.VenueRepository{})
 
 	ctx := context.Background()
 	venueID := uuid.New()
 	p := domain.Pagination{Page: 1, PageSize: 10}
+	filter := repository.SearchQueryFilter{}
 
 	venueIDCopy := venueID
 	expected := []*domain.SearchQuery{
@@ -132,9 +142,9 @@ func TestAnalyticsService_ListSearchQueries(t *testing.T) {
 		{VenueID: &venueIDCopy, SearchTerm: "restroom", SearchCount: 3},
 	}
 
-	searchRepo.On("List", ctx, venueID, p).Return(expected, 2, nil)
+	searchRepo.On("List", ctx, venueID, filter, p).Return(expected, 2, nil)
 
-	queries, total, err := svc.ListSearchQueries(ctx, venueID, p)
+	queries, total, err := svc.ListSearchQueries(ctx, venueID, filter, p)
 	require.NoError(t, err)
 	assert.Len(t, queries, 2)
 	assert.Equal(t, 2, total)

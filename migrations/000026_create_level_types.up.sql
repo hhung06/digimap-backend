@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS level_types (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    venue_id   UUID        NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+    venue_id   UUID        REFERENCES venues(id) ON DELETE CASCADE,
     name       TEXT        NOT NULL,
     icon       TEXT        NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

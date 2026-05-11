@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -14,13 +15,14 @@ import (
 type AnalyticsService interface {
 	LogEvent(ctx context.Context, e *domain.EventLog) error
 	ListEventLogs(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.EventLog, int, error)
-	TrackSearch(ctx context.Context, venueID uuid.UUID, term string) error
-	ListSearchQueries(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error)
+	TrackSearch(ctx context.Context, venueID uuid.UUID, term, origin string) error
+	ListSearchQueries(ctx context.Context, venueID uuid.UUID, filter repository.SearchQueryFilter, p domain.Pagination) ([]*domain.SearchQuery, int, error)
 }
 
 type analyticsService struct {
 	eventRepo  repository.EventLogRepository
 	searchRepo repository.SearchQueryRepository
+	venueRepo  repository.VenueRepository
 	cache      *redis.Client
 }
 
@@ -28,12 +30,27 @@ type analyticsService struct {
 func NewAnalyticsService(
 	eventRepo repository.EventLogRepository,
 	searchRepo repository.SearchQueryRepository,
+	venueRepo repository.VenueRepository,
 	cache *redis.Client,
 ) AnalyticsService {
 	return &analyticsService{
 		eventRepo:  eventRepo,
 		searchRepo: searchRepo,
+		venueRepo:  venueRepo,
 		cache:      cache,
+	}
+}
+
+// deriveAppID maps a venue's external_id prefix to the known app identifier.
+func deriveAppID(externalID string) string {
+	lower := strings.ToLower(externalID)
+	switch {
+	case strings.HasPrefix(lower, "foodex"):
+		return "foodex"
+	case strings.HasPrefix(lower, "hcj"):
+		return "hcj"
+	default:
+		return ""
 	}
 }
 
@@ -45,10 +62,14 @@ func (s *analyticsService) ListEventLogs(ctx context.Context, venueID uuid.UUID,
 	return s.eventRepo.ListByVenue(ctx, venueID, p)
 }
 
-func (s *analyticsService) TrackSearch(ctx context.Context, venueID uuid.UUID, term string) error {
-	return s.searchRepo.Upsert(ctx, venueID, term)
+func (s *analyticsService) TrackSearch(ctx context.Context, venueID uuid.UUID, term, origin string) error {
+	venue, err := s.venueRepo.FindByID(ctx, venueID)
+	if err != nil {
+		return err
+	}
+	return s.searchRepo.Upsert(ctx, venueID, term, origin, deriveAppID(venue.ExternalID))
 }
 
-func (s *analyticsService) ListSearchQueries(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
-	return s.searchRepo.List(ctx, venueID, p)
+func (s *analyticsService) ListSearchQueries(ctx context.Context, venueID uuid.UUID, filter repository.SearchQueryFilter, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
+	return s.searchRepo.List(ctx, venueID, filter, p)
 }

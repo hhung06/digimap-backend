@@ -19,7 +19,7 @@ $$ LANGUAGE plpgsql;
 
 -- Event tags (global, not venue-specific)
 CREATE TABLE IF NOT EXISTS event_tags (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     name        TEXT,
     localization JSONB,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -33,7 +33,7 @@ CREATE TRIGGER set_event_tags_updated_at
 
 -- Event types (per venue)
 CREATE TABLE IF NOT EXISTS event_types (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id    UUID        REFERENCES venues(id) ON DELETE CASCADE,
     name        TEXT,
     localization JSONB,
@@ -48,7 +48,7 @@ CREATE TRIGGER set_event_types_updated_at
 
 -- Events
 CREATE TABLE IF NOT EXISTS events (
-    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id               UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id         UUID        REFERENCES venues(id) ON DELETE CASCADE,
     type_id          UUID        REFERENCES event_types(id) ON DELETE SET NULL,
     title            TEXT,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS event_location_links (
 
 -- Event images
 CREATE TABLE IF NOT EXISTS event_images (
-    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id         UUID        PRIMARY KEY DEFAULT uuidv7(),
     event_id   UUID        NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     image      TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

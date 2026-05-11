@@ -484,6 +484,39 @@ func scanLocation(row pgx.Row) (*domain.Location, error) {
 	return &l, nil
 }
 
+// ── Memo helpers ──────────────────────────────────────────────────────────────
+
+func (r *locationRepo) ListMemos(ctx context.Context, venueID uuid.UUID) ([]*domain.Location, error) {
+	rows, err := r.pool.Query(ctx, `SELECT `+locationSelectCols+`
+		FROM locations
+		WHERE venue_id = $1
+		  AND common_location_type = $2
+		  AND deleted_at IS NULL
+		ORDER BY updated_at DESC`,
+		venueID, domain.LocationTypeMemo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var memos []*domain.Location
+	for rows.Next() {
+		m, err := scanLocation(rows)
+		if err != nil {
+			return nil, err
+		}
+		memos = append(memos, m)
+	}
+	return memos, rows.Err()
+}
+
+func (r *locationRepo) FindMemoByID(ctx context.Context, id uuid.UUID) (*domain.Location, error) {
+	row := r.pool.QueryRow(ctx, `SELECT `+locationSelectCols+`
+		FROM locations
+		WHERE id = $1 AND common_location_type = $2 AND deleted_at IS NULL`,
+		id, domain.LocationTypeMemo)
+	return scanLocation(row)
+}
+
 func scanLocationImage(row pgx.Row) (*domain.LocationImage, error) {
 	var img domain.LocationImage
 	var orig, small, medium, large *string

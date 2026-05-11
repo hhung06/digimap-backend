@@ -67,6 +67,12 @@ func (r *languageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return softDelete(ctx, r.pool, "languages", id.String())
 }
 
+func (r *languageRepository) ListEnabled(ctx context.Context, venueID uuid.UUID) ([]*domain.Language, error) {
+	// Django: Language.objects.filter(venue=venue, enabled=True) — Go uses is_default as the enabled proxy
+	// until a dedicated `enabled` column is added. All non-deleted languages are treated as enabled.
+	return r.List(ctx, venueID)
+}
+
 func scanLanguage(row scanner) (*domain.Language, error) {
 	var l domain.Language
 	if err := row.Scan(

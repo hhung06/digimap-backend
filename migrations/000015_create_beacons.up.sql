@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS beacons (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id    UUID        REFERENCES venues(id) ON DELETE CASCADE,
     level_id    UUID        REFERENCES levels(id) ON DELETE SET NULL,
     element_id  UUID,

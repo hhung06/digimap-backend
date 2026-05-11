@@ -51,6 +51,8 @@ type Dependencies struct {
 	ThemeService            service.ThemeService
 	ProductPlazaService     service.ProductPlazaService
 	LanguageService         service.LanguageService
+	AppVersionService       *service.AppVersionService
+	MemoService             service.MemoService
 	EnricherRegistry        *enricher.Registry
 	UserRepo                repository.UserRepository
 	VenueRepo               repository.VenueRepository
@@ -216,6 +218,14 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.PUT("/:id/locations/:locationID/set-top", locH.SetTop)
 		venues.POST("/:id/locations/:locationID/images", locH.CreateImage)
 		venues.DELETE("/:id/locations/:locationID/images/:imageID", locH.DeleteImage)
+
+		// Memo routes (locations with common_location_type=6)
+		memoH := newMemoHandler(deps.MemoService)
+		venues.GET("/:id/locations/memos", memoH.List)
+		venues.POST("/:id/locations/memos", memoH.Create)
+		venues.GET("/:id/locations/memos/:memoID", memoH.Get)
+		venues.PATCH("/:id/locations/memos/:memoID", memoH.Update)
+		venues.DELETE("/:id/locations/memos/:memoID", memoH.Delete)
 
 		// Product sub-resources
 		prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
@@ -405,7 +415,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	adminJWT.DELETE("/tags/:tagID/detach", tagH.DetachTag)
 	adminJWT.GET("/tags/entity", tagH.ListEntityTags)
 
-	// ── App layer (API Key auth) ───────────────────────────────────────────────
+	// ── App layer ─────────────────────────────────────────────────────────────
 	appH := newAppHandler(
 		deps.LocationService,
 		deps.EventService,
@@ -418,7 +428,11 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		deps.SurveyService,
 		deps.LocationCategoryService,
 		deps.AnalyticsService,
+		deps.AppVersionService,
 	)
+	// Open endpoint — no API key required.
+	// Mirrors Django's AppLatestBundle.get (app/views/version.py:48).
+	r.GET("/app/v1/latest-bundle", appH.LatestBundle)
 	appKey := r.Group("/app/v1", middleware.APIKeyAuth(venueKeyLookup{deps.VenueRepo}))
 	{
 		appKey.GET("/locations", appH.ListLocations)

@@ -2,7 +2,7 @@
 -- The raw token is issued to the client once; only its SHA-256 hash is stored.
 
 CREATE TABLE refresh_tokens (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     user_id     UUID        NOT NULL REFERENCES users (id),
     token_hash  TEXT        UNIQUE NOT NULL,
     expires_at  TIMESTAMPTZ NOT NULL,
@@ -16,7 +16,7 @@ CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens (token_hash) WHERE 
 -- ── Password reset tokens ─────────────────────────────────────────────────────
 
 CREATE TABLE reset_password_tokens (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     user_id     UUID        NOT NULL REFERENCES users (id),
     token_hash  TEXT        UNIQUE NOT NULL,
     expires_at  TIMESTAMPTZ NOT NULL,

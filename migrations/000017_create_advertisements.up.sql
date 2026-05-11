@@ -1,5 +1,5 @@
 CREATE TABLE advertisements (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id               UUID PRIMARY KEY DEFAULT uuidv7(),
     venue_id         UUID REFERENCES venues(id) ON DELETE CASCADE,
     location_id      UUID REFERENCES locations(id) ON DELETE CASCADE,
     type             VARCHAR(50) NOT NULL DEFAULT 'dialog',

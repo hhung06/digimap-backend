@@ -108,6 +108,10 @@ type LocationRepository interface {
 	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
 	CreateImage(ctx context.Context, img *domain.LocationImage) error
 	DeleteImage(ctx context.Context, id uuid.UUID) error
+
+	// Memos — locations with common_location_type = LocationTypeMemo (6)
+	ListMemos(ctx context.Context, venueID uuid.UUID) ([]*domain.Location, error)
+	FindMemoByID(ctx context.Context, id uuid.UUID) (*domain.Location, error)
 }
 
 // ProductRepository handles products, categories, and attachments.
@@ -301,10 +305,16 @@ type EventLogRepository interface {
 	ListByVenue(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.EventLog, int, error)
 }
 
+// SearchQueryFilter narrows search_queries results on the read path.
+type SearchQueryFilter struct {
+	Origin     *string
+	IsPromoted *bool
+}
+
 // SearchQueryRepository handles search term tracking and promoted keywords.
 type SearchQueryRepository interface {
-	Upsert(ctx context.Context, venueID uuid.UUID, term string) error
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error)
+	Upsert(ctx context.Context, venueID uuid.UUID, term, origin, appID string) error
+	List(ctx context.Context, venueID uuid.UUID, filter SearchQueryFilter, p domain.Pagination) ([]*domain.SearchQuery, int, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.SearchQuery, error)
 	Create(ctx context.Context, q *domain.SearchQuery) error
 	Update(ctx context.Context, q *domain.SearchQuery) error
@@ -325,6 +335,8 @@ type SnapshotRepository interface {
 	// to remove its associated LevelBundle rows.
 	DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error
 	UnpublishVenue(ctx context.Context, venueID uuid.UUID) error
+	// LatestDraft returns the most recently created draft snapshot for a venue (nil if none).
+	LatestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error)
 }
 
 // LevelBundleRepository handles per-level bundle data persistence.
@@ -381,7 +393,18 @@ type AppUserRepository interface {
 type LanguageRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Language, error)
 	List(ctx context.Context, venueID uuid.UUID) ([]*domain.Language, error)
+	// ListEnabled returns only active languages for a venue (used by the v2 bundle publisher).
+	ListEnabled(ctx context.Context, venueID uuid.UUID) ([]*domain.Language, error)
 	Create(ctx context.Context, l *domain.Language) error
 	Update(ctx context.Context, l *domain.Language) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// AppVersionRepository persists the force-sync version for each venue.
+// Mirrors Django's ForceSyncVersion model (indoormap-backend/indoormap_api/app/models.py:57).
+type AppVersionRepository interface {
+	// Upsert creates or updates the version row for the given venue.
+	Upsert(ctx context.Context, venueID, version uuid.UUID) error
+	// Get returns the current version for a venue, creating a default row if none exists.
+	Get(ctx context.Context, venueID uuid.UUID) (*domain.AppVersion, error)
 }

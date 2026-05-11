@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -9,6 +10,7 @@ import (
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
+	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
@@ -24,6 +26,7 @@ type appHandler struct {
 	surveys            service.SurveyService
 	locationCategories service.LocationCategoryService
 	analytics          service.AnalyticsService
+	appVersions        *service.AppVersionService
 }
 
 func newAppHandler(
@@ -38,6 +41,7 @@ func newAppHandler(
 	surveys service.SurveyService,
 	locationCategories service.LocationCategoryService,
 	analytics service.AnalyticsService,
+	appVersions *service.AppVersionService,
 ) *appHandler {
 	return &appHandler{
 		locations:          locations,
@@ -51,6 +55,7 @@ func newAppHandler(
 		surveys:            surveys,
 		locationCategories: locationCategories,
 		analytics:          analytics,
+		appVersions:        appVersions,
 	}
 }
 
@@ -373,7 +378,25 @@ func (h *appHandler) SubmitSurveyResponse(c *gin.Context) {
 func (h *appHandler) TopSearch(c *gin.Context) {
 	venueID := middleware.GetVenueID(c)
 	p := paginationFromQuery(c)
-	queries, total, err := h.analytics.ListSearchQueries(c.Request.Context(), venueID, p)
+
+	var filter repository.SearchQueryFilter
+	if origin := c.Query("origin"); origin != "" {
+		if origin != "product" && origin != "exhibitor" {
+			c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "origin must be product or exhibitor"))
+			return
+		}
+		filter.Origin = &origin
+	}
+	if raw := c.Query("is_promoted"); raw != "" {
+		v, err := strconv.ParseBool(raw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "is_promoted must be true or false"))
+			return
+		}
+		filter.IsPromoted = &v
+	}
+
+	queries, total, err := h.analytics.ListSearchQueries(c.Request.Context(), venueID, filter, p)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -441,4 +464,21 @@ func (h *appHandler) Promotions(c *gin.Context) {
 			"total": total,
 		},
 	}))
+}
+
+// LatestBundle returns the current force-sync version for a venue.
+// Mirrors Django's AppLatestBundle.get (indoormap-backend/indoormap_api/app/views/version.py:48).
+// GET /app/v1/latest-bundle?venue=<uuid>
+func (h *appHandler) LatestBundle(c *gin.Context) {
+	venueID, err := uuid.Parse(c.Query("venue"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid venue id"))
+		return
+	}
+	av, err := h.appVersions.Get(c.Request.Context(), venueID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.OK(gin.H{"version": av.Version.String()}))
 }

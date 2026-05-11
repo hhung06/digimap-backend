@@ -59,6 +59,7 @@ type SearchQueryResponse struct {
 // TrackSearchRequest is the public-API payload for recording a search term.
 type TrackSearchRequest struct {
 	Term     string `json:"term" binding:"required"`
+	Origin   string `json:"origin" binding:"omitempty,oneof=product exhibitor"`
 	DeviceID string `json:"device_id"`
 	UserID   string `json:"user_id"`
 }

@@ -1,6 +1,6 @@
 -- event_logs: partitioned by month via range on created_at
 CREATE TABLE event_logs (
-    id          UUID NOT NULL DEFAULT gen_random_uuid(),
+    id          UUID NOT NULL DEFAULT uuidv7(),
     venue_id    UUID,
     name        VARCHAR(50) NOT NULL DEFAULT 'view',
     params      JSONB NOT NULL DEFAULT '{}',
@@ -40,7 +40,7 @@ CREATE INDEX idx_event_logs_device_id   ON event_logs (device_id);
 
 -- search_queries
 CREATE TABLE search_queries (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID PRIMARY KEY DEFAULT uuidv7(),
     venue_id     UUID,
     app_id       VARCHAR(255),
     origin       VARCHAR(255),
@@ -57,5 +57,8 @@ CREATE TABLE search_queries (
 
 CREATE INDEX idx_search_queries_venue_id    ON search_queries (venue_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_search_queries_search_term ON search_queries (search_term) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_search_queries_venue_term_origin
+    ON search_queries (venue_id, search_term, COALESCE(origin, ''))
+    WHERE deleted_at IS NULL;
 
 SELECT create_updated_at_trigger('search_queries');

@@ -16,6 +16,7 @@ import (
 	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler"
 	"github.com/hhung06/digimap-backend/internal/platform/cache"
+	"github.com/hhung06/digimap-backend/internal/platform/cdn"
 	"github.com/hhung06/digimap-backend/internal/platform/database"
 	"github.com/hhung06/digimap-backend/internal/platform/email"
 	"github.com/hhung06/digimap-backend/internal/platform/firebase"
@@ -87,11 +88,13 @@ func runServe(_ *cobra.Command, _ []string) error {
 	productPlazaRepo := postgresrepo.NewProductPlazaRepository(pool)
 	appUserRepo := postgresrepo.NewAppUserRepository(pool)
 	languageRepo := postgresrepo.NewLanguageRepository(pool)
+	appVersionRepo := postgresrepo.NewAppVersionRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
 	mailer := email.NewLogSender(logger)
 	storer := storage.NewLogStorer()
 	pusher := firebase.NewLogPusher(logger)
+	invalidator := cdn.NewLogInvalidator()
 
 	// ── Application services ──────────────────────────────────────────────
 	authSvc := service.NewAuthService(userRepo, tokenRepo, mailer, cfg.JWT)
@@ -99,8 +102,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 	venueSvc := service.NewVenueService(venueRepo, levelRepo, pool)
 	levelSvc := service.NewLevelService(levelRepo)
 	locationCategorySvc := service.NewLocationCategoryService(locationCategoryRepo)
-	snapshotSvc := service.NewSnapshotService(snapshotRepo, storer, cfg.App.Environment)
-	locationSvc := service.NewLocationService(locationRepo, storer, cfg.App.Environment)
+	appVersionSvc := service.NewAppVersionService(appVersionRepo, storer, invalidator, cfg.App.Environment)
+	snapshotSvc := service.NewSnapshotService(snapshotRepo, venueRepo, languageRepo, locationRepo, locationCategoryRepo, productRepo, storer, invalidator, appVersionSvc, cfg.App.Environment)
+	locationSvc := service.NewLocationService(locationRepo, venueRepo, storer, invalidator, appVersionSvc, cfg.App.Environment)
 	productSvc := service.NewProductService(productRepo)
 	storageSvc := service.NewStorageService(storer)
 	eventSvc := service.NewEventService(eventRepo)
@@ -114,13 +118,14 @@ func runServe(_ *cobra.Command, _ []string) error {
 	couponSvc := service.NewCouponService(couponRepo)
 	videoSvc := service.NewVideoService(videoRepo)
 	tagSvc := service.NewTagService(tagRepo)
-	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, redisClient)
+	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, venueRepo, redisClient)
 	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, storer, cfg.App.Environment)
 	assetSvc := service.NewAssetService(assetRepo)
 	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
 	themeSvc := service.NewThemeService(themeRepo)
 	productPlazaSvc := service.NewProductPlazaService(productPlazaRepo)
 	languageSvc := service.NewLanguageService(languageRepo)
+	memoSvc := service.NewMemoService(locationRepo, venueRepo, storer, invalidator, appVersionSvc, cfg.App.Environment)
 
 	enricherRegistry := enricher.NewRegistry(venueRepo)
 	tenants.RegisterAll(enricherRegistry)
@@ -154,6 +159,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 		ThemeService:            themeSvc,
 		ProductPlazaService:     productPlazaSvc,
 		LanguageService:         languageSvc,
+		AppVersionService:       appVersionSvc,
+		MemoService:             memoSvc,
 		EnricherRegistry:        enricherRegistry,
 		UserRepo:                userRepo,
 		VenueRepo:               venueRepo,

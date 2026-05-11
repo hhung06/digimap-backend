@@ -18,8 +18,9 @@ import (
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
-func newTestLocationService(repo *mocks.LocationRepository, storer *mocks.StorerMock) service.LocationService {
-	return service.NewLocationService(repo, storer, "test")
+func newTestLocationService(repo *mocks.LocationRepository, _ *mocks.StorerMock) service.LocationService {
+	// publishTopLocations runs in a goroutine; pass no-op deps so goroutine exits cleanly.
+	return service.NewLocationService(repo, &mocks.VenueRepository{}, storage.NewLogStorer(), cdn.NewLogInvalidator(), nil, "test")
 }
 
 // ── Get ───────────────────────────────────────────────────────────────────────

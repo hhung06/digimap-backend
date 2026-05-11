@@ -11,6 +11,7 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/platform/firebase"
+	"github.com/hhung06/digimap-backend/internal/repository"
 )
 
 // ── UserRepository ────────────────────────────────────────────────────────────
@@ -173,12 +174,12 @@ func (m *EventLogRepository) ListByVenue(ctx context.Context, venueID uuid.UUID,
 // SearchQueryRepository is a mock implementation of repository.SearchQueryRepository.
 type SearchQueryRepository struct{ mock.Mock }
 
-func (m *SearchQueryRepository) Upsert(ctx context.Context, venueID uuid.UUID, term string) error {
-	return m.Called(ctx, venueID, term).Error(0)
+func (m *SearchQueryRepository) Upsert(ctx context.Context, venueID uuid.UUID, term, origin, appID string) error {
+	return m.Called(ctx, venueID, term, origin, appID).Error(0)
 }
 
-func (m *SearchQueryRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
-	args := m.Called(ctx, venueID, p)
+func (m *SearchQueryRepository) List(ctx context.Context, venueID uuid.UUID, filter repository.SearchQueryFilter, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
+	args := m.Called(ctx, venueID, filter, p)
 	if qs, ok := args.Get(0).([]*domain.SearchQuery); ok {
 		return qs, args.Int(1), args.Error(2)
 	}
@@ -442,6 +443,14 @@ func (m *SnapshotRepository) UnpublishVenue(ctx context.Context, venueID uuid.UU
 	return args.Error(0)
 }
 
+func (m *SnapshotRepository) LatestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).(*domain.Snapshot); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 // ── LevelBundleRepository ─────────────────────────────────────────────────────
 
 // LevelBundleRepository is a mock implementation of repository.LevelBundleRepository.
@@ -555,6 +564,10 @@ func (m *StorerMock) PresignDownload(ctx context.Context, key string, ttl time.D
 
 func (m *StorerMock) PutObject(ctx context.Context, key string, data []byte) error {
 	return m.Called(ctx, key, data).Error(0)
+}
+
+func (m *StorerMock) PutEncrypted(ctx context.Context, key string, body []byte, meta map[string]string) error {
+	return m.Called(ctx, key, body, meta).Error(0)
 }
 
 func (m *StorerMock) GetObject(ctx context.Context, key string) ([]byte, error) {
@@ -754,6 +767,22 @@ func (m *LocationRepository) SearchByName(ctx context.Context, venueID uuid.UUID
 	return nil, args.Error(1)
 }
 
+func (m *LocationRepository) ListMemos(ctx context.Context, venueID uuid.UUID) ([]*domain.Location, error) {
+	args := m.Called(ctx, venueID)
+	if locs, ok := args.Get(0).([]*domain.Location); ok {
+		return locs, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationRepository) FindMemoByID(ctx context.Context, id uuid.UUID) (*domain.Location, error) {
+	args := m.Called(ctx, id)
+	if loc, ok := args.Get(0).(*domain.Location); ok {
+		return loc, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 // ── ProductPlazaRepository ────────────────────────────────────────────────────
 
 type ProductPlazaRepository struct{ mock.Mock }
@@ -928,6 +957,30 @@ func (m *LanguageRepository) Update(ctx context.Context, l *domain.Language) err
 
 func (m *LanguageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
+}
+
+func (m *LanguageRepository) ListEnabled(ctx context.Context, venueID uuid.UUID) ([]*domain.Language, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.Language); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+// ── AppVersionRepository ──────────────────────────────────────────────────────
+
+type AppVersionRepository struct{ mock.Mock }
+
+func (m *AppVersionRepository) Upsert(ctx context.Context, venueID, version uuid.UUID) error {
+	return m.Called(ctx, venueID, version).Error(0)
+}
+
+func (m *AppVersionRepository) Get(ctx context.Context, venueID uuid.UUID) (*domain.AppVersion, error) {
+	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).(*domain.AppVersion); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 // ── LevelRepository ───────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS surveys (
-    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id               UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id         UUID        REFERENCES venues(id) ON DELETE CASCADE,
     external_id      TEXT,
     title            TEXT,
@@ -30,7 +30,7 @@ ALTER TABLE notifications ADD CONSTRAINT fk_notifications_survey
     FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS questions (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id              UUID        PRIMARY KEY DEFAULT uuidv7(),
     survey_id       UUID        NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
     question_number INT         NOT NULL DEFAULT 1,
     question_type   TEXT        NOT NULL DEFAULT 'paragraph',
@@ -49,7 +49,7 @@ CREATE TRIGGER set_questions_updated_at
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
 CREATE TABLE IF NOT EXISTS options (
-    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id            UUID        PRIMARY KEY DEFAULT uuidv7(),
     question_id   UUID        NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
     option_number INT         NOT NULL DEFAULT 1,
     option_text   TEXT        NOT NULL,
@@ -65,22 +65,26 @@ CREATE TRIGGER set_options_updated_at
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
 CREATE TABLE IF NOT EXISTS survey_responses (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID        PRIMARY KEY DEFAULT uuidv7(),
     survey_id    UUID        NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at   TIMESTAMPTZ
+    deleted_at   TIMESTAMPTZ,
+    external_id  TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_survey_responses_survey ON survey_responses (survey_id) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_survey_responses_survey_external_id
+    ON survey_responses (survey_id, external_id)
+    WHERE external_id IS NOT NULL AND deleted_at IS NULL;
 
 CREATE TRIGGER set_survey_responses_updated_at
     BEFORE UPDATE ON survey_responses
     FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 
 CREATE TABLE IF NOT EXISTS survey_answers (
-    id          UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID  PRIMARY KEY DEFAULT uuidv7(),
     response_id UUID  NOT NULL REFERENCES survey_responses(id) ON DELETE CASCADE,
     question_id UUID  NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
     option_id   UUID  REFERENCES options(id) ON DELETE SET NULL,

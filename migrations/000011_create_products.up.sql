@@ -1,6 +1,6 @@
 -- Product categories (venue-scoped)
 CREATE TABLE product_categories (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id     UUID        NOT NULL REFERENCES venues (id) ON DELETE CASCADE,
     external_id  TEXT,
     name         TEXT        NOT NULL,
@@ -19,13 +19,13 @@ CREATE TRIGGER set_product_categories_updated_at
 
 -- Products
 CREATE TABLE products (
-    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id               UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id         UUID        REFERENCES venues (id) ON DELETE CASCADE,
     location_id      UUID        REFERENCES locations (id) ON DELETE SET NULL,
     main_category_id UUID        REFERENCES product_categories (id) ON DELETE SET NULL,
     image            TEXT,
     name             TEXT,
-    code             TEXT,
+    external_id      TEXT,
     size             TEXT,
     price            TEXT,
     origin_country   TEXT,
@@ -58,7 +58,7 @@ CREATE INDEX idx_product_category_links_category_id ON product_category_links (c
 
 -- Product attachments
 CREATE TABLE product_attachments (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     product_id  UUID        NOT NULL REFERENCES products (id) ON DELETE CASCADE,
     title       TEXT,
     file_type   TEXT        NOT NULL DEFAULT 'document',

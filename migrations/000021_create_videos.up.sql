@@ -1,5 +1,5 @@
 CREATE TABLE videos (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY DEFAULT uuidv7(),
     venue_id    UUID REFERENCES venues(id) ON DELETE CASCADE,
     title       VARCHAR(255) NOT NULL DEFAULT '',
     description TEXT,

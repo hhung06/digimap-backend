@@ -1,8 +1,7 @@
 CREATE TABLE venues (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id              UUID        PRIMARY KEY DEFAULT uuidv7(),
     customer_id     UUID        NOT NULL REFERENCES customers (id),
     name            TEXT        NOT NULL,
-    slug            TEXT        UNIQUE,
     external_id     TEXT,
     type            SMALLINT    NOT NULL DEFAULT 0,
     public_key      CHAR(43)    UNIQUE NOT NULL,
@@ -18,7 +17,6 @@ CREATE TABLE venues (
     telephone       TEXT,
     work_hours      TEXT,
     description     TEXT,
-    is_published    BOOLEAN     NOT NULL DEFAULT FALSE,
     theme           JSONB,
     plugins         JSONB,
     translations    JSONB,
@@ -45,8 +43,6 @@ CREATE TABLE venues (
 
 CREATE INDEX idx_venues_customer_id  ON venues (customer_id)  WHERE deleted_at IS NULL;
 CREATE INDEX idx_venues_public_key   ON venues (public_key)   WHERE deleted_at IS NULL;
-CREATE INDEX idx_venues_is_published ON venues (is_published) WHERE deleted_at IS NULL;
-CREATE INDEX idx_venues_slug         ON venues (slug)         WHERE deleted_at IS NULL;
 CREATE INDEX idx_venues_name_trgm    ON venues USING GIN (name gin_trgm_ops) WHERE deleted_at IS NULL;
 
 CREATE TRIGGER set_venues_updated_at

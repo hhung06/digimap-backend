@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/cdn"
+	"github.com/hhung06/digimap-backend/internal/platform/crypto"
 	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	"github.com/hhung06/digimap-backend/internal/repository"
 )
@@ -73,13 +74,30 @@ type LocationService interface {
 }
 
 type locationService struct {
-	repo   repository.LocationRepository
-	storer storage.Storer
-	env    string
+	repo        repository.LocationRepository
+	venueRepo   repository.VenueRepository
+	storer      storage.Storer
+	invalidator cdn.Invalidator
+	appVersions *AppVersionService
+	env         string
 }
 
-func NewLocationService(repo repository.LocationRepository, storer storage.Storer, env string) LocationService {
-	return &locationService{repo: repo, storer: storer, env: env}
+func NewLocationService(
+	repo repository.LocationRepository,
+	venueRepo repository.VenueRepository,
+	storer storage.Storer,
+	invalidator cdn.Invalidator,
+	appVersions *AppVersionService,
+	env string,
+) LocationService {
+	return &locationService{
+		repo:        repo,
+		venueRepo:   venueRepo,
+		storer:      storer,
+		invalidator: invalidator,
+		appVersions: appVersions,
+		env:         env,
+	}
 }
 
 func (s *locationService) Get(ctx context.Context, id uuid.UUID) (*domain.Location, error) {
@@ -163,10 +181,15 @@ func (s *locationService) SetTop(ctx context.Context, id uuid.UUID, isTop bool, 
 	if err := s.repo.SetTopLocation(ctx, id, isTop, sortIndex); err != nil {
 		return err
 	}
-	if s.storer == nil {
-		return nil
-	}
-	return s.publishTopLocations(ctx, loc.VenueID)
+	// Run publish in the background so the HTTP response is not blocked.
+	// Mirrors Django's threading.Thread approach (api/locations/views.py:368).
+	venueID := loc.VenueID
+	go func() {
+		if err := s.publishTopLocations(context.Background(), venueID); err != nil {
+			fmt.Printf("top-location publish error venue=%s: %v\n", venueID, err)
+		}
+	}()
+	return nil
 }
 
 type topLocationBundleItem struct {
@@ -176,7 +199,15 @@ type topLocationBundleItem struct {
 	IsTopLocation bool      `json:"is_top_location"`
 }
 
+// publishTopLocations compresses, AES-encrypts, uploads to S3, invalidates CloudFront,
+// and bumps the force-sync version — matching Django's upload_top_location pipeline
+// (indoormap-backend/api/locations/views.py:383).
 func (s *locationService) publishTopLocations(ctx context.Context, venueID uuid.UUID) error {
+	venue, err := s.venueRepo.FindByID(ctx, venueID)
+	if err != nil {
+		return fmt.Errorf("load venue: %w", err)
+	}
+
 	locations, err := s.repo.ListTopLocations(ctx, venueID)
 	if err != nil {
 		return err
@@ -185,9 +216,9 @@ func (s *locationService) publishTopLocations(ctx context.Context, venueID uuid.
 		return nil
 	}
 
-	payload := make([]topLocationBundleItem, len(locations))
+	items := make([]topLocationBundleItem, len(locations))
 	for i, loc := range locations {
-		payload[i] = topLocationBundleItem{
+		items[i] = topLocationBundleItem{
 			ID:            loc.ID,
 			TopLogo:       loc.TopLogo,
 			TopLogoType:   loc.TopLogoType,
@@ -195,15 +226,25 @@ func (s *locationService) publishTopLocations(ctx context.Context, venueID uuid.
 		}
 	}
 
-	data, err := json.Marshal(payload)
+	ciphertext, err := crypto.EncryptBytes(venue.PublicKey, items)
 	if err != nil {
-		return fmt.Errorf("marshal top locations: %w", err)
+		return fmt.Errorf("encrypt top-location bundle: %w", err)
 	}
 
-	key := fmt.Sprintf("%s/top_location/public/%s.digimap", s.env, venueID)
-	if err := s.storer.PutObject(ctx, key, data); err != nil {
+	key := storage.TopLocationKey(s.env, venueID)
+	meta := map[string]string{"encrypted": "AES", "compressed": "gzip"}
+	if err := s.storer.PutEncrypted(ctx, key, []byte(ciphertext), meta); err != nil {
 		return fmt.Errorf("upload top-location bundle: %w", err)
 	}
+
+	if _, err := s.invalidator.Invalidate(ctx, []string{"/" + key}); err != nil {
+		fmt.Printf("top-location cf invalidation failed venue=%s: %v\n", venueID, err)
+	}
+
+	if _, err := s.appVersions.Bump(ctx, venueID); err != nil {
+		fmt.Printf("top-location version bump failed venue=%s: %v\n", venueID, err)
+	}
+
 	return nil
 }
 

@@ -1,5 +1,5 @@
 CREATE TABLE articles (
-    id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                     UUID PRIMARY KEY DEFAULT uuidv7(),
     venue_id               UUID REFERENCES venues(id) ON DELETE CASCADE,
     external_id            VARCHAR(255),
     location_id            UUID REFERENCES locations(id) ON DELETE SET NULL,
@@ -19,7 +19,7 @@ CREATE TABLE articles (
 );
 
 CREATE TABLE article_images (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id         UUID PRIMARY KEY DEFAULT uuidv7(),
     article_id UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
     image      VARCHAR(1000) NOT NULL DEFAULT '',
     sort_order INT NOT NULL DEFAULT 0,

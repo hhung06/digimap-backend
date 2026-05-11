@@ -11,6 +11,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/hhung06/digimap-backend/config"
 )
@@ -19,8 +20,12 @@ import (
 type Storer interface {
 	PresignUpload(ctx context.Context, key string, contentType string, ttl time.Duration) (string, error)
 	PresignDownload(ctx context.Context, key string, ttl time.Duration) (string, error)
-	// PutObject uploads data directly from the server (no presigned URL).
+	// PutObject uploads data directly from the server (no presigned URL). ContentType: application/json.
 	PutObject(ctx context.Context, key string, data []byte) error
+	// PutEncrypted uploads AES-encrypted + gzip-compressed data.
+	// Sets ContentType=text/plain, ContentEncoding=base64, and any additional metadata.
+	// Mirrors Django's upload_encrypted_to_s3 (indoormap-backend/utils/s3services.py:304).
+	PutEncrypted(ctx context.Context, key string, body []byte, meta map[string]string) error
 	// GetObject downloads an object's bytes directly from the server.
 	GetObject(ctx context.Context, key string) ([]byte, error)
 }
@@ -83,6 +88,26 @@ func (s *s3Storer) PutObject(ctx context.Context, key string, data []byte) error
 	return nil
 }
 
+func (s *s3Storer) PutEncrypted(ctx context.Context, key string, body []byte, meta map[string]string) error {
+	awsMeta := make(map[string]string, len(meta))
+	for k, v := range meta {
+		awsMeta[k] = v
+	}
+	_, err := s.direct.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:          aws.String(s.bucket),
+		Key:             aws.String(key),
+		Body:            bytes.NewReader(body),
+		ContentType:     aws.String("text/plain"),
+		ContentEncoding: aws.String("base64"),
+		Metadata:        awsMeta,
+		ChecksumAlgorithm: s3types.ChecksumAlgorithmCrc32,
+	})
+	if err != nil {
+		return fmt.Errorf("s3 put encrypted %s: %w", key, err)
+	}
+	return nil
+}
+
 func (s *s3Storer) GetObject(ctx context.Context, key string) ([]byte, error) {
 	out, err := s.direct.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -110,6 +135,11 @@ func (s *LogStorer) PresignDownload(_ context.Context, key string, _ time.Durati
 
 func (s *LogStorer) PutObject(_ context.Context, key string, _ []byte) error {
 	fmt.Printf("[DEV S3] PutObject key=%s\n", key)
+	return nil
+}
+
+func (s *LogStorer) PutEncrypted(_ context.Context, key string, body []byte, meta map[string]string) error {
+	fmt.Printf("[DEV S3] PutEncrypted key=%s len=%d meta=%v\n", key, len(body), meta)
 	return nil
 }
 

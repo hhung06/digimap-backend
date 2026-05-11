@@ -1,15 +1,17 @@
 CREATE TABLE customers (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     name        TEXT        NOT NULL,
     email       TEXT        UNIQUE NOT NULL,
     phone       TEXT,
     address     TEXT,
-    logo_url    TEXT,
+    image       TEXT,
     is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
     metadata    JSONB,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at  TIMESTAMPTZ
+    deleted_at  TIMESTAMPTZ,
+    url         TEXT,
+    description TEXT
 );
 
 CREATE INDEX idx_customers_email     ON customers (email)      WHERE deleted_at IS NULL;

@@ -1,5 +1,5 @@
 CREATE TABLE connections (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY DEFAULT uuidv7(),
     venue_id    UUID REFERENCES venues(id) ON DELETE CASCADE,
     external_id VARCHAR(255),
     name        VARCHAR(255),
@@ -16,7 +16,7 @@ CREATE TABLE connections (
 );
 
 CREATE TABLE connection_levels (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id            UUID PRIMARY KEY DEFAULT uuidv7(),
     connection_id UUID NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
     level_id      UUID REFERENCES levels(id) ON DELETE CASCADE,
     element_id    UUID,
@@ -27,7 +27,7 @@ CREATE TABLE connection_levels (
 );
 
 CREATE TABLE qrcodes (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID PRIMARY KEY DEFAULT uuidv7(),
     venue_id     UUID REFERENCES venues(id) ON DELETE CASCADE,
     level_id     UUID REFERENCES levels(id) ON DELETE SET NULL,
     location_id  UUID REFERENCES locations(id) ON DELETE SET NULL,

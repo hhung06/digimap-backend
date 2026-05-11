@@ -1,2 +1,0 @@
-ALTER TABLE locations
-    ADD COLUMN IF NOT EXISTS common_sub_type SMALLINT NOT NULL DEFAULT 0;

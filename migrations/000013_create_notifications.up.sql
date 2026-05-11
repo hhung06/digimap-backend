@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS notifications (
-    id                         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                         UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id                   UUID        REFERENCES venues(id) ON DELETE CASCADE,
     survey_id                  UUID,       -- forward ref resolved after surveys table created
     title                      TEXT,

@@ -125,6 +125,24 @@ func (r *snapshotRepo) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID)
 	return err
 }
 
+func (r *snapshotRepo) LatestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error) {
+	row := r.pool.QueryRow(ctx, `
+		SELECT id, venue_id, state, method, created_by, publish_at, created_at, updated_at
+		FROM snapshots
+		WHERE venue_id = $1 AND state = $2 AND deleted_at IS NULL
+		ORDER BY created_at DESC
+		LIMIT 1`,
+		venueID, domain.SnapshotStateDraft)
+	snap, err := scanSnapshot(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return snap, nil
+}
+
 func scanSnapshot(row scanner) (*domain.Snapshot, error) {
 	var s domain.Snapshot
 	err := row.Scan(

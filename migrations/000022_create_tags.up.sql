@@ -1,5 +1,5 @@
 CREATE TABLE tags (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID PRIMARY KEY DEFAULT uuidv7(),
     name         VARCHAR(100),
     localization JSONB,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -8,7 +8,7 @@ CREATE TABLE tags (
 );
 
 CREATE TABLE entity_tags (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY DEFAULT uuidv7(),
     tag_id      UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     entity_type VARCHAR(100) NOT NULL,
     entity_id   UUID NOT NULL,

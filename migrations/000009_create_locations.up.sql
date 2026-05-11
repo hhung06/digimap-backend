@@ -1,5 +1,5 @@
 CREATE TABLE locations (
-    id                               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                               UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id                         UUID        REFERENCES venues (id) ON DELETE CASCADE,
     level_id                         UUID        REFERENCES levels (id) ON DELETE SET NULL,
     main_category_id                 UUID        REFERENCES location_categories (id) ON DELETE SET NULL,
@@ -10,7 +10,6 @@ CREATE TABLE locations (
     common_description               TEXT,
     common_color                     TEXT,
     common_location_type             SMALLINT    NOT NULL DEFAULT 0,
-    common_sub_type                  SMALLINT    NOT NULL DEFAULT 0,
     common_latitude                  NUMERIC(20, 17),
     common_longitude                 NUMERIC(20, 17),
     common_address                   TEXT,
@@ -54,7 +53,8 @@ CREATE TABLE locations (
     is_searchable                    BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at                       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at                       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at                       TIMESTAMPTZ
+    deleted_at                       TIMESTAMPTZ,
+    common_location_sub_type         SMALLINT    NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_locations_venue_id         ON locations (venue_id)          WHERE deleted_at IS NULL;
@@ -78,7 +78,7 @@ CREATE INDEX idx_location_category_links_category_id ON location_category_links 
 
 -- Location images
 CREATE TABLE location_images (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     location_id UUID        NOT NULL REFERENCES locations (id) ON DELETE CASCADE,
     original    TEXT,
     small       TEXT,

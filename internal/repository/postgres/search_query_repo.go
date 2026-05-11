@@ -3,11 +3,13 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/repository"
 )
 
 type searchQueryRepository struct{ pool *pgxpool.Pool }
@@ -21,30 +23,45 @@ const searchQuerySelectCols = `
     q.search_count, q.last_searched, q.is_promoted, q.reference,
     q.status, q.created_at, q.updated_at`
 
-func (r *searchQueryRepository) Upsert(ctx context.Context, venueID uuid.UUID, term string) error {
+func (r *searchQueryRepository) Upsert(ctx context.Context, venueID uuid.UUID, term, origin, appID string) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO search_queries (id, venue_id, search_term, search_count, last_searched)
-         VALUES ($1, $2, $3, 1, NOW())
-         ON CONFLICT (venue_id, search_term) DO UPDATE
+		`INSERT INTO search_queries (id, venue_id, app_id, origin, search_term, search_count, last_searched)
+         VALUES ($1, $2, $3, $4, $5, 1, NOW())
+         ON CONFLICT (venue_id, search_term, COALESCE(origin, '')) WHERE deleted_at IS NULL DO UPDATE
          SET search_count = search_queries.search_count + 1,
              last_searched = NOW(),
+             app_id = COALESCE(NULLIF(EXCLUDED.app_id, ''), search_queries.app_id),
              updated_at = NOW()`,
-		newID(), venueID, term)
+		newID(), venueID, appID, origin, term)
 	return err
 }
 
-func (r *searchQueryRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
+func (r *searchQueryRepository) List(ctx context.Context, venueID uuid.UUID, filter repository.SearchQueryFilter, p domain.Pagination) ([]*domain.SearchQuery, int, error) {
+	args := []any{venueID}
+	cond := "venue_id=$1 AND deleted_at IS NULL"
+	if filter.Origin != nil {
+		args = append(args, *filter.Origin)
+		cond += fmt.Sprintf(" AND origin=$%d", len(args))
+	}
+	if filter.IsPromoted != nil {
+		args = append(args, *filter.IsPromoted)
+		cond += fmt.Sprintf(" AND is_promoted=$%d", len(args))
+	}
+
 	var total int
 	if err := r.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM search_queries WHERE venue_id=$1 AND deleted_at IS NULL`, venueID,
+		`SELECT COUNT(*) FROM search_queries WHERE `+cond, args...,
 	).Scan(&total); err != nil {
 		return nil, 0, err
 	}
+
+	pageArgs := append(args, p.PageSize, p.Offset())
 	rows, err := r.pool.Query(ctx,
 		`SELECT `+searchQuerySelectCols+` FROM search_queries q
-         WHERE q.venue_id=$1 AND q.deleted_at IS NULL
-         ORDER BY q.search_count DESC, q.last_searched DESC LIMIT $2 OFFSET $3`,
-		venueID, p.PageSize, p.Offset())
+         WHERE `+cond+`
+         ORDER BY q.search_count DESC, q.last_searched DESC
+         LIMIT $`+fmt.Sprintf("%d", len(args)+1)+` OFFSET $`+fmt.Sprintf("%d", len(args)+2),
+		pageArgs...)
 	if err != nil {
 		return nil, 0, err
 	}

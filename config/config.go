@@ -60,11 +60,14 @@ type JWTConfig struct {
 }
 
 type AWSConfig struct {
-	Region          string
-	AccessKeyID     string
-	SecretAccessKey string
-	S3Bucket        string
-	SESFromEmail    string
+	Region                   string
+	AccessKeyID              string
+	SecretAccessKey          string
+	S3Bucket                 string
+	S3AssetsBucket           string // encrypted bundle files (digimap, top_location, location_memo, latest-bundle)
+	S3SnapshotBucket         string // snapshot draft/publish JSON blobs
+	CloudFrontDistributionID string
+	SESFromEmail             string
 }
 
 // DSN builds the PostgreSQL connection string.
@@ -169,8 +172,11 @@ func Load() (*Config, error) {
 			Region:          v.GetString("AWS_REGION"),
 			AccessKeyID:     v.GetString("AWS_ACCESS_KEY_ID"),
 			SecretAccessKey: v.GetString("AWS_SECRET_ACCESS_KEY"),
-			S3Bucket:        v.GetString("AWS_S3_BUCKET"),
-			SESFromEmail:    v.GetString("SES_FROM_EMAIL"),
+			S3Bucket:                 v.GetString("AWS_S3_BUCKET"),
+			S3AssetsBucket:           v.GetString("AWS_S3_ASSETS_BUCKET"),
+			S3SnapshotBucket:         v.GetString("AWS_S3_SNAPSHOT_BUCKET"),
+			CloudFrontDistributionID: v.GetString("AWS_CF_DISTRIBUTION_ID"),
+			SESFromEmail:             v.GetString("SES_FROM_EMAIL"),
 		},
 	}
 

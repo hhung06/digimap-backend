@@ -1,6 +1,6 @@
 -- Location categories (venue-scoped)
 CREATE TABLE location_categories (
-    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id     UUID        NOT NULL REFERENCES venues (id),
     external_id  TEXT,
     name         TEXT,
@@ -28,7 +28,7 @@ CREATE TRIGGER set_location_categories_updated_at
 
 -- Amenities (location templates / master amenity definitions)
 CREATE TABLE amenities (
-    id                              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                              UUID        PRIMARY KEY DEFAULT uuidv7(),
     common_name                     TEXT        NOT NULL DEFAULT '',
     common_short_name               TEXT,
     common_description              TEXT,
@@ -72,7 +72,7 @@ CREATE TRIGGER set_amenities_updated_at
 
 -- Venue ↔ amenity links (which amenities are available at a venue)
 CREATE TABLE venue_amenities (
-    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
     venue_id    UUID        NOT NULL REFERENCES venues (id),
     amenity_id  UUID        NOT NULL REFERENCES amenities (id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

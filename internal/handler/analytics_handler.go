@@ -7,6 +7,7 @@ import (
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
+	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
@@ -76,7 +77,7 @@ func (h *analyticsHandler) TrackSearch(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	if err := h.svc.TrackSearch(c.Request.Context(), venueID, req.Term); err != nil {
+	if err := h.svc.TrackSearch(c.Request.Context(), venueID, req.Term, req.Origin); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -133,7 +134,7 @@ func (h *analyticsHandler) ListSearchQueries(c *gin.Context) {
 		return
 	}
 	p := paginationFromQuery(c)
-	queries, total, err := h.svc.ListSearchQueries(c.Request.Context(), venueID, p)
+	queries, total, err := h.svc.ListSearchQueries(c.Request.Context(), venueID, repository.SearchQueryFilter{}, p)
 	if err != nil {
 		respondError(c, err)
 		return
