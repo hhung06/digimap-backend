@@ -148,6 +148,27 @@ func TestNotificationService_Create_RequiresDeliveryTarget(t *testing.T) {
 	repo.AssertNotCalled(t, "Create")
 }
 
+func TestNotificationService_Create_RejectsUnsupportedSegmentFilters(t *testing.T) {
+	repo := &mocks.NotificationRepository{}
+	svc := newTestNotificationService(repo, nil)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	n := &domain.Notification{
+		Title:          "Promo",
+		Content:        "Deal",
+		VenueID:        &venueID,
+		Kind:           domain.NotifKindNormal,
+		SendType:       domain.NotifTypeDraft,
+		SegmentFilters: []byte(`[{"foo":"bar"}]`),
+	}
+
+	err := svc.Create(ctx, n)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
 func TestNotificationService_Create_RejectsInvalidSendType(t *testing.T) {
 	repo := &mocks.NotificationRepository{}
 	svc := newTestNotificationService(repo, nil)

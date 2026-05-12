@@ -221,6 +221,9 @@ func (s *surveyService) handleActivationNotification(ctx context.Context, survey
 		SegmentFilters: survey.SegmentFilters,
 		CreatedBy:      survey.CreatedBy,
 	}
+	if err := validateNotificationDelivery(n); err != nil {
+		return err
+	}
 	if err := s.notifRepo.Create(ctx, n); err != nil {
 		return err
 	}

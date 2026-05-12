@@ -502,6 +502,37 @@ func TestSurveyService_Create_ActiveCMSCreatesImmediateNotification(t *testing.T
 	sender.AssertExpectations(t)
 }
 
+func TestSurveyService_Create_ActiveCMSRejectsUnsupportedSegmentFilters(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	notifRepo := &mocks.NotificationRepository{}
+	sender := &mockNotificationSender{}
+	svc := newTestSurveyService(repo, notifRepo, sender)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	userID := uuid.New()
+	s := &domain.Survey{
+		Title:          "Customer Feedback",
+		Content:        "Please answer",
+		VenueID:        &venueID,
+		CreatedBy:      &userID,
+		Status:         domain.SurveyStatusActive,
+		Source:         domain.SurveySourceCMS,
+		PublishType:    domain.SurveyPublishBoth,
+		StartDate:      ptrTime(time.Now().Add(-time.Minute)),
+		SegmentFilters: []byte(`[{"foo":"bar"}]`),
+	}
+
+	repo.On("Create", ctx, s).Return(nil)
+
+	err := svc.Create(ctx, s)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertExpectations(t)
+	notifRepo.AssertNotCalled(t, "Create")
+	sender.AssertNotCalled(t, "Send")
+}
+
 func TestSurveyService_Create_ActiveCMSCreatesScheduledNotification(t *testing.T) {
 	repo := &mocks.SurveyRepository{}
 	notifRepo := &mocks.NotificationRepository{}
@@ -513,14 +544,15 @@ func TestSurveyService_Create_ActiveCMSCreatesScheduledNotification(t *testing.T
 	userID := uuid.New()
 	startAt := time.Now().Add(time.Hour)
 	s := &domain.Survey{
-		Title:       "Customer Feedback",
-		Content:     "Please answer",
-		VenueID:     &venueID,
-		CreatedBy:   &userID,
-		Status:      domain.SurveyStatusActive,
-		Source:      domain.SurveySourceCMS,
-		PublishType: domain.SurveyPublishBoth,
-		StartDate:   &startAt,
+		Title:          "Customer Feedback",
+		Content:        "Please answer",
+		VenueID:        &venueID,
+		CreatedBy:      &userID,
+		Status:         domain.SurveyStatusActive,
+		Source:         domain.SurveySourceCMS,
+		PublishType:    domain.SurveyPublishBoth,
+		StartDate:      &startAt,
+		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"}]`),
 	}
 
 	repo.On("Create", ctx, s).Return(nil)
@@ -557,14 +589,15 @@ func TestSurveyService_Update_TransitionToActiveCreatesNotification(t *testing.T
 		Source:    domain.SurveySourceCMS,
 	}
 	after := &domain.Survey{
-		ID:        surveyID,
-		VenueID:   &venueID,
-		CreatedBy: &userID,
-		Title:     "Activated survey",
-		Content:   "Now live",
-		Status:    domain.SurveyStatusActive,
-		Source:    domain.SurveySourceCMS,
-		StartDate: ptrTime(time.Now().Add(-time.Minute)),
+		ID:             surveyID,
+		VenueID:        &venueID,
+		CreatedBy:      &userID,
+		Title:          "Activated survey",
+		Content:        "Now live",
+		Status:         domain.SurveyStatusActive,
+		Source:         domain.SurveySourceCMS,
+		StartDate:      ptrTime(time.Now().Add(-time.Minute)),
+		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"}]`),
 	}
 
 	repo.On("FindByID", ctx, surveyID).Return(before, nil)
@@ -592,14 +625,15 @@ func TestSurveyService_ProcessScheduledTransitions_ActivatesAndCloses(t *testing
 	venueID := uuid.New()
 	userID := uuid.New()
 	activate := &domain.Survey{
-		ID:        uuid.New(),
-		VenueID:   &venueID,
-		CreatedBy: &userID,
-		Title:     "Activate me",
-		Content:   "Now",
-		Status:    domain.SurveyStatusInactive,
-		Source:    domain.SurveySourceCMS,
-		StartDate: &now,
+		ID:             uuid.New(),
+		VenueID:        &venueID,
+		CreatedBy:      &userID,
+		Title:          "Activate me",
+		Content:        "Now",
+		Status:         domain.SurveyStatusInactive,
+		Source:         domain.SurveySourceCMS,
+		StartDate:      &now,
+		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"}]`),
 	}
 	closeSurvey := &domain.Survey{
 		ID:      uuid.New(),

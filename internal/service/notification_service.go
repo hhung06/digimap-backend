@@ -47,6 +47,9 @@ func (s *notificationService) Create(ctx context.Context, n *domain.Notification
 	if errs := validateNotification(n); len(errs) > 0 {
 		return domain.NewValidation(errs)
 	}
+	if err := validateNotificationDelivery(n); err != nil {
+		return err
+	}
 
 	n.Status = domain.NotifStatusUnsent
 	n.SendStatus = domain.NotifSendPending
@@ -88,6 +91,9 @@ func validateNotification(n *domain.Notification) map[string]string {
 }
 
 func (s *notificationService) Update(ctx context.Context, n *domain.Notification) error {
+	if err := validateNotificationDelivery(n); err != nil {
+		return err
+	}
 	return s.repo.Update(ctx, n)
 }
 
@@ -182,6 +188,21 @@ func topicsFromSegmentFilters(raw json.RawMessage) ([]string, error) {
 	}
 
 	return nil, domain.NewValidation(map[string]string{"segment_filters": "invalid segment_filters payload"})
+}
+
+func validateNotificationDelivery(n *domain.Notification) error {
+	if n.Topic != "" || len(n.DeviceTokens) > 0 {
+		return nil
+	}
+
+	topics, err := topicsFromSegmentFilters(n.SegmentFilters)
+	if err != nil {
+		return err
+	}
+	if len(topics) == 0 {
+		return domain.NewValidation(map[string]string{"segment_filters": "notification has no supported delivery target"})
+	}
+	return nil
 }
 
 func segmentListToTopics(segments []map[string]any) []string {
