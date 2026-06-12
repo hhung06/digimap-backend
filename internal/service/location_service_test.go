@@ -25,6 +25,125 @@ func newTestLocationService(repo *mocks.LocationRepository, _ *mocks.StorerMock)
 	return service.NewLocationService(repo, venueRepo, storage.NewLogStorer(), cdn.NewLogInvalidator(), nil, "test")
 }
 
+func newTestLocationCategoryService(repo *mocks.LocationCategoryRepository) service.LocationCategoryService {
+	return service.NewLocationCategoryService(repo)
+}
+
+func TestLocationCategoryService_Create_SubcategorySuccess(t *testing.T) {
+	repo := &mocks.LocationCategoryRepository{}
+	svc := newTestLocationCategoryService(repo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	parentID := uuid.New()
+	cat := &domain.LocationCategory{
+		VenueID:  venueID,
+		ParentID: &parentID,
+		Name:     "Coffee",
+	}
+	parent := &domain.LocationCategory{ID: parentID, VenueID: venueID}
+
+	repo.On("FindByID", ctx, parentID).Return(parent, nil)
+	repo.On("Create", ctx, cat).Return(nil)
+
+	err := svc.Create(ctx, cat)
+	require.NoError(t, err)
+	assert.Equal(t, "internal", cat.Source)
+	repo.AssertExpectations(t)
+}
+
+func TestLocationCategoryService_Create_RejectsNestedSubcategory(t *testing.T) {
+	repo := &mocks.LocationCategoryRepository{}
+	svc := newTestLocationCategoryService(repo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	parentID := uuid.New()
+	rootID := uuid.New()
+	cat := &domain.LocationCategory{VenueID: venueID, ParentID: &parentID}
+	parent := &domain.LocationCategory{ID: parentID, VenueID: venueID, ParentID: &rootID}
+
+	repo.On("FindByID", ctx, parentID).Return(parent, nil)
+
+	err := svc.Create(ctx, cat)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestLocationCategoryService_Create_RejectsCrossVenueParent(t *testing.T) {
+	repo := &mocks.LocationCategoryRepository{}
+	svc := newTestLocationCategoryService(repo)
+
+	ctx := context.Background()
+	parentID := uuid.New()
+	cat := &domain.LocationCategory{VenueID: uuid.New(), ParentID: &parentID}
+	parent := &domain.LocationCategory{ID: parentID, VenueID: uuid.New()}
+
+	repo.On("FindByID", ctx, parentID).Return(parent, nil)
+
+	err := svc.Create(ctx, cat)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Create")
+}
+
+func TestLocationCategoryService_Update_RejectsSelfParent(t *testing.T) {
+	repo := &mocks.LocationCategoryRepository{}
+	svc := newTestLocationCategoryService(repo)
+
+	ctx := context.Background()
+	id := uuid.New()
+	cat := &domain.LocationCategory{ID: id, VenueID: uuid.New(), ParentID: &id}
+
+	err := svc.Update(ctx, cat)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Update")
+}
+
+func TestLocationCategoryService_Update_RejectsParentWithSubcategoriesBecomingChild(t *testing.T) {
+	repo := &mocks.LocationCategoryRepository{}
+	svc := newTestLocationCategoryService(repo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	id := uuid.New()
+	parentID := uuid.New()
+	childID := uuid.New()
+	cat := &domain.LocationCategory{ID: id, VenueID: venueID, ParentID: &parentID}
+	newParent := &domain.LocationCategory{ID: parentID, VenueID: venueID}
+	child := &domain.LocationCategory{ID: childID, VenueID: venueID, ParentID: &id}
+
+	repo.On("FindByID", ctx, parentID).Return(newParent, nil)
+	repo.On("List", ctx, venueID).Return([]*domain.LocationCategory{cat, newParent, child}, nil)
+
+	err := svc.Update(ctx, cat)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Update")
+}
+
+func TestLocationCategoryService_Delete_RejectsParentWithSubcategories(t *testing.T) {
+	repo := &mocks.LocationCategoryRepository{}
+	svc := newTestLocationCategoryService(repo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	id := uuid.New()
+	childID := uuid.New()
+	cat := &domain.LocationCategory{ID: id, VenueID: venueID}
+	child := &domain.LocationCategory{ID: childID, VenueID: venueID, ParentID: &id}
+
+	repo.On("FindByID", ctx, id).Return(cat, nil)
+	repo.On("List", ctx, venueID).Return([]*domain.LocationCategory{cat, child}, nil)
+
+	err := svc.Delete(ctx, id)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, domain.ErrValidation))
+	repo.AssertNotCalled(t, "Delete")
+}
+
 // ── Get ───────────────────────────────────────────────────────────────────────
 
 func TestLocationService_Get_Success(t *testing.T) {

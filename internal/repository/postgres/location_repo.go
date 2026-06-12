@@ -384,7 +384,7 @@ func (r *locationRepo) SearchByName(ctx context.Context, venueID uuid.UUID, q st
 
 func (r *locationRepo) loadCategories(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationCategory, error) {
 	const q = `
-		SELECT lc.id, lc.venue_id, lc.external_id, lc.name, lc.short_name, lc.color,
+		SELECT lc.id, lc.venue_id, lc.parent_id, lc.external_id, lc.name, lc.short_name, lc.color,
 		       lc.icon, lc.icon_default, lc.sort_index, lc.visible, lc.description,
 		       lc.type, lc.image, lc.localization, lc.source,
 		       lc.created_at, lc.updated_at, lc.deleted_at

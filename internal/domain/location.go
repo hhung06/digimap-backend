@@ -18,24 +18,27 @@ const (
 // ── Location category ─────────────────────────────────────────────────────────
 
 type LocationCategory struct {
-	ID           uuid.UUID
-	VenueID      uuid.UUID
-	ExternalID   string
-	Name         string
-	ShortName    string
-	Color        string
-	Icon         string
-	IconDefault  string
-	SortIndex    int
-	Visible      bool
-	Description  string
-	Type         string
-	Image        string
-	Localization json.RawMessage
-	Source       string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    *time.Time
+	ID            uuid.UUID
+	VenueID       uuid.UUID
+	ParentID      *uuid.UUID
+	ExternalID    string
+	Name          string
+	ShortName     string
+	Color         string
+	Icon          string
+	IconDefault   string
+	SortIndex     int
+	Visible       bool
+	Description   string
+	Type          string
+	Image         string
+	Localization  json.RawMessage
+	Source        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     *time.Time
+	Parent        *LocationCategory
+	Subcategories []*LocationCategory
 }
 
 // ── Location ──────────────────────────────────────────────────────────────────

@@ -11,26 +11,44 @@ import (
 // ── Location category ─────────────────────────────────────────────────────────
 
 type LocationCategoryResponse struct {
-	ID           uuid.UUID       `json:"id"`
-	VenueID      uuid.UUID       `json:"venue_id"`
-	ExternalID   string          `json:"external_id,omitempty"`
-	Name         string          `json:"name,omitempty"`
-	ShortName    string          `json:"short_name,omitempty"`
-	Color        string          `json:"color,omitempty"`
-	Icon         string          `json:"icon,omitempty"`
-	IconDefault  string          `json:"icon_default,omitempty"`
-	SortIndex    int             `json:"sort_index"`
-	Visible      bool            `json:"visible"`
-	Description  string          `json:"description,omitempty"`
-	Type         string          `json:"type,omitempty"`
-	Image        string          `json:"image,omitempty"`
-	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
-	Source       string          `json:"source"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ID            uuid.UUID                         `json:"id"`
+	VenueID       uuid.UUID                         `json:"venue_id"`
+	ParentID      *uuid.UUID                        `json:"parent_id,omitempty"`
+	Parent        *LocationCategorySummaryResponse  `json:"parent,omitempty"`
+	Subcategories []LocationCategorySummaryResponse `json:"subcategories,omitempty"`
+	ExternalID    string                            `json:"external_id,omitempty"`
+	Name          string                            `json:"name,omitempty"`
+	ShortName     string                            `json:"short_name,omitempty"`
+	Color         string                            `json:"color,omitempty"`
+	Icon          string                            `json:"icon,omitempty"`
+	IconDefault   string                            `json:"icon_default,omitempty"`
+	SortIndex     int                               `json:"sort_index"`
+	Visible       bool                              `json:"visible"`
+	Description   string                            `json:"description,omitempty"`
+	Type          string                            `json:"type,omitempty"`
+	Image         string                            `json:"image,omitempty"`
+	Localization  json.RawMessage                   `json:"localization,omitempty" swaggertype:"object"`
+	Source        string                            `json:"source"`
+	CreatedAt     time.Time                         `json:"created_at"`
+	UpdatedAt     time.Time                         `json:"updated_at"`
+}
+
+type LocationCategorySummaryResponse struct {
+	ID         uuid.UUID  `json:"id"`
+	VenueID    uuid.UUID  `json:"venue_id"`
+	ParentID   *uuid.UUID `json:"parent_id,omitempty"`
+	ExternalID string     `json:"external_id,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	ShortName  string     `json:"short_name,omitempty"`
+	Color      string     `json:"color,omitempty"`
+	Icon       string     `json:"icon,omitempty"`
+	SortIndex  int        `json:"sort_index"`
+	Visible    bool       `json:"visible"`
+	Type       string     `json:"type,omitempty"`
 }
 
 type LocationCategoryRequest struct {
+	ParentID     *uuid.UUID      `json:"parent_id"`
 	ExternalID   string          `json:"external_id"`
 	Name         string          `json:"name"`
 	ShortName    string          `json:"short_name"`
@@ -47,6 +65,7 @@ type LocationCategoryRequest struct {
 }
 
 type UpdateLocationCategoryRequest struct {
+	ParentID     *uuid.UUID      `json:"parent_id"`
 	ExternalID   *string         `json:"external_id"`
 	Name         *string         `json:"name"`
 	ShortName    *string         `json:"short_name"`
@@ -63,6 +82,9 @@ type UpdateLocationCategoryRequest struct {
 }
 
 func (r UpdateLocationCategoryRequest) ApplyTo(c *domain.LocationCategory) {
+	if r.ParentID != nil {
+		c.ParentID = r.ParentID
+	}
 	if r.ExternalID != nil {
 		c.ExternalID = *r.ExternalID
 	}
@@ -105,13 +127,30 @@ func (r UpdateLocationCategoryRequest) ApplyTo(c *domain.LocationCategory) {
 }
 
 func LocationCategoryToResponse(c *domain.LocationCategory) LocationCategoryResponse {
-	return LocationCategoryResponse{
+	r := LocationCategoryResponse{
 		ID: c.ID, VenueID: c.VenueID, ExternalID: c.ExternalID,
-		Name: c.Name, ShortName: c.ShortName, Color: c.Color,
+		ParentID: c.ParentID,
+		Name:     c.Name, ShortName: c.ShortName, Color: c.Color,
 		Icon: c.Icon, IconDefault: c.IconDefault, SortIndex: c.SortIndex,
 		Visible: c.Visible, Description: c.Description, Type: c.Type,
 		Image: c.Image, Localization: c.Localization, Source: c.Source,
 		CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
+	}
+	if c.Parent != nil {
+		parent := LocationCategoryToSummaryResponse(c.Parent)
+		r.Parent = &parent
+	}
+	for _, sub := range c.Subcategories {
+		r.Subcategories = append(r.Subcategories, LocationCategoryToSummaryResponse(sub))
+	}
+	return r
+}
+
+func LocationCategoryToSummaryResponse(c *domain.LocationCategory) LocationCategorySummaryResponse {
+	return LocationCategorySummaryResponse{
+		ID: c.ID, VenueID: c.VenueID, ParentID: c.ParentID, ExternalID: c.ExternalID,
+		Name: c.Name, ShortName: c.ShortName, Color: c.Color, Icon: c.Icon,
+		SortIndex: c.SortIndex, Visible: c.Visible, Type: c.Type,
 	}
 }
 
@@ -165,39 +204,39 @@ type AmenityRequest struct {
 // ── Location ──────────────────────────────────────────────────────────────────
 
 type LocationResponse struct {
-	ID                 uuid.UUID                  `json:"id"`
-	VenueID            uuid.UUID                  `json:"venue_id"`
-	LevelID            *uuid.UUID                 `json:"level_id,omitempty"`
-	MainCategoryID     *uuid.UUID                 `json:"main_category_id,omitempty"`
-	ExternalID         string                     `json:"external_id,omitempty"`
-	CommonHidden       bool                       `json:"common_hidden"`
-	CommonName         string                     `json:"common_name"`
-	CommonShortName    string                     `json:"common_short_name,omitempty"`
-	CommonDescription  string                     `json:"common_description,omitempty"`
-	CommonColor        string                     `json:"common_color,omitempty"`
+	ID                    uuid.UUID                  `json:"id"`
+	VenueID               uuid.UUID                  `json:"venue_id"`
+	LevelID               *uuid.UUID                 `json:"level_id,omitempty"`
+	MainCategoryID        *uuid.UUID                 `json:"main_category_id,omitempty"`
+	ExternalID            string                     `json:"external_id,omitempty"`
+	CommonHidden          bool                       `json:"common_hidden"`
+	CommonName            string                     `json:"common_name"`
+	CommonShortName       string                     `json:"common_short_name,omitempty"`
+	CommonDescription     string                     `json:"common_description,omitempty"`
+	CommonColor           string                     `json:"common_color,omitempty"`
 	CommonLocationType    int                        `json:"common_location_type"`
 	CommonLocationSubType int                        `json:"common_location_sub_type"`
 	CommonLatitude        float64                    `json:"common_latitude"`
 	CommonLongitude       float64                    `json:"common_longitude"`
 	CommonAddress         string                     `json:"common_address,omitempty"`
 	CommonLogo            string                     `json:"common_logo,omitempty"`
-	CommonLargeLogo    string                     `json:"common_large_logo,omitempty"`
-	CommonMediumLogo   string                     `json:"common_medium_logo,omitempty"`
-	CommonSmallLogo    string                     `json:"common_small_logo,omitempty"`
-	CommonContactEmail string                     `json:"common_contact_email,omitempty"`
-	CommonContactPhone string                     `json:"common_contact_phone,omitempty"`
-	IsTopLocation      bool                       `json:"is_top_location"`
-	IsSearchable       bool                       `json:"is_searchable"`
-	Source             string                     `json:"source"`
-	PlaceWorkHours     json.RawMessage            `json:"place_work_hours,omitempty" swaggertype:"object"`
-	Custom             json.RawMessage            `json:"custom,omitempty" swaggertype:"object"`
-	Localization       json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
-	StartTime          *time.Time                 `json:"start_time,omitempty"`
-	EndTime            *time.Time                 `json:"end_time,omitempty"`
-	Categories         []LocationCategoryResponse `json:"categories,omitempty"`
-	Images             []LocationImageResponse    `json:"images,omitempty"`
-	CreatedAt          time.Time                  `json:"created_at"`
-	UpdatedAt          time.Time                  `json:"updated_at"`
+	CommonLargeLogo       string                     `json:"common_large_logo,omitempty"`
+	CommonMediumLogo      string                     `json:"common_medium_logo,omitempty"`
+	CommonSmallLogo       string                     `json:"common_small_logo,omitempty"`
+	CommonContactEmail    string                     `json:"common_contact_email,omitempty"`
+	CommonContactPhone    string                     `json:"common_contact_phone,omitempty"`
+	IsTopLocation         bool                       `json:"is_top_location"`
+	IsSearchable          bool                       `json:"is_searchable"`
+	Source                string                     `json:"source"`
+	PlaceWorkHours        json.RawMessage            `json:"place_work_hours,omitempty" swaggertype:"object"`
+	Custom                json.RawMessage            `json:"custom,omitempty" swaggertype:"object"`
+	Localization          json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
+	StartTime             *time.Time                 `json:"start_time,omitempty"`
+	EndTime               *time.Time                 `json:"end_time,omitempty"`
+	Categories            []LocationCategoryResponse `json:"categories,omitempty"`
+	Images                []LocationImageResponse    `json:"images,omitempty"`
+	CreatedAt             time.Time                  `json:"created_at"`
+	UpdatedAt             time.Time                  `json:"updated_at"`
 }
 
 type LocationImageResponse struct {
@@ -211,15 +250,15 @@ type LocationImageResponse struct {
 }
 
 type CreateLocationRequest struct {
-	LevelID            *uuid.UUID      `json:"level_id"`
-	MainCategoryID     *uuid.UUID      `json:"main_category_id"`
-	CategoryIDs        []uuid.UUID     `json:"category_ids"`
-	ExternalID         string          `json:"external_id"`
-	CommonHidden       bool            `json:"common_hidden"`
-	CommonName         string          `json:"common_name" binding:"required"`
-	CommonShortName    string          `json:"common_short_name"`
-	CommonDescription  string          `json:"common_description"`
-	CommonColor        string          `json:"common_color"`
+	LevelID               *uuid.UUID      `json:"level_id"`
+	MainCategoryID        *uuid.UUID      `json:"main_category_id"`
+	CategoryIDs           []uuid.UUID     `json:"category_ids"`
+	ExternalID            string          `json:"external_id"`
+	CommonHidden          bool            `json:"common_hidden"`
+	CommonName            string          `json:"common_name" binding:"required"`
+	CommonShortName       string          `json:"common_short_name"`
+	CommonDescription     string          `json:"common_description"`
+	CommonColor           string          `json:"common_color"`
 	CommonLocationType    int             `json:"common_location_type"`
 	CommonLocationSubType int             `json:"common_location_sub_type"`
 	CommonLatitude        float64         `json:"common_latitude"`

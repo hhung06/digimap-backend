@@ -24,7 +24,7 @@ func NewLocationCategoryRepository(pool *pgxpool.Pool) repository.LocationCatego
 
 func (r *locationCategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error) {
 	const q = `
-		SELECT id, venue_id, external_id, name, short_name, color, icon, icon_default,
+		SELECT id, venue_id, parent_id, external_id, name, short_name, color, icon, icon_default,
 		       sort_index, visible, description, type, image, localization, source,
 		       created_at, updated_at, deleted_at
 		FROM location_categories WHERE id = $1 AND deleted_at IS NULL`
@@ -38,7 +38,7 @@ func (r *locationCategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*dom
 
 func (r *locationCategoryRepo) List(ctx context.Context, venueID uuid.UUID) ([]*domain.LocationCategory, error) {
 	const q = `
-		SELECT id, venue_id, external_id, name, short_name, color, icon, icon_default,
+		SELECT id, venue_id, parent_id, external_id, name, short_name, color, icon, icon_default,
 		       sort_index, visible, description, type, image, localization, source,
 		       created_at, updated_at, deleted_at
 		FROM location_categories WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY sort_index`
@@ -57,7 +57,11 @@ func (r *locationCategoryRepo) List(ctx context.Context, venueID uuid.UUID) ([]*
 		}
 		cats = append(cats, c)
 	}
-	return cats, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	hydrateLocationCategoryRelations(cats)
+	return cats, nil
 }
 
 func (r *locationCategoryRepo) Create(ctx context.Context, c *domain.LocationCategory) error {
@@ -66,13 +70,13 @@ func (r *locationCategoryRepo) Create(ctx context.Context, c *domain.LocationCat
 	}
 	const q = `
 		INSERT INTO location_categories (
-			id, venue_id, external_id, name, short_name, color, icon, icon_default,
+			id, venue_id, parent_id, external_id, name, short_name, color, icon, icon_default,
 			sort_index, visible, description, type, image, localization, source
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 		RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
-		c.ID, c.VenueID, nullStr(c.ExternalID), nullStr(c.Name), nullStr(c.ShortName),
+		c.ID, c.VenueID, c.ParentID, nullStr(c.ExternalID), nullStr(c.Name), nullStr(c.ShortName),
 		nullStr(c.Color), nullStr(c.Icon), nullStr(c.IconDefault),
 		c.SortIndex, c.Visible, nullStr(c.Description), nullStr(c.Type),
 		nullStr(c.Image), jsonOrNil(c.Localization), c.Source,
@@ -82,14 +86,14 @@ func (r *locationCategoryRepo) Create(ctx context.Context, c *domain.LocationCat
 func (r *locationCategoryRepo) Update(ctx context.Context, c *domain.LocationCategory) error {
 	const q = `
 		UPDATE location_categories
-		SET external_id=$2, name=$3, short_name=$4, color=$5, icon=$6, icon_default=$7,
-		    sort_index=$8, visible=$9, description=$10, type=$11, image=$12,
-		    localization=$13, source=$14
+		SET parent_id=$2, external_id=$3, name=$4, short_name=$5, color=$6, icon=$7, icon_default=$8,
+		    sort_index=$9, visible=$10, description=$11, type=$12, image=$13,
+		    localization=$14, source=$15
 		WHERE id=$1 AND deleted_at IS NULL
 		RETURNING updated_at`
 
 	err := r.pool.QueryRow(ctx, q,
-		c.ID, nullStr(c.ExternalID), nullStr(c.Name), nullStr(c.ShortName),
+		c.ID, c.ParentID, nullStr(c.ExternalID), nullStr(c.Name), nullStr(c.ShortName),
 		nullStr(c.Color), nullStr(c.Icon), nullStr(c.IconDefault),
 		c.SortIndex, c.Visible, nullStr(c.Description), nullStr(c.Type),
 		nullStr(c.Image), jsonOrNil(c.Localization), c.Source,
@@ -113,7 +117,7 @@ func scanLocationCategory(row pgx.Row) (*domain.LocationCategory, error) {
 		deletedAt                                        *time.Time
 	)
 	err := row.Scan(
-		&c.ID, &c.VenueID, &extID, &name, &shortName, &color, &icon, &iconDefault,
+		&c.ID, &c.VenueID, &c.ParentID, &extID, &name, &shortName, &color, &icon, &iconDefault,
 		&c.SortIndex, &c.Visible, &desc, &typ, &image, &localization, &c.Source,
 		&c.CreatedAt, &c.UpdatedAt, &deletedAt,
 	)
@@ -132,4 +136,24 @@ func scanLocationCategory(row pgx.Row) (*domain.LocationCategory, error) {
 	c.Localization = json.RawMessage(localization)
 	c.DeletedAt = deletedAt
 	return &c, nil
+}
+
+func hydrateLocationCategoryRelations(cats []*domain.LocationCategory) {
+	byID := make(map[uuid.UUID]*domain.LocationCategory, len(cats))
+	for _, c := range cats {
+		c.Parent = nil
+		c.Subcategories = nil
+		byID[c.ID] = c
+	}
+	for _, c := range cats {
+		if c.ParentID == nil {
+			continue
+		}
+		parent, ok := byID[*c.ParentID]
+		if !ok {
+			continue
+		}
+		c.Parent = parent
+		parent.Subcategories = append(parent.Subcategories, c)
+	}
 }

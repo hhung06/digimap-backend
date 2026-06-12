@@ -32,7 +32,20 @@ func NewLocationCategoryService(repo repository.LocationCategoryRepository) Loca
 }
 
 func (s *locationCategoryService) Get(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error) {
-	return s.repo.FindByID(ctx, id)
+	cat, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	cats, err := s.repo.List(ctx, cat.VenueID)
+	if err != nil {
+		return nil, err
+	}
+	for _, candidate := range cats {
+		if candidate.ID == id {
+			return candidate, nil
+		}
+	}
+	return cat, nil
 }
 
 func (s *locationCategoryService) List(ctx context.Context, venueID uuid.UUID) ([]*domain.LocationCategory, error) {
@@ -43,15 +56,71 @@ func (s *locationCategoryService) Create(ctx context.Context, c *domain.Location
 	if c.Source == "" {
 		c.Source = "internal"
 	}
+	if err := s.validateHierarchy(ctx, c); err != nil {
+		return err
+	}
 	return s.repo.Create(ctx, c)
 }
 
 func (s *locationCategoryService) Update(ctx context.Context, c *domain.LocationCategory) error {
+	if err := s.validateHierarchy(ctx, c); err != nil {
+		return err
+	}
 	return s.repo.Update(ctx, c)
 }
 
 func (s *locationCategoryService) Delete(ctx context.Context, id uuid.UUID) error {
+	cat, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	cats, err := s.repo.List(ctx, cat.VenueID)
+	if err != nil {
+		return err
+	}
+	for _, child := range cats {
+		if child.ParentID != nil && *child.ParentID == id {
+			return domain.NewValidation(map[string]string{"category": "parent category with subcategories cannot be deleted"})
+		}
+	}
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *locationCategoryService) validateHierarchy(ctx context.Context, c *domain.LocationCategory) error {
+	if c.ParentID == nil {
+		return nil
+	}
+	if *c.ParentID == uuid.Nil {
+		return domain.NewValidation(map[string]string{"parent_id": "must be a valid category id"})
+	}
+	if c.ID != uuid.Nil && *c.ParentID == c.ID {
+		return domain.NewValidation(map[string]string{"parent_id": "category cannot be its own parent"})
+	}
+
+	parent, err := s.repo.FindByID(ctx, *c.ParentID)
+	if err != nil {
+		return err
+	}
+	if parent.VenueID != c.VenueID {
+		return domain.NewValidation(map[string]string{"parent_id": "parent category must belong to the same venue"})
+	}
+	if parent.ParentID != nil {
+		return domain.NewValidation(map[string]string{"parent_id": "subcategory cannot be used as a parent"})
+	}
+
+	if c.ID == uuid.Nil {
+		return nil
+	}
+	cats, err := s.repo.List(ctx, c.VenueID)
+	if err != nil {
+		return err
+	}
+	for _, child := range cats {
+		if child.ParentID != nil && *child.ParentID == c.ID {
+			return domain.NewValidation(map[string]string{"parent_id": "category with subcategories cannot become a subcategory"})
+		}
+	}
+	return nil
 }
 
 // ── Location service ──────────────────────────────────────────────────────────

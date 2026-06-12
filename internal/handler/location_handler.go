@@ -108,7 +108,7 @@ func (h *locationHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 	cat := &domain.LocationCategory{
-		VenueID: venueID, ExternalID: req.ExternalID, Name: req.Name,
+		VenueID: venueID, ParentID: req.ParentID, ExternalID: req.ExternalID, Name: req.Name,
 		ShortName: req.ShortName, Color: req.Color, Icon: req.Icon,
 		IconDefault: req.IconDefault, SortIndex: req.SortIndex,
 		Visible: req.Visible, Description: req.Description,
