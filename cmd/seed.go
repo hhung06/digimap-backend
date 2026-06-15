@@ -654,7 +654,7 @@ func runSeed(_ *cobra.Command, _ []string) error {
 		VALUES
 			($1, 'view', '{"screen":"map"}', 'device-001', 'Mozilla/5.0 (iPhone)', '203.0.113.1'),
 			($1, 'search', '{"term":"ramen"}', 'device-001', 'Mozilla/5.0 (iPhone)', '203.0.113.1'),
-			($1, 'view', '{"screen":"location","id":"` + loc1ID + `"}', 'device-002', 'Mozilla/5.0 (Android)', '203.0.113.2')`,
+			($1, 'view', '{"screen":"location","id":"`+loc1ID+`"}', 'device-002', 'Mozilla/5.0 (Android)', '203.0.113.2')`,
 		venueID); err != nil {
 		return fmt.Errorf("insert event_logs: %w", err)
 	}

@@ -36,10 +36,22 @@
   },
   "scenarios": {
     "full": ["public", "app", "admin"],
-    "public": ["health", "version", "public venue info", "visitor surveys", "analytics tracking"],
+    "public": [
+      "health",
+      "version",
+      "public venue info",
+      "visitor surveys",
+      "analytics tracking"
+    ],
     "app": ["app listing", "app detail", "search options", "promotions"],
     "admin": ["profile", "venues", "venue content", "analytics searches"],
-    "error_retry": ["missing auth", "invalid API key", "invalid login", "invalid UUID", "retry wrapper"]
+    "error_retry": [
+      "missing auth",
+      "invalid API key",
+      "invalid login",
+      "invalid UUID",
+      "retry wrapper"
+    ]
   },
   "data_file": "load-tests/data/test-data.json",
   "env_examples": [
