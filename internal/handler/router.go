@@ -154,10 +154,15 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.DELETE("/level-types/:typeID", ltH.Delete)
 
 		themeH := newThemeHandler(deps.ThemeService)
+		adminOnly.GET("/themes", themeH.ListGlobal)
+		adminOnly.POST("/themes", themeH.CreateGlobal)
+		adminOnly.PUT("/themes/:themeID", themeH.Update)
+		adminOnly.DELETE("/themes/:themeID", themeH.Delete)
 		adminOnly.GET("/venues/:id/themes", themeH.List)
 		adminOnly.POST("/venues/:id/themes", themeH.Create)
 		adminOnly.PUT("/venues/:id/themes/:themeID", themeH.Update)
 		adminOnly.DELETE("/venues/:id/themes/:themeID", themeH.Delete)
+		adminOnly.PATCH("/venues/:id/theme", themeH.SetTheme)
 
 		plazaH := newProductPlazaHandler(deps.ProductPlazaService)
 		adminOnly.GET("/venues/:id/product-plazas", plazaH.List)

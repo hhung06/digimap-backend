@@ -29,16 +29,17 @@ type SnapshotService interface {
 }
 
 type snapshotService struct {
-	repo                repository.SnapshotRepository
-	venueRepo           repository.VenueRepository
-	languageRepo        repository.LanguageRepository
-	locationRepo        repository.LocationRepository
+	repo                 repository.SnapshotRepository
+	venueRepo            repository.VenueRepository
+	languageRepo         repository.LanguageRepository
+	locationRepo         repository.LocationRepository
 	locationCategoryRepo repository.LocationCategoryRepository
-	productRepo         repository.ProductRepository
-	storer              storage.Storer
-	invalidator         cdn.Invalidator
-	appVersions         *AppVersionService
-	env                 string
+	productRepo          repository.ProductRepository
+	themeRepo            repository.ThemeRepository
+	storer               storage.Storer
+	invalidator          cdn.Invalidator
+	appVersions          *AppVersionService
+	env                  string
 }
 
 // NewSnapshotService creates a SnapshotService.
@@ -49,22 +50,24 @@ func NewSnapshotService(
 	locationRepo repository.LocationRepository,
 	locationCategoryRepo repository.LocationCategoryRepository,
 	productRepo repository.ProductRepository,
+	themeRepo repository.ThemeRepository,
 	storer storage.Storer,
 	invalidator cdn.Invalidator,
 	appVersions *AppVersionService,
 	env string,
 ) SnapshotService {
 	return &snapshotService{
-		repo:                repo,
-		venueRepo:           venueRepo,
-		languageRepo:        languageRepo,
-		locationRepo:        locationRepo,
+		repo:                 repo,
+		venueRepo:            venueRepo,
+		languageRepo:         languageRepo,
+		locationRepo:         locationRepo,
 		locationCategoryRepo: locationCategoryRepo,
-		productRepo:         productRepo,
-		storer:              storer,
-		invalidator:         invalidator,
-		appVersions:         appVersions,
-		env:                 env,
+		productRepo:          productRepo,
+		themeRepo:            themeRepo,
+		storer:               storer,
+		invalidator:          invalidator,
+		appVersions:          appVersions,
+		env:                  env,
 	}
 }
 
@@ -243,6 +246,19 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 		metadata = map[string]any{}
 	}
 
+	// Inject the venue's active theme into map metadata so clients receive theme config.
+	// Mirrors Django's get_selected_theme_data() injected into overview["theme"].
+	if venueTheme, err := s.themeRepo.FindVenueTheme(ctx, snap.VenueID); err == nil && venueTheme != nil {
+		var themeData any
+		if json.Unmarshal(venueTheme.Data, &themeData) == nil {
+			if overview, ok := metadata["overview"].(map[string]any); ok {
+				overview["theme"] = themeData
+			} else {
+				metadata["overview"] = map[string]any{"theme": themeData}
+			}
+		}
+	}
+
 	encMeta := map[string]string{"encrypted": "AES", "compressed": "gzip"}
 
 	var invalidationPaths []string
@@ -274,6 +290,11 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 		fmt.Printf("[snapshot] publishV2: failed languages=%v venue=%s snapshot=%s\n", failedLangs, snap.VenueID, snap.ID)
 	}
 
+	// Upload custom themes for this venue and add their paths to the invalidation batch.
+	// Mirrors Django's upload_venue_themes() called during publish.
+	themePaths := s.uploadCustomThemes(ctx, snap.VenueID)
+	invalidationPaths = append(invalidationPaths, themePaths...)
+
 	// Batched CloudFront invalidation for all language bundles.
 	if len(invalidationPaths) > 0 {
 		if _, err := s.invalidator.Invalidate(ctx, invalidationPaths); err != nil {
@@ -285,4 +306,33 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 	if _, err := s.appVersions.Bump(ctx, snap.VenueID); err != nil {
 		fmt.Printf("[snapshot] publishV2: bump version venue=%s: %v\n", snap.VenueID, err)
 	}
+}
+
+// uploadCustomThemes uploads all custom themes for a venue to S3, updates their
+// storage_path in the DB, and returns S3 paths for CloudFront invalidation.
+// Mirrors Django's upload_venue_themes() called during venue publish.
+func (s *snapshotService) uploadCustomThemes(ctx context.Context, venueID uuid.UUID) []string {
+	themes, err := s.themeRepo.List(ctx, venueID)
+	if err != nil {
+		fmt.Printf("[snapshot] uploadCustomThemes: list themes venue=%s: %v\n", venueID, err)
+		return nil
+	}
+
+	var paths []string
+	for _, t := range themes {
+		if t.Scope != domain.ThemeScopeCustom {
+			continue
+		}
+		key := storage.CustomThemeKey(s.env, venueID, t.Name)
+		if err := s.storer.PutObject(ctx, key, []byte(t.Data)); err != nil {
+			fmt.Printf("[snapshot] uploadCustomThemes: upload theme=%s: %v\n", t.ID, err)
+			continue
+		}
+		t.StoragePath = key
+		if err := s.themeRepo.Update(ctx, t); err != nil {
+			fmt.Printf("[snapshot] uploadCustomThemes: update storage_path theme=%s: %v\n", t.ID, err)
+		}
+		paths = append(paths, "/"+key)
+	}
+	return paths
 }

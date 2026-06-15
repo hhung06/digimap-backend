@@ -52,6 +52,7 @@ type VenueRepository interface {
 	Update(ctx context.Context, v *domain.Venue) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, privateKey string) error
+	SetThemeID(ctx context.Context, venueID uuid.UUID, themeID *uuid.UUID) error
 
 	GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error)
 }
@@ -368,10 +369,15 @@ type LevelTypeRepository interface {
 // ThemeRepository handles theme CRUD.
 type ThemeRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Theme, error)
+	// FindVenueTheme returns the theme currently selected by a venue (via venues.theme_id).
+	// Returns nil, nil when the venue has no theme set.
+	FindVenueTheme(ctx context.Context, venueID uuid.UUID) (*domain.Theme, error)
+	ListGlobal(ctx context.Context) ([]*domain.Theme, error)
 	List(ctx context.Context, venueID uuid.UUID) ([]*domain.Theme, error)
 	Create(ctx context.Context, t *domain.Theme) error
 	Update(ctx context.Context, t *domain.Theme) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	IsUsedByVenues(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 // ProductPlazaRepository handles product plaza CRUD.

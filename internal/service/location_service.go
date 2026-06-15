@@ -70,18 +70,8 @@ func (s *locationCategoryService) Update(ctx context.Context, c *domain.Location
 }
 
 func (s *locationCategoryService) Delete(ctx context.Context, id uuid.UUID) error {
-	cat, err := s.repo.FindByID(ctx, id)
-	if err != nil {
+	if _, err := s.repo.FindByID(ctx, id); err != nil {
 		return err
-	}
-	cats, err := s.repo.List(ctx, cat.VenueID)
-	if err != nil {
-		return err
-	}
-	for _, child := range cats {
-		if child.ParentID != nil && *child.ParentID == id {
-			return domain.NewValidation(map[string]string{"category": "parent category with subcategories cannot be deleted"})
-		}
 	}
 	return s.repo.Delete(ctx, id)
 }

@@ -541,6 +541,10 @@ func (m *VenueRepository) UpdateKeys(ctx context.Context, id uuid.UUID, publicKe
 	return m.Called(ctx, id, publicKey, privateKey).Error(0)
 }
 
+func (m *VenueRepository) SetThemeID(ctx context.Context, venueID uuid.UUID, themeID *uuid.UUID) error {
+	return m.Called(ctx, venueID, themeID).Error(0)
+}
+
 func (m *VenueRepository) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
 	args := m.Called(ctx, venueID)
 	return args.Get(0).(uuid.UUID), args.Error(1)
@@ -657,6 +661,22 @@ func (m *ThemeRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.T
 	return nil, args.Error(1)
 }
 
+func (m *ThemeRepository) FindVenueTheme(ctx context.Context, venueID uuid.UUID) (*domain.Theme, error) {
+	args := m.Called(ctx, venueID)
+	if t, ok := args.Get(0).(*domain.Theme); ok {
+		return t, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *ThemeRepository) ListGlobal(ctx context.Context) ([]*domain.Theme, error) {
+	args := m.Called(ctx)
+	if t, ok := args.Get(0).([]*domain.Theme); ok {
+		return t, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *ThemeRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.Theme, error) {
 	args := m.Called(ctx, venueID)
 	if t, ok := args.Get(0).([]*domain.Theme); ok {
@@ -675,6 +695,11 @@ func (m *ThemeRepository) Update(ctx context.Context, t *domain.Theme) error {
 
 func (m *ThemeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
+}
+
+func (m *ThemeRepository) IsUsedByVenues(ctx context.Context, id uuid.UUID) (bool, error) {
+	args := m.Called(ctx, id)
+	return args.Bool(0), args.Error(1)
 }
 
 // ── ProductPlazaRepository ────────────────────────────────────────────────────

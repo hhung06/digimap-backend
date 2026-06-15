@@ -124,24 +124,22 @@ func TestLocationCategoryService_Update_RejectsParentWithSubcategoriesBecomingCh
 	repo.AssertNotCalled(t, "Update")
 }
 
-func TestLocationCategoryService_Delete_RejectsParentWithSubcategories(t *testing.T) {
+func TestLocationCategoryService_Delete_ParentSucceeds(t *testing.T) {
+	// Deleting a parent is allowed; the DB SET NULL orphans subcategories.
 	repo := &mocks.LocationCategoryRepository{}
 	svc := newTestLocationCategoryService(repo)
 
 	ctx := context.Background()
 	venueID := uuid.New()
 	id := uuid.New()
-	childID := uuid.New()
 	cat := &domain.LocationCategory{ID: id, VenueID: venueID}
-	child := &domain.LocationCategory{ID: childID, VenueID: venueID, ParentID: &id}
 
 	repo.On("FindByID", ctx, id).Return(cat, nil)
-	repo.On("List", ctx, venueID).Return([]*domain.LocationCategory{cat, child}, nil)
+	repo.On("Delete", ctx, id).Return(nil)
 
 	err := svc.Delete(ctx, id)
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, domain.ErrValidation))
-	repo.AssertNotCalled(t, "Delete")
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
 }
 
 // ── Get ───────────────────────────────────────────────────────────────────────

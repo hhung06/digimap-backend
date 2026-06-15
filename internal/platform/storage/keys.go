@@ -34,3 +34,15 @@ func LatestBundleKey(env string, venueID uuid.UUID) string {
 func SnapshotDraftKey(env string, venueID, snapshotID uuid.UUID) string {
 	return env + "/" + venueID.String() + "/snapshots/draft/" + snapshotID.String() + ".json"
 }
+
+// GlobalThemeKey returns the S3 key for a global venue theme JSON file.
+// Django: {env}/venue_themes/global/{name}.json
+func GlobalThemeKey(env, name string) string {
+	return env + "/venue_themes/global/" + name + ".json"
+}
+
+// CustomThemeKey returns the S3 key for a venue-scoped custom theme JSON file.
+// Django: {env}/venue_themes/custom/{venue_id}/{name}.json
+func CustomThemeKey(env string, venueID uuid.UUID, name string) string {
+	return env + "/venue_themes/custom/" + venueID.String() + "/" + name + ".json"
+}

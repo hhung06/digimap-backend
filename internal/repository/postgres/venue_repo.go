@@ -190,6 +190,20 @@ func (r *venueRepo) UpdateKeys(ctx context.Context, id uuid.UUID, publicKey, pri
 }
 
 
+func (r *venueRepo) SetThemeID(ctx context.Context, venueID uuid.UUID, themeID *uuid.UUID) error {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE venues SET theme_id = $2 WHERE id = $1 AND deleted_at IS NULL`,
+		venueID, themeID,
+	)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.NewNotFound("venue not found")
+	}
+	return nil
+}
+
 func (r *venueRepo) GetCustomerID(ctx context.Context, venueID uuid.UUID) (uuid.UUID, error) {
 	var customerID uuid.UUID
 	err := r.pool.QueryRow(ctx,

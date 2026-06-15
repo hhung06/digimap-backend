@@ -28,6 +28,7 @@ func newTestSnapshotSvc(repo *mocks.SnapshotRepository) service.SnapshotService 
 		&mocks.LocationRepository{},
 		&mocks.LocationCategoryRepository{},
 		&mocks.ProductRepository{},
+		&mocks.ThemeRepository{},
 		storage.NewLogStorer(),
 		cdn.NewLogInvalidator(),
 		nil,
