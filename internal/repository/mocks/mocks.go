@@ -338,8 +338,42 @@ func (m *CouponRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }
 
+func (m *CouponRepository) ListByUser(ctx context.Context, venueID, userID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error) {
+	args := m.Called(ctx, venueID, userID, p)
+	if cs, ok := args.Get(0).([]*domain.Coupon); ok {
+		return cs, args.Int(1), args.Error(2)
+	}
+	return nil, args.Int(1), args.Error(2)
+}
+
 func (m *CouponRepository) Redeem(ctx context.Context, id uuid.UUID, appUserID uuid.UUID) error {
 	return m.Called(ctx, id, appUserID).Error(0)
+}
+
+// ── CouponUserRepository ──────────────────────────────────────────────────────
+
+// CouponUserRepository is a mock implementation of repository.CouponUserRepository.
+type CouponUserRepository struct{ mock.Mock }
+
+func (m *CouponUserRepository) Create(ctx context.Context, cu *domain.CouponUser) error {
+	return m.Called(ctx, cu).Error(0)
+}
+
+func (m *CouponUserRepository) FindByCouponAndUser(ctx context.Context, couponID, userID uuid.UUID) (*domain.CouponUser, error) {
+	args := m.Called(ctx, couponID, userID)
+	if cu, ok := args.Get(0).(*domain.CouponUser); ok {
+		return cu, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *CouponUserRepository) MarkUsed(ctx context.Context, id uuid.UUID) error {
+	return m.Called(ctx, id).Error(0)
+}
+
+func (m *CouponUserRepository) ExistsForVenueUser(ctx context.Context, venueID, userID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, venueID, userID)
+	return args.Bool(0), args.Error(1)
 }
 
 // ── VideoRepository ───────────────────────────────────────────────────────────
@@ -434,8 +468,12 @@ func (m *SnapshotRepository) CountDraftsByVenue(ctx context.Context, venueID uui
 	return args.Get(0).(int64), args.Error(1)
 }
 
-func (m *SnapshotRepository) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error {
-	return m.Called(ctx, venueID).Error(0)
+func (m *SnapshotRepository) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error) {
+	args := m.Called(ctx, venueID)
+	if s, ok := args.Get(0).(*domain.Snapshot); ok {
+		return s, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *SnapshotRepository) UnpublishVenue(ctx context.Context, venueID uuid.UUID) error {
@@ -572,6 +610,10 @@ func (m *StorerMock) PutObject(ctx context.Context, key string, data []byte) err
 
 func (m *StorerMock) PutEncrypted(ctx context.Context, key string, body []byte, meta map[string]string) error {
 	return m.Called(ctx, key, body, meta).Error(0)
+}
+
+func (m *StorerMock) DeleteObject(ctx context.Context, key string) error {
+	return m.Called(ctx, key).Error(0)
 }
 
 func (m *StorerMock) GetObject(ctx context.Context, key string) ([]byte, error) {
@@ -814,6 +856,14 @@ type LocationCategoryRepository struct{ mock.Mock }
 
 func (m *LocationCategoryRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error) {
 	args := m.Called(ctx, id)
+	if c, ok := args.Get(0).(*domain.LocationCategory); ok {
+		return c, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LocationCategoryRepository) FindByNameAndVenue(ctx context.Context, venueID uuid.UUID, name, source string) (*domain.LocationCategory, error) {
+	args := m.Called(ctx, venueID, name, source)
 	if c, ok := args.Get(0).(*domain.LocationCategory); ok {
 		return c, args.Error(1)
 	}

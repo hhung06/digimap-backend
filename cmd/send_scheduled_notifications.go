@@ -32,6 +32,7 @@ func runSendScheduledNotifications(_ *cobra.Command, _ []string) error {
 	}
 
 	logger := applog.NewLogger(cfg)
+	defer applog.Sync(logger)
 	pool, err := database.NewPool(context.Background(), cfg.Database)
 	if err != nil {
 		return fmt.Errorf("connect database: %w", err)

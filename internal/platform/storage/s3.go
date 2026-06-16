@@ -28,6 +28,9 @@ type Storer interface {
 	PutEncrypted(ctx context.Context, key string, body []byte, meta map[string]string) error
 	// GetObject downloads an object's bytes directly from the server.
 	GetObject(ctx context.Context, key string) ([]byte, error)
+	// DeleteObject removes an object from the bucket.
+	// Best-effort: callers should log and continue on error.
+	DeleteObject(ctx context.Context, key string) error
 }
 
 type s3Storer struct {
@@ -36,8 +39,9 @@ type s3Storer struct {
 	bucket string
 }
 
-// NewS3Storer creates a Storer backed by AWS S3.
-func NewS3Storer(cfg config.AWSConfig) (Storer, error) {
+// NewS3Storer creates a Storer backed by a single AWS S3 bucket.
+// Call once per logical bucket (assets, snapshot, sync).
+func NewS3Storer(cfg config.AWSConfig, bucket string) (Storer, error) {
 	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(),
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithCredentialsProvider(
@@ -49,7 +53,7 @@ func NewS3Storer(cfg config.AWSConfig) (Storer, error) {
 	}
 	direct := s3.NewFromConfig(awsCfg)
 	presign := s3.NewPresignClient(direct)
-	return &s3Storer{client: presign, direct: direct, bucket: cfg.S3Bucket}, nil
+	return &s3Storer{client: presign, direct: direct, bucket: bucket}, nil
 }
 
 func (s *s3Storer) PresignUpload(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
@@ -108,6 +112,17 @@ func (s *s3Storer) PutEncrypted(ctx context.Context, key string, body []byte, me
 	return nil
 }
 
+func (s *s3Storer) DeleteObject(ctx context.Context, key string) error {
+	_, err := s.direct.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("s3 delete %s: %w", key, err)
+	}
+	return nil
+}
+
 func (s *s3Storer) GetObject(ctx context.Context, key string) ([]byte, error) {
 	out, err := s.direct.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -140,6 +155,11 @@ func (s *LogStorer) PutObject(_ context.Context, key string, _ []byte) error {
 
 func (s *LogStorer) PutEncrypted(_ context.Context, key string, body []byte, meta map[string]string) error {
 	fmt.Printf("[DEV S3] PutEncrypted key=%s len=%d meta=%v\n", key, len(body), meta)
+	return nil
+}
+
+func (s *LogStorer) DeleteObject(_ context.Context, key string) error {
+	fmt.Printf("[DEV S3] DeleteObject key=%s\n", key)
 	return nil
 }
 

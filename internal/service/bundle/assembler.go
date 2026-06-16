@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/localization"
 )
 
 // AssembleLanguageBundle builds the six-key per-language bundle dict that gets encrypted.
@@ -386,12 +387,7 @@ func prepareProductSearchOptions(
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func decodeCustom(raw json.RawMessage) map[string]any {
-	var m map[string]any
-	if len(raw) == 0 {
-		return nil
-	}
-	_ = json.Unmarshal(raw, &m)
-	return m
+	return localization.DecodeBlob(raw)
 }
 
 func customStr(m map[string]any, key string) string {
@@ -418,33 +414,15 @@ func customInt(m map[string]any, key string) int {
 }
 
 func localizedName(raw json.RawMessage, fallback, lang string) string {
-	var loc map[string]any
-	if err := json.Unmarshal(raw, &loc); err == nil {
-		if v, ok := loc["common_name_"+lang].(string); ok && v != "" {
-			return v
-		}
-	}
-	return fallback
+	return localization.Field(localization.DecodeBlob(raw), "common_name", lang, fallback)
 }
 
 func localizedProductName(raw json.RawMessage, fallback, lang string) string {
-	var loc map[string]any
-	if err := json.Unmarshal(raw, &loc); err == nil {
-		if v, ok := loc["name_"+lang].(string); ok && v != "" {
-			return v
-		}
-	}
-	return fallback
+	return localization.Field(localization.DecodeBlob(raw), "name", lang, fallback)
 }
 
 func localizedCatName(raw json.RawMessage, fallback, lang string) string {
-	var loc map[string]any
-	if err := json.Unmarshal(raw, &loc); err == nil {
-		if v, ok := loc["name_"+lang].(string); ok && v != "" {
-			return v
-		}
-	}
-	return fallback
+	return localization.Field(localization.DecodeBlob(raw), "name", lang, fallback)
 }
 
 func localizedProductCatName(raw json.RawMessage, fallback, lang string) string {

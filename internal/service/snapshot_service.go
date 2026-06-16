@@ -11,9 +11,12 @@ import (
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/platform/cdn"
 	"github.com/hhung06/digimap-backend/internal/platform/crypto"
+	"github.com/hhung06/digimap-backend/internal/platform/search"
 	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service/bundle"
+	"github.com/hhung06/digimap-backend/internal/service/searchindex"
+	applog "github.com/hhung06/digimap-backend/log"
 )
 
 // SnapshotService manages snapshot metadata and S3 bundle storage.
@@ -36,13 +39,18 @@ type snapshotService struct {
 	locationCategoryRepo repository.LocationCategoryRepository
 	productRepo          repository.ProductRepository
 	themeRepo            repository.ThemeRepository
-	storer               storage.Storer
+	storer               storage.Storer // snapshot bucket: draft/publish JSON blobs
+	assetStorer          storage.Storer // assets bucket: encrypted bundle files
 	invalidator          cdn.Invalidator
 	appVersions          *AppVersionService
 	env                  string
+	searcher             search.Searcher
+	logger               applog.Logger
 }
 
 // NewSnapshotService creates a SnapshotService.
+// storer targets the snapshot bucket (draft/publish JSON blobs).
+// assetStorer targets the assets bucket (encrypted bundle files written during publish).
 func NewSnapshotService(
 	repo repository.SnapshotRepository,
 	venueRepo repository.VenueRepository,
@@ -52,9 +60,12 @@ func NewSnapshotService(
 	productRepo repository.ProductRepository,
 	themeRepo repository.ThemeRepository,
 	storer storage.Storer,
+	assetStorer storage.Storer,
 	invalidator cdn.Invalidator,
 	appVersions *AppVersionService,
 	env string,
+	searcher search.Searcher,
+	logger applog.Logger,
 ) SnapshotService {
 	return &snapshotService{
 		repo:                 repo,
@@ -65,9 +76,12 @@ func NewSnapshotService(
 		productRepo:          productRepo,
 		themeRepo:            themeRepo,
 		storer:               storer,
+		assetStorer:          assetStorer,
 		invalidator:          invalidator,
 		appVersions:          appVersions,
 		env:                  env,
+		searcher:             searcher,
+		logger:               logger,
 	}
 }
 
@@ -92,7 +106,7 @@ func (s *snapshotService) CreateDraft(ctx context.Context, venueID, createdBy uu
 		id = uuid.New()
 	}
 
-	key := fmt.Sprintf("%s/%s/snapshots/draft/%s.json", s.env, venueID, id)
+	key := storage.SnapshotDraftKey(s.env, venueID, id)
 	if err := s.storer.PutObject(ctx, key, bundle); err != nil {
 		return nil, fmt.Errorf("upload snapshot bundle: %w", err)
 	}
@@ -115,7 +129,13 @@ func (s *snapshotService) CreateDraft(ctx context.Context, venueID, createdBy uu
 		return snap, nil // non-fatal: version control best-effort
 	}
 	if count >= domain.MaxSnapshotVersions {
-		_ = s.repo.DeleteOldestDraft(ctx, venueID) // best-effort prune
+		pruned, err := s.repo.DeleteOldestDraft(ctx, venueID) // best-effort prune
+		if err == nil && pruned != nil {
+			pruneKey := storage.SnapshotDraftKey(s.env, pruned.VenueID, pruned.ID)
+			if err := s.storer.DeleteObject(ctx, pruneKey); err != nil {
+				fmt.Printf("[snapshot] CreateDraft prune: s3 delete key=%s: %v\n", pruneKey, err)
+			}
+		}
 	}
 
 	return snap, nil
@@ -184,6 +204,15 @@ func (s *snapshotService) AutoPublish(ctx context.Context, venueID, _ uuid.UUID)
 }
 
 func (s *snapshotService) Delete(ctx context.Context, id uuid.UUID) error {
+	snap, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	// Best-effort S3 cleanup; do not block DB delete on S3 error.
+	key := storage.SnapshotDraftKey(s.env, snap.VenueID, snap.ID)
+	if err := s.storer.DeleteObject(ctx, key); err != nil {
+		fmt.Printf("[snapshot] Delete: s3 delete key=%s: %v\n", key, err)
+	}
 	return s.repo.Delete(ctx, id)
 }
 
@@ -277,7 +306,7 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 		}
 
 		key := storage.DigimapV2Key(s.env, snap.VenueID, lang.Code)
-		if err := s.storer.PutEncrypted(ctx, key, []byte(cipherText), encMeta); err != nil {
+		if err := s.assetStorer.PutEncrypted(ctx, key, []byte(cipherText), encMeta); err != nil {
 			fmt.Printf("[snapshot] publishV2: upload lang=%s: %v\n", lang.Code, err)
 			failedLangs = append(failedLangs, lang.Code)
 			continue
@@ -288,6 +317,11 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 
 	if len(failedLangs) > 0 {
 		fmt.Printf("[snapshot] publishV2: failed languages=%v venue=%s snapshot=%s\n", failedLangs, snap.VenueID, snap.ID)
+	}
+
+	// Index exhibitors and products into OpenSearch (no-op if searcher is a log stub).
+	if s.searcher != nil {
+		searchindex.IndexVenueAsync(ctx, s.logger, s.searcher, venue, locations, products, s.env)
 	}
 
 	// Upload custom themes for this venue and add their paths to the invalidation batch.
@@ -324,7 +358,7 @@ func (s *snapshotService) uploadCustomThemes(ctx context.Context, venueID uuid.U
 			continue
 		}
 		key := storage.CustomThemeKey(s.env, venueID, t.Name)
-		if err := s.storer.PutObject(ctx, key, []byte(t.Data)); err != nil {
+		if err := s.assetStorer.PutObject(ctx, key, []byte(t.Data)); err != nil {
 			fmt.Printf("[snapshot] uploadCustomThemes: upload theme=%s: %v\n", t.ID, err)
 			continue
 		}

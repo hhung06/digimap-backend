@@ -30,9 +30,12 @@ func newTestSnapshotSvc(repo *mocks.SnapshotRepository) service.SnapshotService 
 		&mocks.ProductRepository{},
 		&mocks.ThemeRepository{},
 		storage.NewLogStorer(),
+		storage.NewLogStorer(),
 		cdn.NewLogInvalidator(),
 		nil,
 		"test",
+		nil,
+		nil,
 	)
 }
 
@@ -125,7 +128,8 @@ func TestSnapshotService_CreateDraft_PrunesOldestWhenAtLimit(t *testing.T) {
 
 	repo.On("Create", ctx, mock.AnythingOfType("*domain.Snapshot")).Return(nil)
 	repo.On("CountDraftsByVenue", ctx, venueID).Return(int64(domain.MaxSnapshotVersions), nil)
-	repo.On("DeleteOldestDraft", ctx, venueID).Return(nil)
+	pruned := &domain.Snapshot{ID: uuid.New(), VenueID: venueID, State: domain.SnapshotStateDraft}
+	repo.On("DeleteOldestDraft", ctx, venueID).Return(pruned, nil)
 
 	_, err := svc.CreateDraft(ctx, venueID, createdBy, bundle)
 	require.NoError(t, err)
@@ -137,8 +141,11 @@ func TestSnapshotService_Delete(t *testing.T) {
 	svc := newTestSnapshotSvc(repo)
 
 	ctx := context.Background()
+	venueID := uuid.New()
 	id := uuid.New()
+	snap := &domain.Snapshot{ID: id, VenueID: venueID, State: domain.SnapshotStateDraft}
 
+	repo.On("FindByID", ctx, id).Return(snap, nil)
 	repo.On("Delete", ctx, id).Return(nil)
 
 	err := svc.Delete(ctx, id)

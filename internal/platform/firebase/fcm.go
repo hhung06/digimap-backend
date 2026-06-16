@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	gofirebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
+	"google.golang.org/api/option"
+
 	applog "github.com/hhung06/digimap-backend/log"
 )
 
@@ -50,4 +54,47 @@ func (p *LogPusher) SendMulticast(_ context.Context, tokens []string, title, bod
 	p.logger.Infof("[FCM] multicast tokens=%d title=%q", len(tokens), title)
 	fmt.Printf("\n[DEV FCM] multicast to %d tokens title=%q body=%q\n", len(tokens), title, body)
 	return len(tokens), 0, nil
+}
+
+// FCMPusher sends real push notifications via the Firebase Admin SDK.
+type FCMPusher struct {
+	client *messaging.Client
+}
+
+// NewFCMPusher initialises a real FCM sender from a service-account credentials file.
+func NewFCMPusher(ctx context.Context, credentialsPath string) (Pusher, error) {
+	app, err := gofirebase.NewApp(ctx, nil, option.WithCredentialsFile(credentialsPath))
+	if err != nil {
+		return nil, fmt.Errorf("init firebase app: %w", err)
+	}
+	client, err := app.Messaging(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("init firebase messaging: %w", err)
+	}
+	return &FCMPusher{client: client}, nil
+}
+
+func (p *FCMPusher) Send(ctx context.Context, msg Message) (string, error) {
+	m := &messaging.Message{
+		Notification: &messaging.Notification{Title: msg.Title, Body: msg.Body},
+		Data:         msg.Data,
+	}
+	if msg.Token != "" {
+		m.Token = msg.Token
+	} else {
+		m.Topic = msg.Topic
+	}
+	return p.client.Send(ctx, m)
+}
+
+func (p *FCMPusher) SendMulticast(ctx context.Context, tokens []string, title, body string, data map[string]string) (int, int, error) {
+	resp, err := p.client.SendEachForMulticast(ctx, &messaging.MulticastMessage{
+		Notification: &messaging.Notification{Title: title, Body: body},
+		Data:         data,
+		Tokens:       tokens,
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+	return resp.SuccessCount, resp.FailureCount, nil
 }

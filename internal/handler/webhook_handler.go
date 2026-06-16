@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,19 +10,35 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/repository"
+	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 type webhookHandler struct {
-	venueRepo    repository.VenueRepository
-	locationRepo repository.LocationRepository
-	productRepo  repository.ProductRepository
+	venueRepo            repository.VenueRepository
+	locationRepo         repository.LocationRepository
+	productRepo          repository.ProductRepository
+	locationCategoryRepo repository.LocationCategoryRepository
+	notificationSvc      service.NotificationService
 }
 
-func newWebhookHandler(venueRepo repository.VenueRepository, locationRepo repository.LocationRepository, productRepo repository.ProductRepository) *webhookHandler {
-	return &webhookHandler{venueRepo: venueRepo, locationRepo: locationRepo, productRepo: productRepo}
+func newWebhookHandler(
+	venueRepo repository.VenueRepository,
+	locationRepo repository.LocationRepository,
+	productRepo repository.ProductRepository,
+	locationCategoryRepo repository.LocationCategoryRepository,
+	notificationSvc service.NotificationService,
+) *webhookHandler {
+	return &webhookHandler{
+		venueRepo:            venueRepo,
+		locationRepo:         locationRepo,
+		productRepo:          productRepo,
+		locationCategoryRepo: locationCategoryRepo,
+		notificationSvc:      notificationSvc,
+	}
 }
 
 // validateJMAHeaders validates TOKEN, YEAR, and SYSTEM-CODE headers.
@@ -125,6 +142,8 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 		Errors:  []any{},
 	}
 
+	_ = systemCode // available for future per-system field mapping
+
 	for i, item := range payload.ExhibitorList {
 		if item.ExhibitorID == "" {
 			results.Errors = append(results.Errors, map[string]any{
@@ -159,14 +178,12 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 		rawPayload := map[string]any{}
 		_ = json.Unmarshal(rawJSON, &rawPayload)
 
-		// Map exhibitor fields; names match JMAExhibitorFieldMapper output
 		name := getString(rawPayload, "exhibitor_name_en", "exhibitor_name")
 		desc := getString(rawPayload, "exhibitor_highlights_en")
 		website := getString(rawPayload, "exhibitor_webguide_url")
 		boothNum := getString(rawPayload, "booth_number")
-		_ = systemCode // available for future per-system field mapping
-
 		customBytes, _ := json.Marshal(rawPayload)
+		localizationBytes := buildExhibitorLocalization(rawPayload)
 
 		existing, err := h.locationRepo.FindByExternalID(ctx, venue.ID, item.ExhibitorID, domain.LocationTypeBooth)
 		if err != nil {
@@ -181,6 +198,7 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 				ExternalID:          item.ExhibitorID,
 				Source:              "external",
 				Custom:              json.RawMessage(customBytes),
+				Localization:        json.RawMessage(localizationBytes),
 			}
 			if createErr := h.locationRepo.Create(ctx, loc); createErr != nil {
 				results.Errors = append(results.Errors, map[string]any{
@@ -190,6 +208,13 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 				})
 				continue
 			}
+			// Assign category after create
+			catID := h.upsertExhibitorCategory(ctx, venue.ID, rawPayload)
+			if catID != nil {
+				loc.MainCategoryID = catID
+				_ = h.locationRepo.Update(ctx, loc)
+				_ = h.locationRepo.SetCategories(ctx, loc.ID, []uuid.UUID{*catID})
+			}
 			results.Created = append(results.Created, item.ExhibitorID)
 		} else {
 			// Update
@@ -198,6 +223,12 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 			existing.CommonSocialWebsite = website
 			existing.BoothNumber = boothNum
 			existing.Custom = json.RawMessage(customBytes)
+			existing.Localization = json.RawMessage(localizationBytes)
+
+			catID := h.upsertExhibitorCategory(ctx, venue.ID, rawPayload)
+			if catID != nil {
+				existing.MainCategoryID = catID
+			}
 			if updateErr := h.locationRepo.Update(ctx, existing); updateErr != nil {
 				results.Errors = append(results.Errors, map[string]any{
 					"index":        i,
@@ -205,6 +236,9 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 					"error":        updateErr.Error(),
 				})
 				continue
+			}
+			if catID != nil {
+				_ = h.locationRepo.SetCategories(ctx, existing.ID, []uuid.UUID{*catID})
 			}
 			results.Updated = append(results.Updated, item.ExhibitorID)
 		}
@@ -214,12 +248,61 @@ func (h *webhookHandler) JMAExhibitorUpdate(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(results))
 }
 
+// upsertExhibitorCategory finds or creates a LocationCategory for the exhibition zone
+// from the raw exhibitor payload. Returns nil if no zone name is present.
+func (h *webhookHandler) upsertExhibitorCategory(ctx context.Context, venueID uuid.UUID, raw map[string]any) *uuid.UUID {
+	zoneEn := getString(raw, "exhibition_zone_en")
+	zoneJa := getString(raw, "exhibition_zone")
+	if zoneEn == "" {
+		return nil
+	}
+
+	locBytes, _ := json.Marshal(map[string]any{"name_en": zoneEn, "name_ja": zoneJa})
+
+	cat, err := h.locationCategoryRepo.FindByNameAndVenue(ctx, venueID, zoneEn, "external")
+	if err != nil {
+		// Create
+		cat = &domain.LocationCategory{
+			VenueID:      venueID,
+			Name:         zoneEn,
+			Color:        "#0000FF",
+			Visible:      true,
+			Source:       "external",
+			Localization: json.RawMessage(locBytes),
+		}
+		if createErr := h.locationCategoryRepo.Create(ctx, cat); createErr != nil {
+			return nil
+		}
+	} else {
+		cat.Localization = json.RawMessage(locBytes)
+		_ = h.locationCategoryRepo.Update(ctx, cat)
+	}
+	return &cat.ID
+}
+
+// buildExhibitorLocalization builds the Localization JSON for a location from raw exhibitor payload.
+func buildExhibitorLocalization(raw map[string]any) []byte {
+	nameEn := getString(raw, "exhibitor_name_en")
+	nameJa := getString(raw, "exhibitor_name")
+	descEn := getString(raw, "exhibitor_highlights_en")
+	descJa := getString(raw, "exhibitor_highlights")
+	b, _ := json.Marshal(map[string]any{
+		"common_name_en":        nameEn,
+		"common_name_ja":        nameJa,
+		"common_short_name_en":  nameEn,
+		"common_short_name_ja":  nameJa,
+		"common_description_en": descEn,
+		"common_description_ja": descJa,
+	})
+	return b
+}
+
 // ── Product webhook ───────────────────────────────────────────────────────────
 
 type jmaProductItem struct {
 	ProductID   string `json:"product_id" binding:"required"`
 	ExhibitorID string `json:"exhibitor_id" binding:"required"`
-	Status      any    `json:"status"` // bool or int (0/1)
+	Status      any    `json:"status"`  // bool or int (0/1)
 	Section     *int   `json:"section"` // optional; default 1
 }
 
@@ -314,23 +397,25 @@ func (h *webhookHandler) JMAProductUpdate(c *gin.Context) {
 		expiration := getString(rawPayload, "expiration")
 		desc := getString(rawPayload, "specialities")
 		customBytes, _ := json.Marshal(rawPayload)
+		localizationBytes := buildProductLocalization(name, size, price, country, expiration, desc)
 
 		existing, findErr := h.productRepo.FindByCode(ctx, venue.ID, productCode, "external")
 		if findErr != nil {
 			// Create
 			loc := location
 			prod := &domain.Product{
-				VenueID:     venue.ID,
-				LocationID:  &loc.ID,
-				ExternalID:  productCode, // ExternalID maps to code column in DB
-				Name:        name,
-				Size:        size,
-				Price:       price,
-				Country:     country,
-				Expiration:  expiration,
-				Description: desc,
-				Source:      "external",
-				Custom:      json.RawMessage(customBytes),
+				VenueID:      venue.ID,
+				LocationID:   &loc.ID,
+				ExternalID:   productCode,
+				Name:         name,
+				Size:         size,
+				Price:        price,
+				Country:      country,
+				Expiration:   expiration,
+				Description:  desc,
+				Source:       "external",
+				Custom:       json.RawMessage(customBytes),
+				Localization: json.RawMessage(localizationBytes),
 			}
 			if createErr := h.productRepo.Create(ctx, prod); createErr != nil {
 				results.Errors = append(results.Errors, map[string]any{
@@ -351,6 +436,7 @@ func (h *webhookHandler) JMAProductUpdate(c *gin.Context) {
 			existing.Expiration = expiration
 			existing.Description = desc
 			existing.Custom = json.RawMessage(customBytes)
+			existing.Localization = json.RawMessage(localizationBytes)
 			if updateErr := h.productRepo.Update(ctx, existing); updateErr != nil {
 				results.Errors = append(results.Errors, map[string]any{
 					"index":        i,
@@ -366,6 +452,25 @@ func (h *webhookHandler) JMAProductUpdate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.OK(results))
+}
+
+// buildProductLocalization builds the Localization JSON for a product.
+func buildProductLocalization(name, size, price, country, expiration, desc string) []byte {
+	b, _ := json.Marshal(map[string]any{
+		"name_en":        name,
+		"name_ja":        name,
+		"size_en":        size,
+		"size_ja":        size,
+		"price_en":       price,
+		"price_ja":       price,
+		"country_en":     country,
+		"country_ja":     country,
+		"expiration_en":  expiration,
+		"expiration_ja":  expiration,
+		"description_en": desc,
+		"description_ja": desc,
+	})
+	return b
 }
 
 // ── Push notification webhook ─────────────────────────────────────────────────
@@ -405,8 +510,32 @@ func (h *webhookHandler) JMAPushNotification(c *gin.Context) {
 		return
 	}
 
-	// Firebase push delivery is handled by the notification service (not implemented here).
-	// Accept and acknowledge the webhook.
+	ctx := c.Request.Context()
+	dataJSON, _ := json.Marshal(payload.Data)
+	segFiltersJSON, _ := json.Marshal([]map[string]any{{"key": "jma_webhook_device_tokens", "type": nil}})
+
+	chunks := chunkStrings(payload.DeviceTokens, 2000)
+	for _, chunk := range chunks {
+		tokensJSON, _ := json.Marshal(chunk)
+		notif := &domain.Notification{
+			VenueID:        &venue.ID,
+			Title:          payload.Title,
+			Content:        payload.Content,
+			TargetApp:      expoID,
+			SendType:       domain.NotifTypeImmediate,
+			Status:         domain.NotifStatusUnsent,
+			Kind:           domain.NotifKindNormal,
+			SendStatus:     domain.NotifSendPending,
+			Data:           json.RawMessage(dataJSON),
+			SegmentFilters: json.RawMessage(segFiltersJSON),
+			DeviceTokens:   json.RawMessage(tokensJSON),
+		}
+		if err := h.notificationSvc.Create(ctx, notif); err != nil {
+			c.JSON(http.StatusInternalServerError, dto.Fail(dto.CodeInternalError, "failed to queue notification"))
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, dto.OK(gin.H{
 		"success": true,
 		"message": fmt.Sprintf("notification queued for %d tokens", len(payload.DeviceTokens)),
@@ -428,3 +557,15 @@ func getString(m map[string]any, keys ...string) string {
 	return ""
 }
 
+// chunkStrings splits a slice into chunks of at most size n.
+func chunkStrings(s []string, n int) [][]string {
+	var chunks [][]string
+	for i := 0; i < len(s); i += n {
+		end := i + n
+		if end > len(s) {
+			end = len(s)
+		}
+		chunks = append(chunks, s[i:end])
+	}
+	return chunks
+}

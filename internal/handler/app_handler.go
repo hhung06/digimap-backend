@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
+	search "github.com/hhung06/digimap-backend/internal/platform/search"
 	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
@@ -27,6 +29,9 @@ type appHandler struct {
 	locationCategories service.LocationCategoryService
 	analytics          service.AnalyticsService
 	appVersions        *service.AppVersionService
+	searcher           search.Searcher
+	environment        string
+	venues             repository.VenueRepository
 }
 
 func newAppHandler(
@@ -42,6 +47,9 @@ func newAppHandler(
 	locationCategories service.LocationCategoryService,
 	analytics service.AnalyticsService,
 	appVersions *service.AppVersionService,
+	searcher search.Searcher,
+	environment string,
+	venues repository.VenueRepository,
 ) *appHandler {
 	return &appHandler{
 		locations:          locations,
@@ -56,7 +64,79 @@ func newAppHandler(
 		locationCategories: locationCategories,
 		analytics:          analytics,
 		appVersions:        appVersions,
+		searcher:           searcher,
+		environment:        environment,
+		venues:             venues,
 	}
+}
+
+// Search handles GET /app/v1/search?q=...&type=location|product&from=0&size=20
+func (h *appHandler) Search(c *gin.Context) {
+	venueID := middleware.GetVenueID(c)
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusOK, dto.OK(gin.H{"total": 0, "hits": []any{}}))
+		return
+	}
+
+	venue, err := h.venues.FindByID(c.Request.Context(), venueID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	searchFields := []string{
+		"search_text.ja", "search_text.ja.autocomplete",
+		"search_text.en", "search_text.en.autocomplete",
+		"exhibitor.name", "exhibitor.name.autocomplete",
+		"exhibitor.name_en", "exhibitor.name_en.autocomplete",
+		"product.name", "product.name.autocomplete",
+		"product.name_en", "product.name_en.autocomplete",
+	}
+	multiMatch := map[string]any{
+		"multi_match": map[string]any{
+			"query":  q,
+			"fields": searchFields,
+			"type":   "best_fields",
+		},
+	}
+
+	var query map[string]any
+	docType := c.Query("type")
+	if docType == "location" || docType == "product" {
+		query = map[string]any{
+			"bool": map[string]any{
+				"must":   []any{multiMatch},
+				"filter": []any{map[string]any{"term": map[string]any{"type": docType}}},
+			},
+		}
+	} else {
+		query = multiMatch
+	}
+
+	from, size := 0, 20
+	if f, err := strconv.Atoi(c.Query("from")); err == nil && f >= 0 {
+		from = f
+	}
+	if s, err := strconv.Atoi(c.Query("size")); err == nil && s > 0 && s <= 100 {
+		size = s
+	}
+
+	alias := fmt.Sprintf("%s_%s", venue.ExternalID, h.environment)
+	result, err := h.searcher.Search(c.Request.Context(), alias, query, from, size)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	hits := result.Hits
+	if hits == nil {
+		hits = []search.Hit{}
+	}
+	c.JSON(http.StatusOK, dto.OK(gin.H{
+		"total": result.Total,
+		"hits":  hits,
+	}))
 }
 
 func (h *appHandler) ListLocations(c *gin.Context) {
@@ -265,7 +345,22 @@ func (h *appHandler) GetNotification(c *gin.Context) {
 func (h *appHandler) ListCoupons(c *gin.Context) {
 	venueID := middleware.GetVenueID(c)
 	p := paginationFromQuery(c)
-	coupons, total, err := h.coupons.List(c.Request.Context(), venueID, p)
+
+	var coupons []*domain.Coupon
+	var total int
+	var err error
+
+	if appUserIDStr := c.Query("app_user_id"); appUserIDStr != "" {
+		appUserID, parseErr := uuid.Parse(appUserIDStr)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid app_user_id"))
+			return
+		}
+		coupons, total, err = h.coupons.ListForUser(c.Request.Context(), venueID, appUserID, p)
+	} else {
+		coupons, total, err = h.coupons.List(c.Request.Context(), venueID, p)
+	}
+
 	if err != nil {
 		respondError(c, err)
 		return

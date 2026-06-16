@@ -16,6 +16,7 @@ import (
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/enricher"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
+	search "github.com/hhung06/digimap-backend/internal/platform/search"
 	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
 	applog "github.com/hhung06/digimap-backend/log"
@@ -58,9 +59,13 @@ type Dependencies struct {
 	VenueRepo               repository.VenueRepository
 	LocationRepo            repository.LocationRepository
 	ProductRepo             repository.ProductRepository
+	LocationCategoryRepo    repository.LocationCategoryRepository
 	AppUserRepo             repository.AppUserRepository
 	RedisClient             *redis.Client
 	DB                      *pgxpool.Pool
+	VisitorPhoneEncryptor   service.PhoneEncryptor
+	Searcher                search.Searcher
+	Environment             string
 }
 
 // NewRouter builds and returns the configured Gin engine with all routes registered.
@@ -383,7 +388,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	}
 
 	// ── JMA Webhooks (no auth — external callback) ─────────────────────────────
-	webhookH := newWebhookHandler(deps.VenueRepo, deps.LocationRepo, deps.ProductRepo)
+	webhookH := newWebhookHandler(deps.VenueRepo, deps.LocationRepo, deps.ProductRepo, deps.LocationCategoryRepo, deps.NotificationService)
 	webhooks := v1.Group("/webhooks")
 	{
 		jma := webhooks.Group("/jma")
@@ -434,6 +439,9 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		deps.LocationCategoryService,
 		deps.AnalyticsService,
 		deps.AppVersionService,
+		deps.Searcher,
+		deps.Environment,
+		deps.VenueRepo,
 	)
 	// Open endpoint — no API key required.
 	// Mirrors Django's AppLatestBundle.get (app/views/version.py:48).
@@ -462,11 +470,12 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.POST("/surveys/:surveyID/submit-response", appH.SubmitSurveyResponse)
 		appKey.GET("/top-search", appH.TopSearch)
 		appKey.GET("/search-options", appH.SearchOptions)
+		appKey.GET("/search", appH.Search)
 		appKey.GET("/promotions", appH.Promotions)
 	}
 
 	// ── Public API (no auth) ──────────────────────────────────────────────────
-	visitorSurveySvc := service.NewVisitorSurveySubmissionService(deps.VenueRepo, deps.AppUserRepo)
+	visitorSurveySvc := service.NewVisitorSurveySubmissionService(deps.VenueRepo, deps.AppUserRepo, deps.VisitorPhoneEncryptor)
 	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService, deps.AppUserRepo, visitorSurveySvc)
 	publicAPI := r.Group("/public/v1")
 	{

@@ -18,7 +18,7 @@ import (
 func TestVisitorSurveySubmissionService_Submit_CreatesFreshAppUser(t *testing.T) {
 	venueRepo := &mocks.VenueRepository{}
 	appUserRepo := &mocks.AppUserRepository{}
-	svc := service.NewVisitorSurveySubmissionService(venueRepo, appUserRepo)
+	svc := service.NewVisitorSurveySubmissionService(venueRepo, appUserRepo, nil)
 
 	ctx := context.Background()
 	venueID := uuid.New()
@@ -69,7 +69,7 @@ func TestVisitorSurveySubmissionService_Submit_CreatesFreshAppUser(t *testing.T)
 }
 
 func TestVisitorSurveySubmissionService_Submit_RequiresPublicKey(t *testing.T) {
-	svc := service.NewVisitorSurveySubmissionService(&mocks.VenueRepository{}, &mocks.AppUserRepository{})
+	svc := service.NewVisitorSurveySubmissionService(&mocks.VenueRepository{}, &mocks.AppUserRepository{}, nil)
 
 	_, err := svc.Submit(context.Background(), service.VisitorSurveySubmission{
 		VisitorType: 1,
@@ -81,7 +81,7 @@ func TestVisitorSurveySubmissionService_Submit_RequiresPublicKey(t *testing.T) {
 func TestVisitorSurveySubmissionService_Submit_RequiresVisitorType(t *testing.T) {
 	venueRepo := &mocks.VenueRepository{}
 	appUserRepo := &mocks.AppUserRepository{}
-	svc := service.NewVisitorSurveySubmissionService(venueRepo, appUserRepo)
+	svc := service.NewVisitorSurveySubmissionService(venueRepo, appUserRepo, nil)
 
 	_, err := svc.Submit(context.Background(), service.VisitorSurveySubmission{
 		PublicKey: "pub-key",

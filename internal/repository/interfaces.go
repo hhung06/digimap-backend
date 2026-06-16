@@ -85,6 +85,7 @@ type LevelRepository interface {
 // LocationCategoryRepository handles location categories.
 type LocationCategoryRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error)
+	FindByNameAndVenue(ctx context.Context, venueID uuid.UUID, name, source string) (*domain.LocationCategory, error)
 	List(ctx context.Context, venueID uuid.UUID) ([]*domain.LocationCategory, error)
 	Create(ctx context.Context, c *domain.LocationCategory) error
 	Update(ctx context.Context, c *domain.LocationCategory) error
@@ -272,11 +273,23 @@ type ArticleRepository interface {
 // CouponRepository handles coupons.
 type CouponRepository interface {
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error)
+	// ListByUser returns coupons assigned to a specific app user for a venue,
+	// with IsUsed populated from coupon_users.
+	ListByUser(ctx context.Context, venueID, userID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Coupon, error)
 	Create(ctx context.Context, c *domain.Coupon) error
 	Update(ctx context.Context, c *domain.Coupon) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	Redeem(ctx context.Context, id uuid.UUID, appUserID uuid.UUID) error
+}
+
+// CouponUserRepository handles per-user coupon assignment and redemption.
+type CouponUserRepository interface {
+	Create(ctx context.Context, cu *domain.CouponUser) error
+	FindByCouponAndUser(ctx context.Context, couponID, userID uuid.UUID) (*domain.CouponUser, error)
+	MarkUsed(ctx context.Context, id uuid.UUID) error
+	// ExistsForVenueUser returns true if the user already has any coupon for the venue.
+	ExistsForVenueUser(ctx context.Context, venueID, userID uuid.UUID) (bool, error)
 }
 
 // VideoRepository handles videos.
@@ -333,8 +346,10 @@ type SnapshotRepository interface {
 	CountDraftsByVenue(ctx context.Context, venueID uuid.UUID) (int64, error)
 	// DeleteOldestDraft hard-deletes (not soft-delete) the draft snapshot with
 	// the oldest created_at for the given venue, triggering ON DELETE CASCADE
-	// to remove its associated LevelBundle rows.
-	DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error
+	// to remove its associated LevelBundle rows. Returns the deleted snapshot
+	// so callers can remove the corresponding S3 object. Returns (nil, nil) if
+	// no draft exists.
+	DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error)
 	UnpublishVenue(ctx context.Context, venueID uuid.UUID) error
 	// LatestDraft returns the most recently created draft snapshot for a venue (nil if none).
 	LatestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error)

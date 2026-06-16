@@ -52,6 +52,37 @@ func (r *couponRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	return scanCoupon(row)
 }
 
+func (r *couponRepository) ListByUser(ctx context.Context, venueID, userID uuid.UUID, p domain.Pagination) ([]*domain.Coupon, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT c.id) FROM coupons c
+		INNER JOIN coupon_users cu ON cu.coupon_id = c.id AND cu.user_id = $2
+		WHERE c.venue_id = $1 AND c.deleted_at IS NULL`, venueID, userID,
+	).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT `+couponSelectCols+`, cu.is_used
+		FROM coupons c
+		INNER JOIN coupon_users cu ON cu.coupon_id = c.id AND cu.user_id = $2
+		WHERE c.venue_id = $1 AND c.deleted_at IS NULL
+		ORDER BY c.created_at DESC LIMIT $3 OFFSET $4`,
+		venueID, userID, p.PageSize, p.Offset())
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []*domain.Coupon
+	for rows.Next() {
+		c, err := scanCouponWithStatus(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, c)
+	}
+	return out, total, rows.Err()
+}
+
 func (r *couponRepository) Create(ctx context.Context, c *domain.Coupon) error {
 	c.ID = newID()
 	return r.pool.QueryRow(ctx,
@@ -92,6 +123,19 @@ func scanCoupon(row scanner) (*domain.Coupon, error) {
 		&c.ID, &c.VenueID, &c.ExternalID, &c.CouponName, &c.CouponCode,
 		&c.Status, &c.IssuedAt, &c.ExpiredAt, &c.RedeemedAt, &c.RedeemedBy,
 		&c.Localization, &c.CreatedAt, &c.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func scanCouponWithStatus(row scanner) (*domain.Coupon, error) {
+	var c domain.Coupon
+	if err := row.Scan(
+		&c.ID, &c.VenueID, &c.ExternalID, &c.CouponName, &c.CouponCode,
+		&c.Status, &c.IssuedAt, &c.ExpiredAt, &c.RedeemedAt, &c.RedeemedBy,
+		&c.Localization, &c.CreatedAt, &c.UpdatedAt,
+		&c.IsUsed,
 	); err != nil {
 		return nil, err
 	}

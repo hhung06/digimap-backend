@@ -22,4 +22,19 @@ type Coupon struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DeletedAt    *time.Time
+
+	// IsUsed is a transient field populated in user-context queries (ListByUser).
+	// It reflects the coupon_users.is_used value for the requesting user.
+	IsUsed bool
+}
+
+type CouponUser struct {
+	ID        uuid.UUID
+	CouponID  uuid.UUID
+	UserID    *uuid.UUID
+	DeviceID  string
+	IsUsed    bool
+	UsedAt    *time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

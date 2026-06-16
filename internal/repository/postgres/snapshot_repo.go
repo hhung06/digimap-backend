@@ -112,17 +112,28 @@ func (r *snapshotRepo) UnpublishVenue(ctx context.Context, venueID uuid.UUID) er
 	return err
 }
 
-func (r *snapshotRepo) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) error {
+func (r *snapshotRepo) DeleteOldestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error) {
 	// Hard-delete (not soft-delete) so ON DELETE CASCADE fires for level_bundles.
-	_, err := r.pool.Exec(ctx, `
-		DELETE FROM snapshots
-		WHERE id = (
+	// Use a CTE with RETURNING to get the deleted row back for S3 cleanup.
+	row := r.pool.QueryRow(ctx, `
+		WITH target AS (
 			SELECT id FROM snapshots
 			WHERE venue_id = $1 AND state = $2 AND deleted_at IS NULL
 			ORDER BY created_at ASC
 			LIMIT 1
-		)`, venueID, domain.SnapshotStateDraft)
-	return err
+		)
+		DELETE FROM snapshots
+		WHERE id = (SELECT id FROM target)
+		RETURNING `+snapshotSelectCols,
+		venueID, domain.SnapshotStateDraft)
+	snap, err := scanSnapshot(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return snap, nil
 }
 
 func (r *snapshotRepo) LatestDraft(ctx context.Context, venueID uuid.UUID) (*domain.Snapshot, error) {

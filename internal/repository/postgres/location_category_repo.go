@@ -22,6 +22,22 @@ func NewLocationCategoryRepository(pool *pgxpool.Pool) repository.LocationCatego
 	return &locationCategoryRepo{pool: pool}
 }
 
+func (r *locationCategoryRepo) FindByNameAndVenue(ctx context.Context, venueID uuid.UUID, name, source string) (*domain.LocationCategory, error) {
+	const q = `
+		SELECT id, venue_id, parent_id, external_id, name, short_name, color, icon, icon_default,
+		       sort_index, visible, description, type, image, localization, source,
+		       created_at, updated_at, deleted_at
+		FROM location_categories
+		WHERE venue_id = $1 AND name = $2 AND source = $3 AND deleted_at IS NULL
+		LIMIT 1`
+
+	c, err := scanLocationCategory(r.pool.QueryRow(ctx, q, venueID, name, source))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.NewNotFound("location category not found")
+	}
+	return c, err
+}
+
 func (r *locationCategoryRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error) {
 	const q = `
 		SELECT id, venue_id, parent_id, external_id, name, short_name, color, icon, icon_default,

@@ -98,7 +98,7 @@ func TestAdService_Delete(t *testing.T) {
 
 func TestCouponService_List(t *testing.T) {
 	repo := &mocks.CouponRepository{}
-	svc := service.NewCouponService(repo)
+	svc := service.NewCouponService(repo, &mocks.CouponUserRepository{})
 
 	ctx := context.Background()
 	venueID := uuid.New()
@@ -116,7 +116,7 @@ func TestCouponService_List(t *testing.T) {
 
 func TestCouponService_Get(t *testing.T) {
 	repo := &mocks.CouponRepository{}
-	svc := service.NewCouponService(repo)
+	svc := service.NewCouponService(repo, &mocks.CouponUserRepository{})
 
 	ctx := context.Background()
 	id := uuid.New()
@@ -132,7 +132,7 @@ func TestCouponService_Get(t *testing.T) {
 
 func TestCouponService_Create(t *testing.T) {
 	repo := &mocks.CouponRepository{}
-	svc := service.NewCouponService(repo)
+	svc := service.NewCouponService(repo, &mocks.CouponUserRepository{})
 
 	ctx := context.Background()
 	c := &domain.Coupon{CouponCode: "NEW20"}
@@ -146,7 +146,7 @@ func TestCouponService_Create(t *testing.T) {
 
 func TestCouponService_Delete(t *testing.T) {
 	repo := &mocks.CouponRepository{}
-	svc := service.NewCouponService(repo)
+	svc := service.NewCouponService(repo, &mocks.CouponUserRepository{})
 
 	ctx := context.Background()
 	id := uuid.New()

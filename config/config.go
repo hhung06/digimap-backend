@@ -11,12 +11,15 @@ import (
 
 // Config holds all application configuration, populated from environment variables.
 type Config struct {
-	App      AppConfig
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	AWS      AWSConfig
+	App        AppConfig
+	Server     ServerConfig
+	Database   DatabaseConfig
+	Redis      RedisConfig
+	JWT        JWTConfig
+	AWS        AWSConfig
+	SMTP       SMTPConfig
+	Firebase   FirebaseConfig
+	OpenSearch OpenSearchConfig
 }
 
 type AppConfig struct {
@@ -26,6 +29,17 @@ type AppConfig struct {
 	Debug              bool
 	DefaultPageSize    int
 	CORSAllowedOrigins []string
+	DataEncryptionKey string
+}
+
+type FirebaseConfig struct {
+	CredentialsPath string
+}
+
+type OpenSearchConfig struct {
+	Endpoint string
+	User     string
+	Password string
 }
 
 type ServerConfig struct {
@@ -63,11 +77,19 @@ type AWSConfig struct {
 	Region                   string
 	AccessKeyID              string
 	SecretAccessKey          string
-	S3Bucket                 string
-	S3AssetsBucket           string // encrypted bundle files (digimap, top_location, location_memo, latest-bundle)
+	S3AssetsBucket           string // images, encrypted bundles (digimap, top_location, location_memo, latest-bundle)
 	S3SnapshotBucket         string // snapshot draft/publish JSON blobs
+	S3SyncBucket             string // venue sync data (VenueSyncFlag / SyncData JSON)
 	CloudFrontDistributionID string
-	SESFromEmail             string
+}
+
+type SMTPConfig struct {
+	Host      string
+	Port      int
+	User      string
+	Password  string
+	FromEmail string
+	UseTLS    bool
 }
 
 // DSN builds the PostgreSQL connection string.
@@ -134,12 +156,13 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		App: AppConfig{
-			Environment:        v.GetString("APP_ENV"),
-			LogLevel:           v.GetString("LOG_LEVEL"),
-			LogFormat:          v.GetString("LOG_FORMAT"),
-			Debug:              v.GetBool("DEBUG"),
-			DefaultPageSize:    v.GetInt("DEFAULT_PAGE_SIZE"),
-			CORSAllowedOrigins: strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ","),
+			Environment:         v.GetString("APP_ENV"),
+			LogLevel:            v.GetString("LOG_LEVEL"),
+			LogFormat:           v.GetString("LOG_FORMAT"),
+			Debug:               v.GetBool("DEBUG"),
+			DefaultPageSize:     v.GetInt("DEFAULT_PAGE_SIZE"),
+			CORSAllowedOrigins:  strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ","),
+			DataEncryptionKey: v.GetString("DATA_ENCRYPTION_KEY"),
 		},
 		Server: ServerConfig{
 			Port:         v.GetInt("PORT"),
@@ -169,14 +192,29 @@ func Load() (*Config, error) {
 			Issuer:        v.GetString("JWT_ISSUER"),
 		},
 		AWS: AWSConfig{
-			Region:          v.GetString("AWS_REGION"),
-			AccessKeyID:     v.GetString("AWS_ACCESS_KEY_ID"),
-			SecretAccessKey: v.GetString("AWS_SECRET_ACCESS_KEY"),
-			S3Bucket:                 v.GetString("AWS_S3_BUCKET"),
+			Region:                   v.GetString("AWS_REGION"),
+			AccessKeyID:              v.GetString("AWS_ACCESS_KEY_ID"),
+			SecretAccessKey:          v.GetString("AWS_SECRET_ACCESS_KEY"),
 			S3AssetsBucket:           v.GetString("AWS_S3_ASSETS_BUCKET"),
 			S3SnapshotBucket:         v.GetString("AWS_S3_SNAPSHOT_BUCKET"),
+			S3SyncBucket:             v.GetString("AWS_S3_SYNC_BUCKET"),
 			CloudFrontDistributionID: v.GetString("AWS_CF_DISTRIBUTION_ID"),
-			SESFromEmail:             v.GetString("SES_FROM_EMAIL"),
+		},
+		SMTP: SMTPConfig{
+			Host:      v.GetString("EMAIL_HOST"),
+			Port:      v.GetInt("EMAIL_PORT"),
+			User:      v.GetString("EMAIL_HOST_USER"),
+			Password:  v.GetString("EMAIL_HOST_PASSWORD"),
+			FromEmail: v.GetString("EMAIL_FROM_ADDR"),
+			UseTLS:    v.GetBool("EMAIL_USE_TLS"),
+		},
+		Firebase: FirebaseConfig{
+			CredentialsPath: v.GetString("FIREBASE_CREDENTIALS_PATH"),
+		},
+		OpenSearch: OpenSearchConfig{
+			Endpoint: v.GetString("OPENSEARCH_ENDPOINT"),
+			User:     v.GetString("OPENSEARCH_USER"),
+			Password: v.GetString("OPENSEARCH_PASSWORD"),
 		},
 	}
 

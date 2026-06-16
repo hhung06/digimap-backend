@@ -1,10 +1,13 @@
 package log
 
 import (
+	"fmt"
 	"os"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/hhung06/digimap-backend/config"
-	"github.com/sirupsen/logrus"
 )
 
 // Logger defines methods for structured application logging.
@@ -36,87 +39,76 @@ type Logger interface {
 // Fields is a map of structured log fields.
 type Fields map[string]interface{}
 
-// wrappedEntry wraps a logrus.Entry to satisfy the Logger interface.
-type wrappedEntry struct {
-	entry *logrus.Entry
+type zapLogger struct {
+	s *zap.SugaredLogger
 }
 
-func (w *wrappedEntry) Debug(args ...interface{})                 { w.entry.Debug(args...) }
-func (w *wrappedEntry) Debugf(f string, args ...interface{})      { w.entry.Debugf(f, args...) }
-func (w *wrappedEntry) Debugln(args ...interface{})               { w.entry.Debugln(args...) }
-func (w *wrappedEntry) Error(args ...interface{})                 { w.entry.Error(args...) }
-func (w *wrappedEntry) Errorf(f string, args ...interface{})      { w.entry.Errorf(f, args...) }
-func (w *wrappedEntry) Errorln(args ...interface{})               { w.entry.Errorln(args...) }
-func (w *wrappedEntry) Fatal(args ...interface{})                 { w.entry.Fatal(args...) }
-func (w *wrappedEntry) Fatalf(f string, args ...interface{})      { w.entry.Fatalf(f, args...) }
-func (w *wrappedEntry) Fatalln(args ...interface{})               { w.entry.Fatalln(args...) }
-func (w *wrappedEntry) Info(args ...interface{})                  { w.entry.Info(args...) }
-func (w *wrappedEntry) Infof(f string, args ...interface{})       { w.entry.Infof(f, args...) }
-func (w *wrappedEntry) Infoln(args ...interface{})                { w.entry.Infoln(args...) }
-func (w *wrappedEntry) Panic(args ...interface{})                 { w.entry.Panic(args...) }
-func (w *wrappedEntry) Panicf(f string, args ...interface{})      { w.entry.Panicf(f, args...) }
-func (w *wrappedEntry) Panicln(args ...interface{})               { w.entry.Panicln(args...) }
-func (w *wrappedEntry) Print(args ...interface{})                 { w.entry.Print(args...) }
-func (w *wrappedEntry) Printf(f string, args ...interface{})      { w.entry.Printf(f, args...) }
-func (w *wrappedEntry) Println(args ...interface{})               { w.entry.Println(args...) }
-func (w *wrappedEntry) Warn(args ...interface{})                  { w.entry.Warn(args...) }
-func (w *wrappedEntry) Warnf(f string, args ...interface{})       { w.entry.Warnf(f, args...) }
-func (w *wrappedEntry) Warnln(args ...interface{})                { w.entry.Warnln(args...) }
-func (w *wrappedEntry) WithFields(fields Fields) Logger {
-	return &wrappedEntry{entry: w.entry.WithFields(logrus.Fields(fields))}
+func (z *zapLogger) Debug(args ...interface{})            { z.s.Debug(args...) }
+func (z *zapLogger) Debugf(f string, args ...interface{}) { z.s.Debugf(f, args...) }
+func (z *zapLogger) Debugln(args ...interface{})          { z.s.Debug(fmt.Sprint(args...)) }
+func (z *zapLogger) Error(args ...interface{})            { z.s.Error(args...) }
+func (z *zapLogger) Errorf(f string, args ...interface{}) { z.s.Errorf(f, args...) }
+func (z *zapLogger) Errorln(args ...interface{})          { z.s.Error(fmt.Sprint(args...)) }
+func (z *zapLogger) Fatal(args ...interface{})            { z.s.Fatal(args...) }
+func (z *zapLogger) Fatalf(f string, args ...interface{}) { z.s.Fatalf(f, args...) }
+func (z *zapLogger) Fatalln(args ...interface{})          { z.s.Fatal(fmt.Sprint(args...)) }
+func (z *zapLogger) Info(args ...interface{})             { z.s.Info(args...) }
+func (z *zapLogger) Infof(f string, args ...interface{})  { z.s.Infof(f, args...) }
+func (z *zapLogger) Infoln(args ...interface{})           { z.s.Info(fmt.Sprint(args...)) }
+func (z *zapLogger) Panic(args ...interface{})            { z.s.Panic(args...) }
+func (z *zapLogger) Panicf(f string, args ...interface{}) { z.s.Panicf(f, args...) }
+func (z *zapLogger) Panicln(args ...interface{})          { z.s.Panic(fmt.Sprint(args...)) }
+func (z *zapLogger) Print(args ...interface{})            { z.s.Info(args...) }
+func (z *zapLogger) Printf(f string, args ...interface{}) { z.s.Infof(f, args...) }
+func (z *zapLogger) Println(args ...interface{})          { z.s.Info(fmt.Sprint(args...)) }
+func (z *zapLogger) Warn(args ...interface{})             { z.s.Warn(args...) }
+func (z *zapLogger) Warnf(f string, args ...interface{})  { z.s.Warnf(f, args...) }
+func (z *zapLogger) Warnln(args ...interface{})           { z.s.Warn(fmt.Sprint(args...)) }
+
+func (z *zapLogger) WithFields(fields Fields) Logger {
+	args := make([]interface{}, 0, len(fields)*2)
+	for k, v := range fields {
+		args = append(args, k, v)
+	}
+	return &zapLogger{s: z.s.With(args...)}
 }
 
-// logrusLogger wraps *logrus.Logger and implements Logger.
-type logrusLogger struct {
-	l *logrus.Logger
-}
+// Sync flushes buffered log entries. Not on the Logger interface.
+func (z *zapLogger) Sync() error { return z.s.Sync() }
 
-func (r *logrusLogger) Debug(args ...interface{})                 { r.l.Debug(args...) }
-func (r *logrusLogger) Debugf(f string, args ...interface{})      { r.l.Debugf(f, args...) }
-func (r *logrusLogger) Debugln(args ...interface{})               { r.l.Debugln(args...) }
-func (r *logrusLogger) Error(args ...interface{})                 { r.l.Error(args...) }
-func (r *logrusLogger) Errorf(f string, args ...interface{})      { r.l.Errorf(f, args...) }
-func (r *logrusLogger) Errorln(args ...interface{})               { r.l.Errorln(args...) }
-func (r *logrusLogger) Fatal(args ...interface{})                 { r.l.Fatal(args...) }
-func (r *logrusLogger) Fatalf(f string, args ...interface{})      { r.l.Fatalf(f, args...) }
-func (r *logrusLogger) Fatalln(args ...interface{})               { r.l.Fatalln(args...) }
-func (r *logrusLogger) Info(args ...interface{})                  { r.l.Info(args...) }
-func (r *logrusLogger) Infof(f string, args ...interface{})       { r.l.Infof(f, args...) }
-func (r *logrusLogger) Infoln(args ...interface{})                { r.l.Infoln(args...) }
-func (r *logrusLogger) Panic(args ...interface{})                 { r.l.Panic(args...) }
-func (r *logrusLogger) Panicf(f string, args ...interface{})      { r.l.Panicf(f, args...) }
-func (r *logrusLogger) Panicln(args ...interface{})               { r.l.Panicln(args...) }
-func (r *logrusLogger) Print(args ...interface{})                 { r.l.Print(args...) }
-func (r *logrusLogger) Printf(f string, args ...interface{})      { r.l.Printf(f, args...) }
-func (r *logrusLogger) Println(args ...interface{})               { r.l.Println(args...) }
-func (r *logrusLogger) Warn(args ...interface{})                  { r.l.Warn(args...) }
-func (r *logrusLogger) Warnf(f string, args ...interface{})       { r.l.Warnf(f, args...) }
-func (r *logrusLogger) Warnln(args ...interface{})                { r.l.Warnln(args...) }
-func (r *logrusLogger) WithFields(fields Fields) Logger {
-	return &wrappedEntry{entry: r.l.WithFields(logrus.Fields(fields))}
+// Sync flushes the logger if it supports it. Call with defer after NewLogger.
+func Sync(l Logger) {
+	if s, ok := l.(interface{ Sync() error }); ok {
+		_ = s.Sync() // discard error — ENOTTY/EINVAL on TTY/pipe stderr is harmless
+	}
 }
 
 // NewLogger creates a Logger from the typed Config.
 func NewLogger(cfg *config.Config) Logger {
-	l := logrus.New()
-	l.Out = os.Stderr
-
-	if cfg.App.LogFormat == "json" {
-		l.Formatter = &logrus.JSONFormatter{}
-	} else {
-		l.Formatter = &logrus.TextFormatter{FullTimestamp: true}
-	}
-
+	var level zapcore.Level
 	switch cfg.App.LogLevel {
 	case "warn", "warning":
-		l.Level = logrus.WarnLevel
+		level = zapcore.WarnLevel
 	case "info":
-		l.Level = logrus.InfoLevel
+		level = zapcore.InfoLevel
 	case "error":
-		l.Level = logrus.ErrorLevel
+		level = zapcore.ErrorLevel
 	default:
-		l.Level = logrus.DebugLevel
+		level = zapcore.DebugLevel
 	}
 
-	return &logrusLogger{l: l}
+	encCfg := zap.NewProductionEncoderConfig()
+	encCfg.TimeKey = "time"
+	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	encCfg.EncodeLevel = zapcore.CapitalLevelEncoder
+
+	var encoder zapcore.Encoder
+	if cfg.App.LogFormat == "json" {
+		encoder = zapcore.NewJSONEncoder(encCfg)
+	} else {
+		encoder = zapcore.NewConsoleEncoder(encCfg)
+	}
+
+	core := zapcore.NewCore(encoder, zapcore.AddSync(os.Stderr), level)
+	return &zapLogger{s: zap.New(core).Sugar()}
 }

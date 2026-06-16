@@ -17,9 +17,11 @@ import (
 	"github.com/hhung06/digimap-backend/internal/handler"
 	"github.com/hhung06/digimap-backend/internal/platform/cache"
 	"github.com/hhung06/digimap-backend/internal/platform/cdn"
+	"github.com/hhung06/digimap-backend/internal/platform/crypto"
 	"github.com/hhung06/digimap-backend/internal/platform/database"
 	"github.com/hhung06/digimap-backend/internal/platform/email"
 	"github.com/hhung06/digimap-backend/internal/platform/firebase"
+	"github.com/hhung06/digimap-backend/internal/platform/search"
 	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	postgresrepo "github.com/hhung06/digimap-backend/internal/repository/postgres"
 	"github.com/hhung06/digimap-backend/internal/service"
@@ -40,6 +42,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 
 	logger := applog.NewLogger(cfg)
+	defer applog.Sync(logger)
 	logger.Infof("starting digimap-backend env=%s port=%d", cfg.App.Environment, cfg.Server.Port)
 
 	ctx := context.Background()
@@ -76,6 +79,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	adRepo := postgresrepo.NewAdRepository(pool)
 	articleRepo := postgresrepo.NewArticleRepository(pool)
 	couponRepo := postgresrepo.NewCouponRepository(pool)
+	couponUserRepo := postgresrepo.NewCouponUserRepository(pool)
 	videoRepo := postgresrepo.NewVideoRepository(pool)
 	tagRepo := postgresrepo.NewTagRepository(pool)
 	eventLogRepo := postgresrepo.NewEventLogRepository(pool)
@@ -91,10 +95,72 @@ func runServe(_ *cobra.Command, _ []string) error {
 	appVersionRepo := postgresrepo.NewAppVersionRepository(pool)
 
 	// ── Platform services ─────────────────────────────────────────────────
-	mailer := email.NewLogSender(logger)
-	storer := storage.NewLogStorer()
-	pusher := firebase.NewLogPusher(logger)
-	invalidator := cdn.NewLogInvalidator()
+	var mailer email.Sender
+	if cfg.SMTP.Host != "" {
+		mailer = email.NewSMTPSender(cfg.SMTP)
+		logger.Infof("SMTP mailer initialised host=%s port=%d", cfg.SMTP.Host, cfg.SMTP.Port)
+	} else {
+		mailer = email.NewLogSender(logger)
+		logger.Info("SMTP mailer: using log stub (EMAIL_HOST not set)")
+	}
+
+	var assetStorer, snapshotStorer storage.Storer
+	var invalidator cdn.Invalidator
+	if cfg.AWS.S3AssetsBucket != "" {
+		assetStorer, err = storage.NewS3Storer(cfg.AWS, cfg.AWS.S3AssetsBucket)
+		if err != nil {
+			return fmt.Errorf("init s3 assets storer: %w", err)
+		}
+		snapshotStorer, err = storage.NewS3Storer(cfg.AWS, cfg.AWS.S3SnapshotBucket)
+		if err != nil {
+			return fmt.Errorf("init s3 snapshot storer: %w", err)
+		}
+		invalidator, err = cdn.NewCloudFrontInvalidator(cfg.AWS)
+		if err != nil {
+			return fmt.Errorf("init cloudfront invalidator: %w", err)
+		}
+		logger.Info("S3 storers + CloudFront invalidator initialised")
+	} else {
+		assetStorer = storage.NewLogStorer()
+		snapshotStorer = storage.NewLogStorer()
+		invalidator = cdn.NewLogInvalidator()
+		logger.Info("storage/CDN: using log stubs (AWS_S3_ASSETS_BUCKET not set)")
+	}
+
+	var pusher firebase.Pusher
+	if cfg.Firebase.CredentialsPath != "" {
+		pusher, err = firebase.NewFCMPusher(ctx, cfg.Firebase.CredentialsPath)
+		if err != nil {
+			return fmt.Errorf("init firebase pusher: %w", err)
+		}
+		logger.Info("firebase FCM pusher initialised")
+	} else {
+		pusher = firebase.NewLogPusher(logger)
+		logger.Info("firebase FCM pusher: using log stub (FIREBASE_CREDENTIALS_PATH not set)")
+	}
+
+	var phoneEncryptor service.PhoneEncryptor
+	if cfg.App.DataEncryptionKey != "" {
+		phoneEncryptor, err = crypto.NewAESGCMEncryption(cfg.App.DataEncryptionKey)
+		if err != nil {
+			return fmt.Errorf("init phone encryptor: %w", err)
+		}
+		logger.Info("visitor phone encryption enabled")
+	} else {
+		logger.Info("visitor phone encryption disabled (DATA_ENCRYPTION_KEY not set)")
+	}
+
+	var searcher search.Searcher
+	if cfg.OpenSearch.Endpoint != "" {
+		searcher, err = search.NewSearcher(cfg.OpenSearch.Endpoint, cfg.OpenSearch.User, cfg.OpenSearch.Password)
+		if err != nil {
+			return fmt.Errorf("init opensearch: %w", err)
+		}
+		logger.Infof("opensearch searcher initialised endpoint=%s", cfg.OpenSearch.Endpoint)
+	} else {
+		searcher = search.NewLogSearcher()
+		logger.Info("opensearch: using log stub (OPENSEARCH_ENDPOINT not set)")
+	}
 
 	// ── Application services ──────────────────────────────────────────────
 	authSvc := service.NewAuthService(userRepo, tokenRepo, mailer, cfg.JWT)
@@ -102,11 +168,11 @@ func runServe(_ *cobra.Command, _ []string) error {
 	venueSvc := service.NewVenueService(venueRepo, levelRepo, pool)
 	levelSvc := service.NewLevelService(levelRepo)
 	locationCategorySvc := service.NewLocationCategoryService(locationCategoryRepo)
-	appVersionSvc := service.NewAppVersionService(appVersionRepo, storer, invalidator, cfg.App.Environment)
-	snapshotSvc := service.NewSnapshotService(snapshotRepo, venueRepo, languageRepo, locationRepo, locationCategoryRepo, productRepo, themeRepo, storer, invalidator, appVersionSvc, cfg.App.Environment)
-	locationSvc := service.NewLocationService(locationRepo, venueRepo, storer, invalidator, appVersionSvc, cfg.App.Environment)
+	appVersionSvc := service.NewAppVersionService(appVersionRepo, assetStorer, invalidator, cfg.App.Environment)
+	snapshotSvc := service.NewSnapshotService(snapshotRepo, venueRepo, languageRepo, locationRepo, locationCategoryRepo, productRepo, themeRepo, snapshotStorer, assetStorer, invalidator, appVersionSvc, cfg.App.Environment, searcher, logger)
+	locationSvc := service.NewLocationService(locationRepo, venueRepo, assetStorer, invalidator, appVersionSvc, cfg.App.Environment)
 	productSvc := service.NewProductService(productRepo)
-	storageSvc := service.NewStorageService(storer)
+	storageSvc := service.NewStorageService(assetStorer)
 	eventSvc := service.NewEventService(eventRepo)
 	userSvc := service.NewUserService(userRepo, mailer)
 	notificationSvc := service.NewNotificationService(notificationRepo, pusher)
@@ -115,23 +181,24 @@ func runServe(_ *cobra.Command, _ []string) error {
 	connectionSvc := service.NewConnectionService(connectionRepo)
 	adSvc := service.NewAdvertisementService(adRepo)
 	articleSvc := service.NewArticleService(articleRepo)
-	couponSvc := service.NewCouponService(couponRepo)
+	couponSvc := service.NewCouponService(couponRepo, couponUserRepo)
 	videoSvc := service.NewVideoService(videoRepo)
 	tagSvc := service.NewTagService(tagRepo)
 	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, venueRepo, redisClient)
-	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, storer, cfg.App.Environment)
+	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, assetStorer, cfg.App.Environment)
 	assetSvc := service.NewAssetService(assetRepo)
 	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
-	themeSvc := service.NewThemeService(themeRepo, venueRepo, storer, invalidator, cfg.App.Environment)
+	themeSvc := service.NewThemeService(themeRepo, venueRepo, assetStorer, invalidator, cfg.App.Environment)
 	productPlazaSvc := service.NewProductPlazaService(productPlazaRepo)
 	languageSvc := service.NewLanguageService(languageRepo)
-	memoSvc := service.NewMemoService(locationRepo, venueRepo, storer, invalidator, appVersionSvc, cfg.App.Environment)
+	memoSvc := service.NewMemoService(locationRepo, venueRepo, assetStorer, invalidator, appVersionSvc, cfg.App.Environment)
 
 	enricherRegistry := enricher.NewRegistry(venueRepo)
 	tenants.RegisterAll(enricherRegistry)
 
 	// ── HTTP server ───────────────────────────────────────────────────────
 	deps := handler.Dependencies{
+		VisitorPhoneEncryptor:   phoneEncryptor,
 		AuthService:             authSvc,
 		CustomerService:         customerSvc,
 		VenueService:            venueSvc,
@@ -166,9 +233,12 @@ func runServe(_ *cobra.Command, _ []string) error {
 		VenueRepo:               venueRepo,
 		LocationRepo:            locationRepo,
 		ProductRepo:             productRepo,
+		LocationCategoryRepo:    locationCategoryRepo,
 		AppUserRepo:             appUserRepo,
 		RedisClient:             redisClient,
 		DB:                      pool,
+		Searcher:                searcher,
+		Environment:             cfg.App.Environment,
 	}
 	router := handler.NewRouter(cfg, logger, deps)
 

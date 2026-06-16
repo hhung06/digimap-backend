@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
@@ -23,6 +24,12 @@ type VisitorSurveySubmission struct {
 	UserAgent      string
 }
 
+// PhoneEncryptor encrypts a plaintext phone number for storage.
+// Implemented by crypto.AESGCMEncryption; nil disables encryption.
+type PhoneEncryptor interface {
+	Encrypt(phone string) (string, error)
+}
+
 type VisitorSurveySubmissionService interface {
 	Submit(ctx context.Context, req VisitorSurveySubmission) (*domain.AppUser, error)
 }
@@ -30,10 +37,11 @@ type VisitorSurveySubmissionService interface {
 type visitorSurveySubmissionService struct {
 	venues   repository.VenueRepository
 	appUsers repository.AppUserRepository
+	enc      PhoneEncryptor
 }
 
-func NewVisitorSurveySubmissionService(venues repository.VenueRepository, appUsers repository.AppUserRepository) VisitorSurveySubmissionService {
-	return &visitorSurveySubmissionService{venues: venues, appUsers: appUsers}
+func NewVisitorSurveySubmissionService(venues repository.VenueRepository, appUsers repository.AppUserRepository, enc PhoneEncryptor) VisitorSurveySubmissionService {
+	return &visitorSurveySubmissionService{venues: venues, appUsers: appUsers, enc: enc}
 }
 
 func (s *visitorSurveySubmissionService) Submit(ctx context.Context, req VisitorSurveySubmission) (*domain.AppUser, error) {
@@ -56,13 +64,22 @@ func (s *visitorSurveySubmissionService) Submit(ctx context.Context, req Visitor
 	}
 	visitorType := req.VisitorType
 
+	phone := strings.TrimSpace(req.PhoneNumber)
+	if phone != "" && s.enc != nil {
+		encrypted, err := s.enc.Encrypt(phone)
+		if err != nil {
+			return nil, fmt.Errorf("encrypt phone: %w", err)
+		}
+		phone = encrypted
+	}
+
 	u := &domain.AppUser{
 		VenueID:        &venue.ID,
 		Source:         "visitor_survey",
 		FirstName:      firstName,
 		LastName:       lastName,
 		Email:          strings.TrimSpace(req.Email),
-		Phone:          strings.TrimSpace(req.PhoneNumber),
+		Phone:          phone,
 		VisitorType:    &visitorType,
 		Interests:      interests,
 		OtherInterests: strings.TrimSpace(req.OtherInterests),
