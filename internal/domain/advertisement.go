@@ -12,13 +12,13 @@ type Advertisement struct {
 	LocationID      *uuid.UUID
 	Type            string
 	Status          string
-	Navigate        string
-	ContentImageURL string
-	ContentCTAURL   string
+	Navigate        *string
+	ContentImageURL *string
+	ContentCTAURL   *string
 	Placement       string
 	SizeWidth       *int
 	SizeHeight      *int
-	RewardType      string
+	RewardType      *string
 	RewardAmount    *int
 	DisplayDuration *int
 	PublishedAt     *time.Time

@@ -616,8 +616,14 @@ func runSeed(_ *cobra.Command, _ []string) error {
 	// ── Theme ─────────────────────────────────────────────────────────────────
 	var themeID string
 	if err = tx.QueryRow(ctx, `
-		INSERT INTO themes (venue_id, name, primary_color, secondary_color)
-		VALUES ($1, 'Foodex Brand', '#E63946', '#457B9D')
+		INSERT INTO themes (venue_id, scope, name, data, storage_path)
+		VALUES (
+			$1,
+			'custom',
+			'Foodex Brand',
+			'{"primary_color":"#E63946","secondary_color":"#457B9D"}'::jsonb,
+			''
+		)
 		RETURNING id`, venueID).Scan(&themeID); err != nil {
 		return fmt.Errorf("insert theme: %w", err)
 	}

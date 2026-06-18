@@ -14,13 +14,13 @@ type AdvertisementResponse struct {
 	LocationID      *uuid.UUID `json:"location_id,omitempty"`
 	Type            string     `json:"type"`
 	Status          string     `json:"status"`
-	Navigate        string     `json:"navigate,omitempty"`
-	ContentImageURL string     `json:"content_image_url,omitempty"`
-	ContentCTAURL   string     `json:"content_cta_url,omitempty"`
+	Navigate        *string    `json:"navigate,omitempty"`
+	ContentImageURL *string    `json:"content_image_url,omitempty"`
+	ContentCTAURL   *string    `json:"content_cta_url,omitempty"`
 	Placement       string     `json:"placement"`
 	SizeWidth       *int       `json:"size_width,omitempty"`
 	SizeHeight      *int       `json:"size_height,omitempty"`
-	RewardType      string     `json:"reward_type,omitempty"`
+	RewardType      *string    `json:"reward_type,omitempty"`
 	RewardAmount    *int       `json:"reward_amount,omitempty"`
 	DisplayDuration *int       `json:"display_duration,omitempty"`
 	PublishedAt     *time.Time `json:"published_at,omitempty"`
@@ -33,13 +33,13 @@ type AdvertisementResponse struct {
 type AdvertisementRequest struct {
 	LocationID      *uuid.UUID `json:"location_id"`
 	Type            string     `json:"type"`
-	Navigate        string     `json:"navigate"`
-	ContentImageURL string     `json:"content_image_url"`
-	ContentCTAURL   string     `json:"content_cta_url"`
+	Navigate        *string    `json:"navigate"`
+	ContentImageURL *string    `json:"content_image_url"`
+	ContentCTAURL   *string    `json:"content_cta_url"`
 	Placement       string     `json:"placement"`
 	SizeWidth       *int       `json:"size_width"`
 	SizeHeight      *int       `json:"size_height"`
-	RewardType      string     `json:"reward_type"`
+	RewardType      *string    `json:"reward_type"`
 	RewardAmount    *int       `json:"reward_amount"`
 	DisplayDuration *int       `json:"display_duration"`
 	StartAt         *time.Time `json:"start_at"`
@@ -70,13 +70,13 @@ func (r UpdateAdvertisementRequest) ApplyTo(a *domain.Advertisement) {
 		a.Type = *r.Type
 	}
 	if r.Navigate != nil {
-		a.Navigate = *r.Navigate
+		a.Navigate = r.Navigate
 	}
 	if r.ContentImageURL != nil {
-		a.ContentImageURL = *r.ContentImageURL
+		a.ContentImageURL = r.ContentImageURL
 	}
 	if r.ContentCTAURL != nil {
-		a.ContentCTAURL = *r.ContentCTAURL
+		a.ContentCTAURL = r.ContentCTAURL
 	}
 	if r.Placement != nil {
 		a.Placement = *r.Placement
@@ -88,7 +88,7 @@ func (r UpdateAdvertisementRequest) ApplyTo(a *domain.Advertisement) {
 		a.SizeHeight = r.SizeHeight
 	}
 	if r.RewardType != nil {
-		a.RewardType = *r.RewardType
+		a.RewardType = r.RewardType
 	}
 	if r.RewardAmount != nil {
 		a.RewardAmount = r.RewardAmount

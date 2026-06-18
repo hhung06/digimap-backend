@@ -12,13 +12,13 @@ import (
 type ArticleResponse struct {
 	ID                   uuid.UUID              `json:"id"`
 	VenueID              *uuid.UUID             `json:"venue_id,omitempty"`
-	ExternalID           string                 `json:"external_id,omitempty"`
+	ExternalID           *string                `json:"external_id,omitempty"`
 	LocationID           *uuid.UUID             `json:"location_id,omitempty"`
 	Placement            string                 `json:"placement"`
-	Navigate             string                 `json:"navigate,omitempty"`
+	Navigate             *string                `json:"navigate,omitempty"`
 	Title                string                 `json:"title"`
-	Label                string                 `json:"label,omitempty"`
-	Content              string                 `json:"content,omitempty"`
+	Label                *string                `json:"label,omitempty"`
+	Content              *string                `json:"content,omitempty"`
 	Status               string                 `json:"status"`
 	PublishedAt          *time.Time             `json:"published_at,omitempty"`
 	PublishedPeriodStart *time.Time             `json:"published_period_start,omitempty"`
@@ -39,13 +39,13 @@ type ArticleImageResponse struct {
 }
 
 type ArticleRequest struct {
-	ExternalID           string          `json:"external_id"`
+	ExternalID           *string         `json:"external_id"`
 	LocationID           *uuid.UUID      `json:"location_id"`
 	Placement            string          `json:"placement"`
-	Navigate             string          `json:"navigate"`
+	Navigate             *string         `json:"navigate"`
 	Title                string          `json:"title" binding:"required"`
-	Label                string          `json:"label"`
-	Content              string          `json:"content"`
+	Label                *string         `json:"label"`
+	Content              *string         `json:"content"`
 	Status               string          `json:"status"`
 	PublishedAt          *time.Time      `json:"published_at"`
 	PublishedPeriodStart *time.Time      `json:"published_period_start"`
@@ -70,7 +70,7 @@ type UpdateArticleRequest struct {
 
 func (r UpdateArticleRequest) ApplyTo(a *domain.Article) {
 	if r.ExternalID != nil {
-		a.ExternalID = *r.ExternalID
+		a.ExternalID = r.ExternalID
 	}
 	if r.LocationID != nil {
 		a.LocationID = r.LocationID
@@ -79,16 +79,16 @@ func (r UpdateArticleRequest) ApplyTo(a *domain.Article) {
 		a.Placement = *r.Placement
 	}
 	if r.Navigate != nil {
-		a.Navigate = *r.Navigate
+		a.Navigate = r.Navigate
 	}
 	if r.Title != nil {
 		a.Title = *r.Title
 	}
 	if r.Label != nil {
-		a.Label = *r.Label
+		a.Label = r.Label
 	}
 	if r.Content != nil {
-		a.Content = *r.Content
+		a.Content = r.Content
 	}
 	if r.Status != nil {
 		a.Status = *r.Status

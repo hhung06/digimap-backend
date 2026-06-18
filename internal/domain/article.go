@@ -10,13 +10,13 @@ import (
 type Article struct {
 	ID                  uuid.UUID
 	VenueID             *uuid.UUID
-	ExternalID          string
+	ExternalID          *string
 	LocationID          *uuid.UUID
 	Placement           string
-	Navigate            string
+	Navigate            *string
 	Title               string
-	Label               string
-	Content             string
+	Label               *string
+	Content             *string
 	Status              string
 	PublishedAt         *time.Time
 	PublishedPeriodStart *time.Time
