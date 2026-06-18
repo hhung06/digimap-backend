@@ -234,7 +234,7 @@ func (s *surveyService) handleActivationNotification(ctx context.Context, survey
 }
 
 func (s *surveyService) validateResponse(ctx context.Context, r *domain.SurveyResponse, expectedVenueID *uuid.UUID, requireExternalID bool) error {
-	if requireExternalID && strings.TrimSpace(r.ExternalID) == "" {
+	if requireExternalID && (r.ExternalID == nil || strings.TrimSpace(*r.ExternalID) == "") {
 		return domain.NewValidation(map[string]string{"external_id": "is required"})
 	}
 
@@ -280,7 +280,11 @@ func (s *surveyService) validateResponse(ctx context.Context, r *domain.SurveyRe
 }
 
 func validateSurveyAnswer(question *domain.Question, answer *domain.SurveyAnswer) error {
-	text := strings.TrimSpace(answer.AnswerText)
+	answerText := ""
+	if answer.AnswerText != nil {
+		answerText = *answer.AnswerText
+	}
+	text := strings.TrimSpace(answerText)
 
 	if answer.OptionID != nil {
 		validOption := false

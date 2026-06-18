@@ -103,7 +103,7 @@ func TestCouponService_List(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	p := domain.Pagination{Page: 1, PageSize: 10}
-	expected := []*domain.Coupon{{CouponCode: "SAVE10"}}
+	expected := []*domain.Coupon{{CouponCode: strPtr("SAVE10")}}
 
 	repo.On("List", ctx, venueID, p).Return(expected, 1, nil)
 
@@ -120,13 +120,13 @@ func TestCouponService_Get(t *testing.T) {
 
 	ctx := context.Background()
 	id := uuid.New()
-	expected := &domain.Coupon{ID: id, CouponCode: "SAVE10"}
+	expected := &domain.Coupon{ID: id, CouponCode: strPtr("SAVE10")}
 
 	repo.On("FindByID", ctx, id).Return(expected, nil)
 
 	c, err := svc.Get(ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, "SAVE10", c.CouponCode)
+	assert.Equal(t, strPtr("SAVE10"), c.CouponCode)
 	repo.AssertExpectations(t)
 }
 
@@ -135,7 +135,7 @@ func TestCouponService_Create(t *testing.T) {
 	svc := service.NewCouponService(repo, &mocks.CouponUserRepository{})
 
 	ctx := context.Background()
-	c := &domain.Coupon{CouponCode: "NEW20"}
+	c := &domain.Coupon{CouponCode: strPtr("NEW20")}
 
 	repo.On("Create", ctx, c).Return(nil)
 

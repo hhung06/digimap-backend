@@ -406,13 +406,13 @@ func (h *webhookHandler) JMAProductUpdate(c *gin.Context) {
 			prod := &domain.Product{
 				VenueID:      venue.ID,
 				LocationID:   &loc.ID,
-				ExternalID:   productCode,
-				Name:         name,
-				Size:         size,
-				Price:        price,
-				Country:      country,
-				Expiration:   expiration,
-				Description:  desc,
+				ExternalID:   &productCode,
+				Name:         &name,
+				Size:         &size,
+				Price:        &price,
+				Country:      &country,
+				Expiration:   &expiration,
+				Description:  &desc,
 				Source:       "external",
 				Custom:       json.RawMessage(customBytes),
 				Localization: json.RawMessage(localizationBytes),
@@ -429,12 +429,12 @@ func (h *webhookHandler) JMAProductUpdate(c *gin.Context) {
 			results.Created = append(results.Created, productCode)
 		} else {
 			// Update
-			existing.Name = name
-			existing.Size = size
-			existing.Price = price
-			existing.Country = country
-			existing.Expiration = expiration
-			existing.Description = desc
+			existing.Name = &name
+			existing.Size = &size
+			existing.Price = &price
+			existing.Country = &country
+			existing.Expiration = &expiration
+			existing.Description = &desc
 			existing.Custom = json.RawMessage(customBytes)
 			existing.Localization = json.RawMessage(localizationBytes)
 			if updateErr := h.productRepo.Update(ctx, existing); updateErr != nil {
@@ -517,10 +517,12 @@ func (h *webhookHandler) JMAPushNotification(c *gin.Context) {
 	chunks := chunkStrings(payload.DeviceTokens, 2000)
 	for _, chunk := range chunks {
 		tokensJSON, _ := json.Marshal(chunk)
+		title := payload.Title
+		content := payload.Content
 		notif := &domain.Notification{
 			VenueID:        &venue.ID,
-			Title:          payload.Title,
-			Content:        payload.Content,
+			Title:          &title,
+			Content:        &content,
 			TargetApp:      expoID,
 			SendType:       domain.NotifTypeImmediate,
 			Status:         domain.NotifStatusUnsent,

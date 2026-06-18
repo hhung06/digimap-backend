@@ -125,12 +125,12 @@ func (h *notificationHandler) Create(c *gin.Context) {
 	}
 	n := &domain.Notification{
 		VenueID: &venueID, SurveyID: req.SurveyID,
-		Title: req.Title, Content: req.Content, Topic: req.Topic,
+		Title: &req.Title, Content: &req.Content, Topic: req.Topic,
 		Kind: kind, SendType: sendType,
 		Data: req.Data, LinkURL: req.LinkURL, ScheduledAt: req.ScheduledAt,
 		TargetApp: targetApp, SegmentFilters: req.SegmentFilters,
 		DeviceTokens: req.DeviceTokens,
-		CreatedBy: &userID,
+		CreatedBy:    &userID,
 	}
 	if err := h.svc.Create(c.Request.Context(), n); err != nil {
 		respondError(c, err)

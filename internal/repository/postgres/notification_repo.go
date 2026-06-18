@@ -95,9 +95,9 @@ func (r *notificationRepo) Create(ctx context.Context, n *domain.Notification) e
 		RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
-		n.ID, n.VenueID, n.SurveyID, nullStr(n.Title), nullStr(n.Content), nullStr(n.Topic),
+		n.ID, n.VenueID, n.SurveyID, n.Title, n.Content, n.Topic,
 		n.Kind, n.Status, n.SendStatus, n.SendType,
-		jsonOrNil(n.Data), nullStr(n.LinkURL), n.ScheduledAt, n.TargetApp,
+		jsonOrNil(n.Data), n.LinkURL, n.ScheduledAt, n.TargetApp,
 		jsonOrNil(n.SegmentFilters), jsonOrNil(n.DeviceTokens), jsonOrNil(n.ErrorInfos),
 		n.RetryCount, n.CreatedBy,
 	).Scan(&n.CreatedAt, &n.UpdatedAt)
@@ -112,8 +112,8 @@ func (r *notificationRepo) Update(ctx context.Context, n *domain.Notification) e
 		RETURNING updated_at`
 
 	err := r.pool.QueryRow(ctx, q,
-		n.ID, n.SurveyID, nullStr(n.Title), nullStr(n.Content), nullStr(n.Topic),
-		n.Kind, n.SendType, jsonOrNil(n.Data), nullStr(n.LinkURL), n.ScheduledAt,
+		n.ID, n.SurveyID, n.Title, n.Content, n.Topic,
+		n.Kind, n.SendType, jsonOrNil(n.Data), n.LinkURL, n.ScheduledAt,
 		n.TargetApp, jsonOrNil(n.SegmentFilters), jsonOrNil(n.DeviceTokens),
 	).Scan(&n.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -144,11 +144,11 @@ func (r *notificationRepo) MarkFailed(ctx context.Context, id uuid.UUID, errInfo
 
 func scanNotification(row scanner) (*domain.Notification, error) {
 	var n domain.Notification
-	var title, content, topic, linkURL, targetApp *string
+	var targetApp *string
 	err := row.Scan(
-		&n.ID, &n.VenueID, &n.SurveyID, &title, &content, &topic,
+		&n.ID, &n.VenueID, &n.SurveyID, &n.Title, &n.Content, &n.Topic,
 		&n.Kind, &n.Status, &n.SendStatus, &n.SendType,
-		&n.Data, &linkURL, &n.ScheduledAt, &targetApp,
+		&n.Data, &n.LinkURL, &n.ScheduledAt, &targetApp,
 		&n.SegmentFilters, &n.DeviceTokens, &n.ErrorInfos,
 		&n.RetryCount, &n.RetryAt, &n.PublishedAt, &n.CreatedBy,
 		&n.CreatedAt, &n.UpdatedAt,
@@ -156,10 +156,6 @@ func scanNotification(row scanner) (*domain.Notification, error) {
 	if err != nil {
 		return nil, err
 	}
-	derefStr(&n.Title, title)
-	derefStr(&n.Content, content)
-	derefStr(&n.Topic, topic)
-	derefStr(&n.LinkURL, linkURL)
 	if targetApp != nil {
 		n.TargetApp = *targetApp
 	}

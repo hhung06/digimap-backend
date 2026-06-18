@@ -28,9 +28,9 @@ const (
 type Survey struct {
 	ID             uuid.UUID
 	VenueID        *uuid.UUID
-	ExternalID     string
-	Title          string
-	Content        string
+	ExternalID     *string
+	Title          *string
+	Content        *string
 	StartDate      *time.Time
 	EndDate        *time.Time
 	Status         int
@@ -73,7 +73,7 @@ type Option struct {
 type SurveyResponse struct {
 	ID          uuid.UUID
 	SurveyID    uuid.UUID
-	ExternalID  string
+	ExternalID  *string
 	SubmittedAt time.Time
 	Answers     []*SurveyAnswer
 	CreatedAt   time.Time
@@ -85,6 +85,6 @@ type SurveyAnswer struct {
 	ResponseID uuid.UUID
 	QuestionID uuid.UUID
 	OptionID   *uuid.UUID
-	AnswerText string
+	AnswerText *string
 	CreatedAt  time.Time
 }

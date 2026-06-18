@@ -122,7 +122,7 @@ func (r *surveyRepo) Create(ctx context.Context, s *domain.Survey) error {
 		RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
-		s.ID, s.VenueID, nullStr(s.ExternalID), nullStr(s.Title), nullStr(s.Content),
+		s.ID, s.VenueID, s.ExternalID, s.Title, s.Content,
 		s.StartDate, s.EndDate, s.Status, s.PublishType, s.IsForced,
 		s.Source, s.App, jsonOrNil(s.SegmentFilters), s.CreatedBy,
 	).Scan(&s.CreatedAt, &s.UpdatedAt)
@@ -137,7 +137,7 @@ func (r *surveyRepo) Update(ctx context.Context, s *domain.Survey) error {
 		RETURNING updated_at`
 
 	err := r.pool.QueryRow(ctx, q,
-		s.ID, nullStr(s.ExternalID), nullStr(s.Title), nullStr(s.Content),
+		s.ID, s.ExternalID, s.Title, s.Content,
 		s.StartDate, s.EndDate, s.Status, s.PublishType, s.IsForced,
 		s.Source, s.App, jsonOrNil(s.SegmentFilters),
 	).Scan(&s.UpdatedAt)
@@ -287,11 +287,9 @@ func (r *surveyRepo) ListResponses(ctx context.Context, surveyID uuid.UUID, p do
 	var responses []*domain.SurveyResponse
 	for rows.Next() {
 		var sr domain.SurveyResponse
-		var externalID *string
-		if err := rows.Scan(&sr.ID, &sr.SurveyID, &externalID, &sr.SubmittedAt, &sr.CreatedAt); err != nil {
+		if err := rows.Scan(&sr.ID, &sr.SurveyID, &sr.ExternalID, &sr.SubmittedAt, &sr.CreatedAt); err != nil {
 			return nil, 0, err
 		}
-		derefStr(&sr.ExternalID, externalID)
 		responses = append(responses, &sr)
 	}
 	return responses, total, rows.Err()
@@ -302,8 +300,8 @@ func (r *surveyRepo) CreateResponse(ctx context.Context, resp *domain.SurveyResp
 		resp.ID = newID()
 	}
 	const q = `INSERT INTO survey_responses (id, survey_id, external_id, submitted_at) VALUES ($1,$2,$3,NOW()) RETURNING submitted_at, created_at`
-	if err := r.pool.QueryRow(ctx, q, resp.ID, resp.SurveyID, nullStr(resp.ExternalID)).Scan(&resp.SubmittedAt, &resp.CreatedAt); err != nil {
-		if IsUniqueViolation(err) && resp.ExternalID != "" {
+	if err := r.pool.QueryRow(ctx, q, resp.ID, resp.SurveyID, resp.ExternalID).Scan(&resp.SubmittedAt, &resp.CreatedAt); err != nil {
+		if IsUniqueViolation(err) && resp.ExternalID != nil {
 			return domain.NewConflict("survey response already exists for external_id")
 		}
 		return err
@@ -314,7 +312,7 @@ func (r *surveyRepo) CreateResponse(ctx context.Context, resp *domain.SurveyResp
 		}
 		ans.ResponseID = resp.ID
 		const aq = `INSERT INTO survey_answers (id, response_id, question_id, option_id, answer_text) VALUES ($1,$2,$3,$4,$5)`
-		if _, err := r.pool.Exec(ctx, aq, ans.ID, ans.ResponseID, ans.QuestionID, ans.OptionID, nullStr(ans.AnswerText)); err != nil {
+		if _, err := r.pool.Exec(ctx, aq, ans.ID, ans.ResponseID, ans.QuestionID, ans.OptionID, ans.AnswerText); err != nil {
 			return err
 		}
 	}
@@ -346,18 +344,15 @@ func (r *surveyRepo) ListActive(ctx context.Context, venueID uuid.UUID, publishT
 
 func scanSurvey(row scanner) (*domain.Survey, error) {
 	var s domain.Survey
-	var extID, title, content, app *string
+	var app *string
 	err := row.Scan(
-		&s.ID, &s.VenueID, &extID, &title, &content,
+		&s.ID, &s.VenueID, &s.ExternalID, &s.Title, &s.Content,
 		&s.StartDate, &s.EndDate, &s.Status, &s.PublishType, &s.IsForced,
 		&s.Source, &app, &s.SegmentFilters, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	derefStr(&s.ExternalID, extID)
-	derefStr(&s.Title, title)
-	derefStr(&s.Content, content)
 	if app != nil {
 		s.App = *app
 	}

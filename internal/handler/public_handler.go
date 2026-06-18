@@ -80,10 +80,11 @@ func (h *publicHandler) SubmitSurveyResponse(c *gin.Context) {
 		Answers:  make([]*domain.SurveyAnswer, len(req.Answers)),
 	}
 	for i, a := range req.Answers {
+		answerText := a.AnswerText
 		resp.Answers[i] = &domain.SurveyAnswer{
 			QuestionID: a.QuestionID,
 			OptionID:   a.OptionID,
-			AnswerText: a.AnswerText,
+			AnswerText: &answerText,
 		}
 	}
 	if err := h.surveys.SubmitPublicResponse(c.Request.Context(), resp); err != nil {

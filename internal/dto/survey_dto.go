@@ -52,9 +52,9 @@ type QuestionRequest struct {
 type SurveyResponse struct {
 	ID             uuid.UUID          `json:"id"`
 	VenueID        *uuid.UUID         `json:"venue_id,omitempty"`
-	ExternalID     string             `json:"external_id,omitempty"`
-	Title          string             `json:"title,omitempty"`
-	Content        string             `json:"content,omitempty"`
+	ExternalID     *string            `json:"external_id,omitempty"`
+	Title          *string            `json:"title,omitempty"`
+	Content        *string            `json:"content,omitempty"`
 	StartDate      *time.Time         `json:"start_date,omitempty"`
 	EndDate        *time.Time         `json:"end_date,omitempty"`
 	Status         int                `json:"status"`
@@ -69,9 +69,9 @@ type SurveyResponse struct {
 }
 
 type CreateSurveyRequest struct {
-	ExternalID     string          `json:"external_id"`
-	Title          string          `json:"title"`
-	Content        string          `json:"content"`
+	ExternalID     *string         `json:"external_id"`
+	Title          *string         `json:"title"`
+	Content        *string         `json:"content"`
 	StartDate      *time.Time      `json:"start_date"`
 	EndDate        *time.Time      `json:"end_date"`
 	Status         int             `json:"status"`
@@ -96,13 +96,13 @@ type UpdateSurveyRequest struct {
 
 func (r UpdateSurveyRequest) ApplyTo(s *domain.Survey) {
 	if r.ExternalID != nil {
-		s.ExternalID = *r.ExternalID
+		s.ExternalID = r.ExternalID
 	}
 	if r.Title != nil {
-		s.Title = *r.Title
+		s.Title = r.Title
 	}
 	if r.Content != nil {
-		s.Content = *r.Content
+		s.Content = r.Content
 	}
 	if r.StartDate != nil {
 		s.StartDate = r.StartDate
@@ -132,7 +132,7 @@ func (r UpdateSurveyRequest) ApplyTo(s *domain.Survey) {
 type SurveyResponseResponse struct {
 	ID          uuid.UUID              `json:"id"`
 	SurveyID    uuid.UUID              `json:"survey_id"`
-	ExternalID  string                 `json:"external_id,omitempty"`
+	ExternalID  *string                `json:"external_id,omitempty"`
 	SubmittedAt time.Time              `json:"submitted_at"`
 	Answers     []SurveyAnswerResponse `json:"answers,omitempty"`
 	CreatedAt   time.Time              `json:"created_at"`
@@ -142,7 +142,7 @@ type SurveyAnswerResponse struct {
 	ID         uuid.UUID  `json:"id"`
 	QuestionID uuid.UUID  `json:"question_id"`
 	OptionID   *uuid.UUID `json:"option_id,omitempty"`
-	AnswerText string     `json:"answer_text,omitempty"`
+	AnswerText *string    `json:"answer_text,omitempty"`
 }
 
 type SubmitSurveyRequest struct {

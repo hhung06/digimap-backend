@@ -12,15 +12,15 @@ type NotificationResponse struct {
 	ID             uuid.UUID       `json:"id"`
 	VenueID        *uuid.UUID      `json:"venue_id,omitempty"`
 	SurveyID       *uuid.UUID      `json:"survey_id,omitempty"`
-	Title          string          `json:"title,omitempty"`
-	Content        string          `json:"content,omitempty"`
-	Topic          string          `json:"topic,omitempty"`
+	Title          *string         `json:"title,omitempty"`
+	Content        *string         `json:"content,omitempty"`
+	Topic          *string         `json:"topic,omitempty"`
 	Kind           int             `json:"type"`
 	Status         int             `json:"status"`
 	SendStatus     int             `json:"send_status"`
 	SendType       int             `json:"send_type"`
 	Data           json.RawMessage `json:"data,omitempty" swaggertype:"object"`
-	LinkURL        string          `json:"link_url,omitempty"`
+	LinkURL        *string         `json:"link_url,omitempty"`
 	ScheduledAt    *time.Time      `json:"scheduled_at,omitempty"`
 	TargetApp      string          `json:"target_app"`
 	SegmentFilters json.RawMessage `json:"segment_filters,omitempty" swaggertype:"object"`
@@ -35,11 +35,11 @@ type CreateNotificationRequest struct {
 	SurveyID       *uuid.UUID      `json:"survey_id"`
 	Title          string          `json:"title" binding:"required"`
 	Content        string          `json:"content" binding:"required"`
-	Topic          string          `json:"topic"`
+	Topic          *string         `json:"topic"`
 	Kind           int             `json:"type"`
 	SendType       int             `json:"send_type"`
 	Data           json.RawMessage `json:"data" swaggertype:"object"`
-	LinkURL        string          `json:"link_url"`
+	LinkURL        *string         `json:"link_url"`
 	ScheduledAt    *time.Time      `json:"scheduled_at"`
 	TargetApp      string          `json:"target_app"`
 	SegmentFilters json.RawMessage `json:"segment_filters" swaggertype:"object"`
@@ -66,13 +66,13 @@ func (r UpdateNotificationRequest) ApplyTo(n *domain.Notification) {
 		n.SurveyID = r.SurveyID
 	}
 	if r.Title != nil {
-		n.Title = *r.Title
+		n.Title = r.Title
 	}
 	if r.Content != nil {
-		n.Content = *r.Content
+		n.Content = r.Content
 	}
 	if r.Topic != nil {
-		n.Topic = *r.Topic
+		n.Topic = r.Topic
 	}
 	if r.Kind != nil {
 		n.Kind = *r.Kind
@@ -84,7 +84,7 @@ func (r UpdateNotificationRequest) ApplyTo(n *domain.Notification) {
 		n.Data = r.Data
 	}
 	if r.LinkURL != nil {
-		n.LinkURL = *r.LinkURL
+		n.LinkURL = r.LinkURL
 	}
 	if r.ScheduledAt != nil {
 		n.ScheduledAt = r.ScheduledAt

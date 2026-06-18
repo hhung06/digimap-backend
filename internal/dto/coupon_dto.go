@@ -12,9 +12,9 @@ import (
 type CouponResponse struct {
 	ID           uuid.UUID       `json:"id"`
 	VenueID      *uuid.UUID      `json:"venue_id,omitempty"`
-	ExternalID   string          `json:"external_id,omitempty"`
-	CouponName   string          `json:"coupon_name,omitempty"`
-	CouponCode   string          `json:"coupon_code,omitempty"`
+	ExternalID   *string         `json:"external_id,omitempty"`
+	CouponName   *string         `json:"coupon_name,omitempty"`
+	CouponCode   *string         `json:"coupon_code,omitempty"`
 	Status       string          `json:"status"`
 	IssuedAt     *time.Time      `json:"issued_at,omitempty"`
 	ExpiredAt    *time.Time      `json:"expired_at,omitempty"`
@@ -25,9 +25,9 @@ type CouponResponse struct {
 }
 
 type CouponRequest struct {
-	ExternalID   string          `json:"external_id"`
-	CouponName   string          `json:"coupon_name"`
-	CouponCode   string          `json:"coupon_code"`
+	ExternalID   *string         `json:"external_id"`
+	CouponName   *string         `json:"coupon_name"`
+	CouponCode   *string         `json:"coupon_code"`
 	Status       string          `json:"status"`
 	IssuedAt     *time.Time      `json:"issued_at"`
 	ExpiredAt    *time.Time      `json:"expired_at"`
@@ -46,13 +46,13 @@ type UpdateCouponRequest struct {
 
 func (r UpdateCouponRequest) ApplyTo(c *domain.Coupon) {
 	if r.ExternalID != nil {
-		c.ExternalID = *r.ExternalID
+		c.ExternalID = r.ExternalID
 	}
 	if r.CouponName != nil {
-		c.CouponName = *r.CouponName
+		c.CouponName = r.CouponName
 	}
 	if r.CouponCode != nil {
-		c.CouponCode = *r.CouponCode
+		c.CouponCode = r.CouponCode
 	}
 	if r.Status != nil {
 		c.Status = *r.Status

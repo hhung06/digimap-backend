@@ -20,6 +20,8 @@ func newTestNotificationService(repo *mocks.NotificationRepository, pusher *mock
 	return service.NewNotificationService(repo, pusher)
 }
 
+func strPtr(s string) *string { return &s }
+
 // ── Create ────────────────────────────────────────────────────────────────────
 
 func TestNotificationService_Create_DraftWithTopic(t *testing.T) {
@@ -29,10 +31,10 @@ func TestNotificationService_Create_DraftWithTopic(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:    "Flash Sale",
-		Content:  "50% off",
+		Title:    strPtr("Flash Sale"),
+		Content:  strPtr("50% off"),
 		VenueID:  &venueID,
-		Topic:    "venue-promo",
+		Topic:    strPtr("venue-promo"),
 		Kind:     domain.NotifKindNormal,
 		SendType: domain.NotifTypeDraft,
 	}
@@ -56,18 +58,18 @@ func TestNotificationService_Create_ImmediateAutoDispatches(t *testing.T) {
 	id := uuid.New()
 	n := &domain.Notification{
 		ID:       id,
-		Title:    "Flash Sale",
-		Content:  "50% off",
+		Title:    strPtr("Flash Sale"),
+		Content:  strPtr("50% off"),
 		VenueID:  &venueID,
-		Topic:    "venue-promo",
+		Topic:    strPtr("venue-promo"),
 		Kind:     domain.NotifKindNormal,
 		SendType: domain.NotifTypeImmediate,
 	}
 	stored := &domain.Notification{
 		ID:         id,
-		Title:      "Flash Sale",
-		Content:    "50% off",
-		Topic:      "venue-promo",
+		Title:      strPtr("Flash Sale"),
+		Content:    strPtr("50% off"),
+		Topic:      strPtr("venue-promo"),
 		SendStatus: domain.NotifSendPending,
 	}
 
@@ -89,10 +91,10 @@ func TestNotificationService_Create_ScheduledRequiresScheduledAt(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:    "Promo",
-		Content:  "Deal",
+		Title:    strPtr("Promo"),
+		Content:  strPtr("Deal"),
 		VenueID:  &venueID,
-		Topic:    "venue-promo",
+		Topic:    strPtr("venue-promo"),
 		Kind:     domain.NotifKindNormal,
 		SendType: domain.NotifTypeScheduled,
 		// ScheduledAt intentionally missing
@@ -112,10 +114,10 @@ func TestNotificationService_Create_ScheduledRequiresFutureScheduledAt(t *testin
 	past := time.Now().Add(-time.Hour)
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:       "Promo",
-		Content:     "Deal",
+		Title:       strPtr("Promo"),
+		Content:     strPtr("Deal"),
 		VenueID:     &venueID,
-		Topic:       "venue-promo",
+		Topic:       strPtr("venue-promo"),
 		Kind:        domain.NotifKindNormal,
 		SendType:    domain.NotifTypeScheduled,
 		ScheduledAt: &past,
@@ -134,8 +136,8 @@ func TestNotificationService_Create_RequiresDeliveryTarget(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:    "Promo",
-		Content:  "Deal",
+		Title:    strPtr("Promo"),
+		Content:  strPtr("Deal"),
 		VenueID:  &venueID,
 		Kind:     domain.NotifKindNormal,
 		SendType: domain.NotifTypeDraft,
@@ -155,8 +157,8 @@ func TestNotificationService_Create_RejectsUnsupportedSegmentFilters(t *testing.
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:          "Promo",
-		Content:        "Deal",
+		Title:       strPtr("Promo"),
+		Content:       strPtr("Deal"),
 		VenueID:        &venueID,
 		Kind:           domain.NotifKindNormal,
 		SendType:       domain.NotifTypeDraft,
@@ -176,10 +178,10 @@ func TestNotificationService_Create_RejectsInvalidSendType(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:    "Promo",
-		Content:  "Deal",
+		Title:    strPtr("Promo"),
+		Content:  strPtr("Deal"),
 		VenueID:  &venueID,
-		Topic:    "venue-promo",
+		Topic:    strPtr("venue-promo"),
 		Kind:     domain.NotifKindNormal,
 		SendType: 99,
 	}
@@ -197,10 +199,10 @@ func TestNotificationService_Create_RejectsInvalidKind(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:    "Promo",
-		Content:  "Deal",
+		Title:    strPtr("Promo"),
+		Content:  strPtr("Deal"),
 		VenueID:  &venueID,
-		Topic:    "venue-promo",
+		Topic:    strPtr("venue-promo"),
 		Kind:     99,
 		SendType: domain.NotifTypeDraft,
 	}
@@ -219,10 +221,10 @@ func TestNotificationService_Create_ScheduledFuture(t *testing.T) {
 	future := time.Now().Add(time.Hour)
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:       "Promo",
-		Content:     "Deal",
+		Title:       strPtr("Promo"),
+		Content:     strPtr("Deal"),
 		VenueID:     &venueID,
-		Topic:       "venue-promo",
+		Topic:       strPtr("venue-promo"),
 		Kind:        domain.NotifKindNormal,
 		SendType:    domain.NotifTypeScheduled,
 		ScheduledAt: &future,
@@ -243,7 +245,7 @@ func TestNotificationService_Get_Success(t *testing.T) {
 
 	ctx := context.Background()
 	id := uuid.New()
-	expected := &domain.Notification{ID: id, Title: "Flash Sale"}
+	expected := &domain.Notification{ID: id, Title:       strPtr("Flash Sale")}
 
 	repo.On("FindByID", ctx, id).Return(expected, nil)
 
@@ -277,7 +279,7 @@ func TestNotificationService_List_Success(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	p := domain.Pagination{Page: 1, PageSize: 20}
-	expected := []*domain.Notification{{Title: "Alert"}}
+	expected := []*domain.Notification{{Title:       strPtr("Alert")}}
 
 	repo.On("List", ctx, venueID, p).Return(expected, int64(1), nil)
 
@@ -315,9 +317,9 @@ func TestNotificationService_Send_ByTopic_Success(t *testing.T) {
 	id := uuid.New()
 	n := &domain.Notification{
 		ID:         id,
-		Title:      "Flash Sale",
-		Content:    "50% off today!",
-		Topic:      "venue-123",
+		Title:      strPtr("Flash Sale"),
+		Content:    strPtr("50% off today!"),
+		Topic:      strPtr("venue-123"),
 		SendStatus: domain.NotifSendPending,
 	}
 
@@ -363,9 +365,9 @@ func TestNotificationService_Send_FCMError(t *testing.T) {
 	id := uuid.New()
 	n := &domain.Notification{
 		ID:         id,
-		Title:      "Flash Sale",
-		Content:    "50% off!",
-		Topic:      "venue-123",
+		Title:      strPtr("Flash Sale"),
+		Content:    strPtr("50% off!"),
+		Topic:      strPtr("venue-123"),
 		SendStatus: domain.NotifSendPending,
 	}
 
@@ -388,8 +390,8 @@ func TestNotificationService_Send_BySegmentFiltersTopics_Success(t *testing.T) {
 	id := uuid.New()
 	n := &domain.Notification{
 		ID:             id,
-		Title:          "Survey",
-		Content:        "Please answer",
+		Title:       strPtr("Survey"),
+		Content:       strPtr("Please answer"),
 		SendStatus:     domain.NotifSendPending,
 		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"},{"key":"all_users","type":null}]`),
 	}
@@ -415,9 +417,9 @@ func TestNotificationService_SendDueScheduled_SendsReadyNotifications(t *testing
 	id := uuid.New()
 	n := &domain.Notification{
 		ID:         id,
-		Title:      "Scheduled",
-		Content:    "Due now",
-		Topic:      "venue-123",
+		Title:      strPtr("Scheduled"),
+		Content:    strPtr("Due now"),
+		Topic:      strPtr("venue-123"),
 		SendType:   domain.NotifTypeScheduled,
 		SendStatus: domain.NotifSendPending,
 	}

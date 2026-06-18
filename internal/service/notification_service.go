@@ -83,7 +83,7 @@ func validateNotification(n *domain.Notification) map[string]string {
 		}
 	}
 
-	if n.Topic == "" && len(n.DeviceTokens) == 0 && len(n.SegmentFilters) == 0 {
+	if (n.Topic == nil || *n.Topic == "") && len(n.DeviceTokens) == 0 && len(n.SegmentFilters) == 0 {
 		errs["delivery_target"] = "one of topic, device_tokens, or segment_filters is required"
 	}
 
@@ -128,16 +128,28 @@ func (s *notificationService) Send(ctx context.Context, id uuid.UUID) error {
 	}
 
 	var sendErr error
-	if n.Topic != "" {
+	topic := ""
+	if n.Topic != nil {
+		topic = *n.Topic
+	}
+	title := ""
+	if n.Title != nil {
+		title = *n.Title
+	}
+	body := ""
+	if n.Content != nil {
+		body = *n.Content
+	}
+	if topic != "" {
 		_, sendErr = s.pusher.Send(ctx, firebase.Message{
-			Topic: n.Topic,
-			Title: n.Title,
-			Body:  n.Content,
+			Topic: topic,
+			Title: title,
+			Body:  body,
 		})
 	} else if len(n.DeviceTokens) > 0 {
 		var tokens []string
 		if jsonErr := json.Unmarshal(n.DeviceTokens, &tokens); jsonErr == nil && len(tokens) > 0 {
-			_, _, sendErr = s.pusher.SendMulticast(ctx, tokens, n.Title, n.Content, nil)
+			_, _, sendErr = s.pusher.SendMulticast(ctx, tokens, title, body, nil)
 		}
 	} else {
 		sendErr = s.sendBySegmentFilters(ctx, n)
@@ -160,11 +172,19 @@ func (s *notificationService) sendBySegmentFilters(ctx context.Context, n *domai
 	if len(topics) == 0 {
 		return domain.NewValidation(map[string]string{"segment_filters": "notification has no supported delivery target"})
 	}
+	notifTitle := ""
+	if n.Title != nil {
+		notifTitle = *n.Title
+	}
+	notifBody := ""
+	if n.Content != nil {
+		notifBody = *n.Content
+	}
 	for _, topic := range topics {
 		if _, err := s.pusher.Send(ctx, firebase.Message{
 			Topic: topic,
-			Title: n.Title,
-			Body:  n.Content,
+			Title: notifTitle,
+			Body:  notifBody,
 		}); err != nil {
 			return err
 		}
@@ -191,7 +211,7 @@ func topicsFromSegmentFilters(raw json.RawMessage) ([]string, error) {
 }
 
 func validateNotificationDelivery(n *domain.Notification) error {
-	if n.Topic != "" || len(n.DeviceTokens) > 0 {
+	if (n.Topic != nil && *n.Topic != "") || len(n.DeviceTokens) > 0 {
 		return nil
 	}
 

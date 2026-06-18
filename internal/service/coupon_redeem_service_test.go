@@ -62,7 +62,7 @@ func TestCouponService_RedeemCoupon_FallsBackToCouponLevelRedemption(t *testing.
 	ctx := context.Background()
 	couponID := uuid.New()
 	appUserID := uuid.New()
-	coupon := &domain.Coupon{ID: couponID, CouponCode: "SAVE10"}
+	coupon := &domain.Coupon{ID: couponID, CouponCode: strPtr("SAVE10")}
 
 	userRepo.On("FindByCouponAndUser", ctx, couponID, appUserID).Return((*domain.CouponUser)(nil), domain.NewNotFound("coupon not assigned to this user"))
 	repo.On("FindByID", ctx, couponID).Return(coupon, nil)
@@ -83,7 +83,7 @@ func TestCouponService_RedeemCoupon_FallbackDetectsAlreadyRedeemedCoupon(t *test
 	couponID := uuid.New()
 	appUserID := uuid.New()
 	redeemedAt := time.Now()
-	coupon := &domain.Coupon{ID: couponID, CouponCode: "SAVE10", RedeemedAt: &redeemedAt}
+	coupon := &domain.Coupon{ID: couponID, CouponCode: strPtr("SAVE10"), RedeemedAt: &redeemedAt}
 
 	userRepo.On("FindByCouponAndUser", ctx, couponID, appUserID).Return((*domain.CouponUser)(nil), domain.NewNotFound("coupon not assigned to this user"))
 	repo.On("FindByID", ctx, couponID).Return(coupon, nil)

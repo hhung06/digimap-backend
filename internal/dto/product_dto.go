@@ -11,7 +11,7 @@ import (
 type ProductCategoryResponse struct {
 	ID           uuid.UUID       `json:"id"`
 	VenueID      uuid.UUID       `json:"venue_id"`
-	ExternalID   string          `json:"external_id,omitempty"`
+	ExternalID   *string         `json:"external_id,omitempty"`
 	Name         string          `json:"name"`
 	Source       string          `json:"source"`
 	Localization json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
@@ -20,7 +20,7 @@ type ProductCategoryResponse struct {
 }
 
 type ProductCategoryRequest struct {
-	ExternalID   string          `json:"external_id"`
+	ExternalID   *string         `json:"external_id"`
 	Name         string          `json:"name" binding:"required"`
 	Source       string          `json:"source"`
 	Localization json.RawMessage `json:"localization" swaggertype:"object"`
@@ -29,17 +29,17 @@ type ProductCategoryRequest struct {
 type ProductAttachmentResponse struct {
 	ID        uuid.UUID `json:"id"`
 	ProductID uuid.UUID `json:"product_id"`
-	Title     string    `json:"title,omitempty"`
+	Title     *string   `json:"title,omitempty"`
 	FileType  string    `json:"file_type"`
-	File      string    `json:"file,omitempty"`
-	SourceURL string    `json:"source_url,omitempty"`
+	File      *string   `json:"file,omitempty"`
+	SourceURL *string   `json:"source_url,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type ProductAttachmentRequest struct {
-	Title     string `json:"title"`
-	File      string `json:"file"`
-	SourceURL string `json:"source_url"`
+	Title     *string `json:"title"`
+	File      *string `json:"file"`
+	SourceURL *string `json:"source_url"`
 }
 
 type ProductResponse struct {
@@ -47,14 +47,14 @@ type ProductResponse struct {
 	VenueID        uuid.UUID                   `json:"venue_id"`
 	LocationID     *uuid.UUID                  `json:"location_id,omitempty"`
 	MainCategoryID *uuid.UUID                  `json:"main_category_id,omitempty"`
-	ExternalID     string                      `json:"external_id,omitempty"`
-	Image          string                      `json:"image,omitempty"`
-	Name           string                      `json:"name,omitempty"`
-	Size           string                      `json:"size,omitempty"`
-	Price          string                      `json:"price,omitempty"`
-	OriginCountry  string                      `json:"origin_country,omitempty"`
-	Expiration     string                      `json:"expiration,omitempty"`
-	Description    string                      `json:"description,omitempty"`
+	ExternalID     *string                     `json:"external_id,omitempty"`
+	Image          *string                     `json:"image,omitempty"`
+	Name           *string                     `json:"name,omitempty"`
+	Size           *string                     `json:"size,omitempty"`
+	Price          *string                     `json:"price,omitempty"`
+	OriginCountry  *string                     `json:"origin_country,omitempty"`
+	Expiration     *string                     `json:"expiration,omitempty"`
+	Description    *string                     `json:"description,omitempty"`
 	Custom         json.RawMessage             `json:"custom,omitempty" swaggertype:"object"`
 	Localization   json.RawMessage             `json:"localization,omitempty" swaggertype:"object"`
 	Source         string                      `json:"source"`
@@ -68,14 +68,14 @@ type CreateProductRequest struct {
 	LocationID     *uuid.UUID      `json:"location_id"`
 	MainCategoryID *uuid.UUID      `json:"main_category_id"`
 	CategoryIDs    []uuid.UUID     `json:"category_ids"`
-	ExternalID     string          `json:"external_id"`
-	Image          string          `json:"image"`
-	Name           string          `json:"name"`
-	Size           string          `json:"size"`
-	Price          string          `json:"price"`
-	OriginCountry  string          `json:"origin_country"`
-	Expiration     string          `json:"expiration"`
-	Description    string          `json:"description"`
+	ExternalID     *string         `json:"external_id"`
+	Image          *string         `json:"image"`
+	Name           *string         `json:"name"`
+	Size           *string         `json:"size"`
+	Price          *string         `json:"price"`
+	OriginCountry  *string         `json:"origin_country"`
+	Expiration     *string         `json:"expiration"`
+	Description    *string         `json:"description"`
 	Custom         json.RawMessage `json:"custom" swaggertype:"object"`
 	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
 	Source         string          `json:"source"`
@@ -106,28 +106,28 @@ func (r UpdateProductRequest) ApplyTo(p *domain.Product) {
 		p.MainCategoryID = r.MainCategoryID
 	}
 	if r.Image != nil {
-		p.Image = *r.Image
+		p.Image = r.Image
 	}
 	if r.Name != nil {
-		p.Name = *r.Name
+		p.Name = r.Name
 	}
 	if r.ExternalID != nil {
-		p.ExternalID = *r.ExternalID
+		p.ExternalID = r.ExternalID
 	}
 	if r.Size != nil {
-		p.Size = *r.Size
+		p.Size = r.Size
 	}
 	if r.Price != nil {
-		p.Price = *r.Price
+		p.Price = r.Price
 	}
 	if r.OriginCountry != nil {
-		p.Country = *r.OriginCountry
+		p.Country = r.OriginCountry
 	}
 	if r.Expiration != nil {
-		p.Expiration = *r.Expiration
+		p.Expiration = r.Expiration
 	}
 	if r.Description != nil {
-		p.Description = *r.Description
+		p.Description = r.Description
 	}
 	if r.Custom != nil {
 		p.Custom = r.Custom

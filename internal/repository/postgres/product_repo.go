@@ -68,7 +68,7 @@ func (r *productRepo) CreateCategory(ctx context.Context, c *domain.ProductCateg
 		RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
-		c.ID, c.VenueID, nullStr(c.ExternalID), c.Name, c.Source, jsonOrNil(c.Localization),
+		c.ID, c.VenueID, c.ExternalID, c.Name, c.Source, jsonOrNil(c.Localization),
 	).Scan(&c.CreatedAt, &c.UpdatedAt)
 }
 
@@ -80,7 +80,7 @@ func (r *productRepo) UpdateCategory(ctx context.Context, c *domain.ProductCateg
 		RETURNING updated_at`
 
 	err := r.pool.QueryRow(ctx, q,
-		c.ID, nullStr(c.ExternalID), c.Name, c.Source, jsonOrNil(c.Localization),
+		c.ID, c.ExternalID, c.Name, c.Source, jsonOrNil(c.Localization),
 	).Scan(&c.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.NewNotFound("product category not found")
@@ -164,9 +164,9 @@ func (r *productRepo) Create(ctx context.Context, p *domain.Product) error {
 
 	return r.pool.QueryRow(ctx, q,
 		p.ID, uuidOrNil(p.VenueID), p.LocationID, p.MainCategoryID,
-		nullStr(p.Image), nullStr(p.Name), nullStr(p.ExternalID), nullStr(p.Size),
-		nullStr(p.Price), nullStr(p.Country), nullStr(p.Expiration),
-		nullStr(p.Description), jsonOrNil(p.Custom), jsonOrNil(p.Localization), p.Source,
+		p.Image, p.Name, p.ExternalID, p.Size,
+		p.Price, p.Country, p.Expiration,
+		p.Description, jsonOrNil(p.Custom), jsonOrNil(p.Localization), p.Source,
 	).Scan(&p.CreatedAt, &p.UpdatedAt)
 }
 
@@ -181,9 +181,9 @@ func (r *productRepo) Update(ctx context.Context, p *domain.Product) error {
 
 	err := r.pool.QueryRow(ctx, q,
 		p.ID, p.LocationID, p.MainCategoryID,
-		nullStr(p.Image), nullStr(p.Name), nullStr(p.ExternalID), nullStr(p.Size),
-		nullStr(p.Price), nullStr(p.Country), nullStr(p.Expiration),
-		nullStr(p.Description), jsonOrNil(p.Custom), jsonOrNil(p.Localization), p.Source,
+		p.Image, p.Name, p.ExternalID, p.Size,
+		p.Price, p.Country, p.Expiration,
+		p.Description, jsonOrNil(p.Custom), jsonOrNil(p.Localization), p.Source,
 	).Scan(&p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.NewNotFound("product not found")
@@ -259,7 +259,7 @@ func (r *productRepo) CreateAttachment(ctx context.Context, a *domain.ProductAtt
 		RETURNING created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, q,
-		a.ID, a.ProductID, nullStr(a.Title), a.FileType, nullStr(a.File), nullStr(a.SourceURL),
+		a.ID, a.ProductID, a.Title, a.FileType, a.File, a.SourceURL,
 	).Scan(&a.CreatedAt, &a.UpdatedAt)
 }
 
@@ -319,17 +319,15 @@ func (r *productRepo) loadProductCategories(ctx context.Context, productID uuid.
 
 func scanProductCategory(row pgx.Row) (*domain.ProductCategory, error) {
 	var c domain.ProductCategory
-	var extID *string
 	var localization []byte
 	var deletedAt *time.Time
 	err := row.Scan(
-		&c.ID, &c.VenueID, &extID, &c.Name, &c.Source, &localization,
+		&c.ID, &c.VenueID, &c.ExternalID, &c.Name, &c.Source, &localization,
 		&c.CreatedAt, &c.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	derefStr(&c.ExternalID, extID)
 	c.Localization = json.RawMessage(localization)
 	c.DeletedAt = deletedAt
 	return &c, nil
@@ -337,26 +335,17 @@ func scanProductCategory(row pgx.Row) (*domain.ProductCategory, error) {
 
 func scanProduct(row pgx.Row) (*domain.Product, error) {
 	var p domain.Product
-	var image, name, externalId, size, price, country, expiration, desc *string
 	var custom, localization []byte
 	var deletedAt *time.Time
 	err := row.Scan(
 		&p.ID, &p.VenueID, &p.LocationID, &p.MainCategoryID,
-		&image, &name, &externalId, &size, &price,
-		&country, &expiration, &desc, &custom, &localization, &p.Source,
+		&p.Image, &p.Name, &p.ExternalID, &p.Size, &p.Price,
+		&p.Country, &p.Expiration, &p.Description, &custom, &localization, &p.Source,
 		&p.CreatedAt, &p.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	derefStr(&p.Image, image)
-	derefStr(&p.Name, name)
-	derefStr(&p.ExternalID, externalId)
-	derefStr(&p.Size, size)
-	derefStr(&p.Price, price)
-	derefStr(&p.Country, country)
-	derefStr(&p.Expiration, expiration)
-	derefStr(&p.Description, desc)
 	p.Custom = json.RawMessage(custom)
 	p.Localization = json.RawMessage(localization)
 	p.DeletedAt = deletedAt
@@ -365,18 +354,14 @@ func scanProduct(row pgx.Row) (*domain.Product, error) {
 
 func scanProductAttachment(row pgx.Row) (*domain.ProductAttachment, error) {
 	var a domain.ProductAttachment
-	var title, file, sourceURL *string
 	var deletedAt *time.Time
 	err := row.Scan(
-		&a.ID, &a.ProductID, &title, &a.FileType, &file, &sourceURL,
+		&a.ID, &a.ProductID, &a.Title, &a.FileType, &a.File, &a.SourceURL,
 		&a.CreatedAt, &a.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	derefStr(&a.Title, title)
-	derefStr(&a.File, file)
-	derefStr(&a.SourceURL, sourceURL)
 	a.DeletedAt = deletedAt
 	return &a, nil
 }

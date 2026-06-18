@@ -10,9 +10,9 @@ import (
 type Coupon struct {
 	ID           uuid.UUID
 	VenueID      *uuid.UUID
-	ExternalID   string
-	CouponName   string
-	CouponCode   string
+	ExternalID   *string
+	CouponName   *string
+	CouponCode   *string
 	Status       string
 	IssuedAt     *time.Time
 	ExpiredAt    *time.Time

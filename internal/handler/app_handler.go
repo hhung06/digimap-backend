@@ -453,14 +453,15 @@ func (h *appHandler) SubmitSurveyResponse(c *gin.Context) {
 	}
 	resp := &domain.SurveyResponse{
 		SurveyID:   surveyID,
-		ExternalID: req.ExternalID,
+		ExternalID: &req.ExternalID,
 		Answers:    make([]*domain.SurveyAnswer, len(req.Answers)),
 	}
 	for i, a := range req.Answers {
+		answerText := a.AnswerText
 		resp.Answers[i] = &domain.SurveyAnswer{
 			QuestionID: a.QuestionID,
 			OptionID:   a.OptionID,
-			AnswerText: a.AnswerText,
+			AnswerText: &answerText,
 		}
 	}
 	if err := h.surveys.SubmitAppResponse(c.Request.Context(), middleware.GetVenueID(c), resp); err != nil {

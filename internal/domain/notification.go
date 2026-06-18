@@ -29,15 +29,15 @@ type Notification struct {
 	ID             uuid.UUID
 	VenueID        *uuid.UUID
 	SurveyID       *uuid.UUID
-	Title          string
-	Content        string
-	Topic          string
+	Title          *string
+	Content        *string
+	Topic          *string
 	Kind           int // 1=normal 2=survey (maps to `type` column)
 	Status         int // 1=sent 2=unsent
 	SendStatus     int // 0=pending 1=success 2=failed
 	SendType       int // 1=draft 2=scheduled 3=immediate
 	Data           json.RawMessage
-	LinkURL        string
+	LinkURL        *string
 	ScheduledAt    *time.Time
 	TargetApp      string
 	SegmentFilters json.RawMessage

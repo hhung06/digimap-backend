@@ -42,7 +42,7 @@ func TestSurveyService_Create_DefaultsStatus(t *testing.T) {
 	svc := newTestSurveyService(repo)
 
 	ctx := context.Background()
-	s := &domain.Survey{Title: "Customer Feedback"}
+	s := &domain.Survey{Title: strPtr("Customer Feedback")}
 
 	repo.On("Create", ctx, s).Return(nil)
 
@@ -57,7 +57,7 @@ func TestSurveyService_Create_DefaultsSource(t *testing.T) {
 	svc := newTestSurveyService(repo)
 
 	ctx := context.Background()
-	s := &domain.Survey{Title: "Customer Feedback"}
+	s := &domain.Survey{Title: strPtr("Customer Feedback")}
 
 	repo.On("Create", ctx, s).Return(nil)
 
@@ -75,7 +75,7 @@ func TestSurveyService_Get_Success(t *testing.T) {
 
 	ctx := context.Background()
 	id := uuid.New()
-	expected := &domain.Survey{ID: id, Title: "Customer Feedback"}
+	expected := &domain.Survey{ID: id, Title: strPtr("Customer Feedback")}
 
 	repo.On("FindByID", ctx, id).Return(expected, nil)
 
@@ -109,7 +109,7 @@ func TestSurveyService_List_Success(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	p := domain.Pagination{Page: 1, PageSize: 20}
-	expected := []*domain.Survey{{Title: "Survey A"}}
+	expected := []*domain.Survey{{Title: strPtr("Survey A")}}
 
 	repo.On("List", ctx, venueID, p).Return(expected, int64(1), nil)
 
@@ -178,7 +178,7 @@ func TestSurveyService_SubmitVenueResponse_Success(t *testing.T) {
 	questionID := uuid.New()
 	r := &domain.SurveyResponse{
 		SurveyID: surveyID,
-		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "hello"}},
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: strPtr("hello")}},
 	}
 	repo.On("FindByID", ctx, surveyID).Return(&domain.Survey{
 		ID:      surveyID,
@@ -284,7 +284,7 @@ func TestSurveyService_SubmitPublicResponse_RejectsQuestionOutsideSurvey(t *test
 
 	err := svc.SubmitPublicResponse(ctx, &domain.SurveyResponse{
 		SurveyID: surveyID,
-		Answers:  []*domain.SurveyAnswer{{QuestionID: otherQuestionID, AnswerText: "hello"}},
+		Answers:  []*domain.SurveyAnswer{{QuestionID: otherQuestionID, AnswerText: strPtr("hello")}},
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, domain.ErrValidation)
@@ -377,11 +377,11 @@ func TestSurveyService_SubmitPublicResponse_AllowsRepeatedPayloads(t *testing.T)
 	}
 	resp1 := &domain.SurveyResponse{
 		SurveyID: surveyID,
-		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "first"}},
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: strPtr("first")}},
 	}
 	resp2 := &domain.SurveyResponse{
 		SurveyID: surveyID,
-		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "first"}},
+		Answers:  []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: strPtr("first")}},
 	}
 
 	repo.On("FindByID", ctx, surveyID).Return(survey, nil).Twice()
@@ -426,8 +426,8 @@ func TestSurveyService_SubmitAppResponse_RejectsSurveyFromDifferentVenue(t *test
 
 	err := svc.SubmitAppResponse(ctx, venueID, &domain.SurveyResponse{
 		SurveyID:   surveyID,
-		ExternalID: "visitor-1",
-		Answers:    []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "hello"}},
+		ExternalID: strPtr("visitor-1"),
+		Answers:    []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: strPtr("hello")}},
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, domain.ErrValidation)
@@ -452,8 +452,8 @@ func TestSurveyService_SubmitAppResponse_PassesExternalIDToRepository(t *testing
 	}
 	resp := &domain.SurveyResponse{
 		SurveyID:   surveyID,
-		ExternalID: "visitor-1",
-		Answers:    []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: "hello"}},
+		ExternalID: strPtr("visitor-1"),
+		Answers:    []*domain.SurveyAnswer{{QuestionID: questionID, AnswerText: strPtr("hello")}},
 	}
 
 	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
@@ -474,8 +474,8 @@ func TestSurveyService_Create_ActiveCMSCreatesImmediateNotification(t *testing.T
 	venueID := uuid.New()
 	userID := uuid.New()
 	s := &domain.Survey{
-		Title:          "Customer Feedback",
-		Content:        "Please answer",
+		Title: strPtr("Customer Feedback"),
+		Content: strPtr("Please answer"),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
 		Status:         domain.SurveyStatusActive,
@@ -512,8 +512,8 @@ func TestSurveyService_Create_ActiveCMSRejectsUnsupportedSegmentFilters(t *testi
 	venueID := uuid.New()
 	userID := uuid.New()
 	s := &domain.Survey{
-		Title:          "Customer Feedback",
-		Content:        "Please answer",
+		Title: strPtr("Customer Feedback"),
+		Content: strPtr("Please answer"),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
 		Status:         domain.SurveyStatusActive,
@@ -544,8 +544,8 @@ func TestSurveyService_Create_ActiveCMSCreatesScheduledNotification(t *testing.T
 	userID := uuid.New()
 	startAt := time.Now().Add(time.Hour)
 	s := &domain.Survey{
-		Title:          "Customer Feedback",
-		Content:        "Please answer",
+		Title: strPtr("Customer Feedback"),
+		Content: strPtr("Please answer"),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
 		Status:         domain.SurveyStatusActive,
@@ -592,8 +592,8 @@ func TestSurveyService_Update_TransitionToActiveCreatesNotification(t *testing.T
 		ID:             surveyID,
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
-		Title:          "Activated survey",
-		Content:        "Now live",
+		Title: strPtr("Activated survey"),
+		Content: strPtr("Now live"),
 		Status:         domain.SurveyStatusActive,
 		Source:         domain.SurveySourceCMS,
 		StartDate:      ptrTime(time.Now().Add(-time.Minute)),
@@ -628,8 +628,8 @@ func TestSurveyService_ProcessScheduledTransitions_ActivatesAndCloses(t *testing
 		ID:             uuid.New(),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
-		Title:          "Activate me",
-		Content:        "Now",
+		Title: strPtr("Activate me"),
+		Content: strPtr("Now"),
 		Status:         domain.SurveyStatusInactive,
 		Source:         domain.SurveySourceCMS,
 		StartDate:      &now,
@@ -673,7 +673,7 @@ func TestSurveyService_Create_DefaultsInvariant(t *testing.T) {
 
 		ctx := context.Background()
 		s := &domain.Survey{
-			Title:  rapid.StringN(1, 50, 50).Draw(rt, "title"),
+			Title:  func() *string { s := rapid.StringN(1, 50, 50).Draw(rt, "title"); return &s }(),
 			Status: 0, // always zero to test defaulting
 			Source: 0,
 		}

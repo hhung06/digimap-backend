@@ -10,7 +10,7 @@ import (
 type ProductCategory struct {
 	ID           uuid.UUID
 	VenueID      uuid.UUID
-	ExternalID   string
+	ExternalID   *string
 	Name         string
 	Source       string
 	Localization json.RawMessage
@@ -24,14 +24,14 @@ type Product struct {
 	VenueID        uuid.UUID
 	LocationID     *uuid.UUID
 	MainCategoryID *uuid.UUID
-	ExternalID     string
-	Image          string
-	Name           string
-	Size           string
-	Price          string
-	Country        string
-	Expiration     string
-	Description    string
+	ExternalID     *string
+	Image          *string
+	Name           *string
+	Size           *string
+	Price          *string
+	Country        *string
+	Expiration     *string
+	Description    *string
 	Custom         json.RawMessage
 	Localization   json.RawMessage
 	Source         string
@@ -46,10 +46,10 @@ type Product struct {
 type ProductAttachment struct {
 	ID        uuid.UUID
 	ProductID uuid.UUID
-	Title     string
+	Title     *string
 	FileType  string
-	File      string
-	SourceURL string
+	File      *string
+	SourceURL *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt *time.Time

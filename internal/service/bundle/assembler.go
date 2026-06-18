@@ -81,7 +81,11 @@ func prepareSearchData(lang string, locations []*domain.Location, products []*do
 		if !isJa && customInt(custom, "exhibitor_english_status") != 1 {
 			continue
 		}
-		name := localizedProductName(p.Localization, p.Name, lang)
+		pName := ""
+		if p.Name != nil {
+			pName = *p.Name
+		}
+		name := localizedProductName(p.Localization, pName, lang)
 		prods = append(prods, searchProduct{
 			ID:     p.ID.String(),
 			Name:   name,
@@ -183,9 +187,13 @@ func prepareProductData(lang string, products []*domain.Product) []productItem {
 		if !isJa && (section != 2 || engStatus != 1) {
 			continue
 		}
+		pName2 := ""
+		if p.Name != nil {
+			pName2 = *p.Name
+		}
 		item := productItem{
 			ID:     p.ID.String(),
-			Name:   localizedProductName(p.Localization, p.Name, lang),
+			Name:   localizedProductName(p.Localization, pName2, lang),
 			Custom: stripNilKeys(custom),
 		}
 		if p.LocationID != nil {
@@ -367,9 +375,13 @@ func prepareProductSearchOptions(
 	var groupedCats []map[string]any
 	for _, c := range productCats {
 		name := localizedProductCatName(c.Localization, c.Name, lang)
-		item := map[string]any{"id": c.ID.String(), "name": name, "external_id": c.ExternalID}
+		extID := ""
+		if c.ExternalID != nil {
+			extID = *c.ExternalID
+		}
+		item := map[string]any{"id": c.ID.String(), "name": name, "external_id": extID}
 		allCats = append(allCats, item)
-		if strings.HasSuffix(c.ExternalID, "_0") {
+		if strings.HasSuffix(extID, "_0") {
 			groupedCats = append(groupedCats, item)
 		}
 	}

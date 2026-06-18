@@ -110,7 +110,11 @@ func (s *productService) ListAttachments(ctx context.Context, productID uuid.UUI
 }
 
 func (s *productService) CreateAttachment(ctx context.Context, a *domain.ProductAttachment) error {
-	a.FileType = detectFileType(a.File)
+	fileName := ""
+	if a.File != nil {
+		fileName = *a.File
+	}
+	a.FileType = detectFileType(fileName)
 	return s.repo.CreateAttachment(ctx, a)
 }
 

@@ -495,8 +495,9 @@ func (h *surveyHandler) SubmitResponse(c *gin.Context) {
 	}
 	resp := &domain.SurveyResponse{SurveyID: surveyID}
 	for _, a := range req.Answers {
+		answerText := a.AnswerText
 		resp.Answers = append(resp.Answers, &domain.SurveyAnswer{
-			QuestionID: a.QuestionID, OptionID: a.OptionID, AnswerText: a.AnswerText,
+			QuestionID: a.QuestionID, OptionID: a.OptionID, AnswerText: &answerText,
 		})
 	}
 	if err := h.svc.SubmitVenueResponse(c.Request.Context(), venueID, resp); err != nil {
