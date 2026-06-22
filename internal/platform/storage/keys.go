@@ -1,6 +1,11 @@
 package storage
 
-import "github.com/google/uuid"
+import (
+	"path"
+	"strings"
+
+	"github.com/google/uuid"
+)
 
 // Key builders mirror Django's generate_object_key (indoormap-backend/utils/s3services.py:32).
 // All keys are prefixed with env (e.g., "production", "staging", "local").
@@ -45,4 +50,59 @@ func GlobalThemeKey(env, name string) string {
 // Django: {env}/venue_themes/custom/{venue_id}/{name}.json
 func CustomThemeKey(env string, venueID uuid.UUID, name string) string {
 	return env + "/venue_themes/custom/" + venueID.String() + "/" + name + ".json"
+}
+
+// MediaKey returns an immutable key for one backend-owned media upload.
+func MediaKey(env, entity string, recordID uuid.UUID, field string, uploadID uuid.UUID, ext string) string {
+	if !isCanonicalMediaSegment(env) || !isCanonicalMediaSegment(entity) || !isCanonicalMediaSegment(field) {
+		return ""
+	}
+	normalizedExt, ok := normalizeMediaExtension(ext)
+	if !ok {
+		return ""
+	}
+	return path.Join(env, "media", entity, recordID.String(), field, uploadID.String()+normalizedExt)
+}
+
+// OwnsMediaKey reports whether key belongs to the specified record field.
+func OwnsMediaKey(env, entity string, recordID uuid.UUID, field, key string) bool {
+	if !isCanonicalMediaSegment(env) || !isCanonicalMediaSegment(entity) || !isCanonicalMediaSegment(field) {
+		return false
+	}
+	parts := strings.Split(key, "/")
+	if len(parts) != 6 || parts[0] != env || parts[1] != "media" || parts[2] != entity || parts[4] != field {
+		return false
+	}
+	keyRecordID, err := uuid.Parse(parts[3])
+	if err != nil || keyRecordID != recordID || keyRecordID.String() != parts[3] {
+		return false
+	}
+	nameParts := strings.Split(parts[5], ".")
+	if len(nameParts) != 2 {
+		return false
+	}
+	uploadID, err := uuid.Parse(nameParts[0])
+	if err != nil || uploadID.String() != nameParts[0] {
+		return false
+	}
+	normalizedExt, ok := normalizeMediaExtension(nameParts[1])
+	return ok && normalizedExt == "."+nameParts[1]
+}
+
+func isCanonicalMediaSegment(segment string) bool {
+	return segment != "" && segment != "." && segment != ".." &&
+		!strings.ContainsAny(segment, `/\`) && path.Clean(segment) == segment
+}
+
+func normalizeMediaExtension(ext string) (string, bool) {
+	ext = strings.TrimPrefix(ext, ".")
+	if ext == "" {
+		return "", false
+	}
+	for _, r := range ext {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') {
+			return "", false
+		}
+	}
+	return "." + strings.ToLower(ext), true
 }

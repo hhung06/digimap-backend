@@ -4,6 +4,7 @@ package mocks
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -602,6 +603,10 @@ func (m *StorerMock) PresignUpload(ctx context.Context, key, contentType string,
 func (m *StorerMock) PresignDownload(ctx context.Context, key string, ttl time.Duration) (string, error) {
 	args := m.Called(ctx, key, ttl)
 	return args.String(0), args.Error(1)
+}
+
+func (m *StorerMock) PutMedia(ctx context.Context, key, contentType string, contentLength int64, body io.Reader) error {
+	return m.Called(ctx, key, contentType, contentLength, body).Error(0)
 }
 
 func (m *StorerMock) PutObject(ctx context.Context, key string, data []byte) error {

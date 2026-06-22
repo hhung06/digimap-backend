@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
@@ -20,6 +19,7 @@ import (
 type Storer interface {
 	PresignUpload(ctx context.Context, key string, contentType string, ttl time.Duration) (string, error)
 	PresignDownload(ctx context.Context, key string, ttl time.Duration) (string, error)
+	PutMedia(ctx context.Context, key, contentType string, contentLength int64, body io.Reader) error
 	// PutObject uploads data directly from the server (no presigned URL). ContentType: application/json.
 	PutObject(ctx context.Context, key string, data []byte) error
 	// PutEncrypted uploads AES-encrypted + gzip-compressed data.
@@ -33,27 +33,31 @@ type Storer interface {
 	DeleteObject(ctx context.Context, key string) error
 }
 
+type putObjectAPI interface {
+	PutObject(context.Context, *s3.PutObjectInput, ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+}
+
 type s3Storer struct {
 	client *s3.PresignClient
 	direct *s3.Client
+	media  putObjectAPI
 	bucket string
 }
 
 // NewS3Storer creates a Storer backed by a single AWS S3 bucket.
 // Call once per logical bucket (assets, snapshot, sync).
 func NewS3Storer(cfg config.AWSConfig, bucket string) (Storer, error) {
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(),
-		awsconfig.WithRegion(cfg.Region),
-		awsconfig.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
-		),
-	)
+	awsCfg, err := loadAWSConfig(context.Background(), cfg)
 	if err != nil {
 		return nil, fmt.Errorf("load aws config: %w", err)
 	}
 	direct := s3.NewFromConfig(awsCfg)
 	presign := s3.NewPresignClient(direct)
-	return &s3Storer{client: presign, direct: direct, bucket: bucket}, nil
+	return &s3Storer{client: presign, direct: direct, media: direct, bucket: bucket}, nil
+}
+
+func loadAWSConfig(ctx context.Context, cfg config.AWSConfig) (aws.Config, error) {
+	return awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(cfg.Region))
 }
 
 func (s *s3Storer) PresignUpload(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
@@ -88,6 +92,20 @@ func (s *s3Storer) PutObject(ctx context.Context, key string, data []byte) error
 	})
 	if err != nil {
 		return fmt.Errorf("s3 put %s: %w", key, err)
+	}
+	return nil
+}
+
+func (s *s3Storer) PutMedia(ctx context.Context, key, contentType string, contentLength int64, body io.Reader) error {
+	_, err := s.media.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(key),
+		Body:          body,
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(contentLength),
+	})
+	if err != nil {
+		return fmt.Errorf("s3 put media %s: %w", key, err)
 	}
 	return nil
 }
@@ -150,6 +168,11 @@ func (s *LogStorer) PresignDownload(_ context.Context, key string, _ time.Durati
 
 func (s *LogStorer) PutObject(_ context.Context, key string, _ []byte) error {
 	fmt.Printf("[DEV S3] PutObject key=%s\n", key)
+	return nil
+}
+
+func (s *LogStorer) PutMedia(_ context.Context, key, contentType string, contentLength int64, _ io.Reader) error {
+	fmt.Printf("[DEV S3] PutMedia key=%s content_type=%s len=%d\n", key, contentType, contentLength)
 	return nil
 }
 
