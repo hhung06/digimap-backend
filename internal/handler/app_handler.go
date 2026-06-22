@@ -11,6 +11,7 @@ import (
 	"github.com/hhung06/digimap-backend/internal/domain"
 	"github.com/hhung06/digimap-backend/internal/dto"
 	"github.com/hhung06/digimap-backend/internal/handler/middleware"
+	"github.com/hhung06/digimap-backend/internal/localization"
 	search "github.com/hhung06/digimap-backend/internal/platform/search"
 	"github.com/hhung06/digimap-backend/internal/repository"
 	"github.com/hhung06/digimap-backend/internal/service"
@@ -233,9 +234,10 @@ func (h *appHandler) ListProductPlazas(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	lang := middleware.GetLang(c)
 	items := make([]dto.ProductPlazaResponse, len(plazas))
 	for i, p := range plazas {
-		items[i] = dto.ProductPlazaToResponse(p)
+		items[i] = localizedProductPlazaResponse(p, lang)
 	}
 	c.JSON(http.StatusOK, dto.OK(items))
 }
@@ -251,7 +253,7 @@ func (h *appHandler) GetProductPlaza(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.ProductPlazaToResponse(plaza)))
+	c.JSON(http.StatusOK, dto.OK(localizedProductPlazaResponse(plaza, middleware.GetLang(c))))
 }
 
 func (h *appHandler) ListArticles(c *gin.Context) {
@@ -262,9 +264,10 @@ func (h *appHandler) ListArticles(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	lang := middleware.GetLang(c)
 	items := make([]dto.ArticleResponse, len(articles))
 	for i, a := range articles {
-		items[i] = dto.ArticleToResponse(a)
+		items[i] = localizedArticleResponse(a, lang)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
@@ -280,7 +283,7 @@ func (h *appHandler) GetArticle(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.ArticleToResponse(a)))
+	c.JSON(http.StatusOK, dto.OK(localizedArticleResponse(a, middleware.GetLang(c))))
 }
 
 func (h *appHandler) ListFeaturedZones(c *gin.Context) {
@@ -577,4 +580,33 @@ func (h *appHandler) LatestBundle(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(gin.H{"version": av.Version.String()}))
+}
+
+// localizedProductPlazaResponse resolves name/description from the localization blob
+// for public app reads. Falls back to the primary-language column values.
+func localizedProductPlazaResponse(p *domain.ProductPlaza, lang string) dto.ProductPlazaResponse {
+	blob := localization.DecodeBlob(p.Localization)
+	resp := dto.ProductPlazaToResponse(p)
+	resp.Name = localization.Field(blob, "name", lang, p.Name)
+	resp.Description = localization.Field(blob, "description", lang, p.Description)
+	resp.Localization = nil // omit raw blob from public response
+	return resp
+}
+
+// localizedArticleResponse resolves title/content/label from the localization blob
+// for public app reads. Falls back to the primary-language column values.
+func localizedArticleResponse(a *domain.Article, lang string) dto.ArticleResponse {
+	blob := localization.DecodeBlob(a.Localization)
+	resp := dto.ArticleToResponse(a)
+	resp.Title = localization.Field(blob, "title", lang, a.Title)
+	if a.Label != nil {
+		resolved := localization.Field(blob, "label", lang, *a.Label)
+		resp.Label = &resolved
+	}
+	if a.Content != nil {
+		resolved := localization.Field(blob, "content", lang, *a.Content)
+		resp.Content = &resolved
+	}
+	resp.Localization = nil // omit raw blob from public response
+	return resp
 }

@@ -18,7 +18,7 @@ func NewProductPlazaRepository(pool *pgxpool.Pool) repository.ProductPlazaReposi
 	return &productPlazaRepo{pool: pool}
 }
 
-const productPlazaSelectCols = `id, venue_id, name, description, location_id, created_at, updated_at`
+const productPlazaSelectCols = `id, venue_id, name, description, localization, location_id, created_at, updated_at`
 
 func (r *productPlazaRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error) {
 	q := `SELECT ` + productPlazaSelectCols + ` FROM product_plazas WHERE id = $1 AND deleted_at IS NULL`
@@ -53,18 +53,18 @@ func (r *productPlazaRepo) Create(ctx context.Context, p *domain.ProductPlaza) e
 		p.ID = newID()
 	}
 	const q = `
-		INSERT INTO product_plazas (id, venue_id, name, description, location_id)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO product_plazas (id, venue_id, name, description, localization, location_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING created_at, updated_at`
-	return r.pool.QueryRow(ctx, q, p.ID, p.VenueID, p.Name, p.Description, p.LocationID).Scan(&p.CreatedAt, &p.UpdatedAt)
+	return r.pool.QueryRow(ctx, q, p.ID, p.VenueID, p.Name, p.Description, p.Localization, p.LocationID).Scan(&p.CreatedAt, &p.UpdatedAt)
 }
 
 func (r *productPlazaRepo) Update(ctx context.Context, p *domain.ProductPlaza) error {
 	const q = `
-		UPDATE product_plazas SET name = $2, description = $3, location_id = $4
+		UPDATE product_plazas SET name = $2, description = $3, localization = $4, location_id = $5
 		WHERE id = $1 AND deleted_at IS NULL
 		RETURNING updated_at`
-	err := r.pool.QueryRow(ctx, q, p.ID, p.Name, p.Description, p.LocationID).Scan(&p.UpdatedAt)
+	err := r.pool.QueryRow(ctx, q, p.ID, p.Name, p.Description, p.Localization, p.LocationID).Scan(&p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.NewNotFound("product plaza not found")
 	}
@@ -77,6 +77,6 @@ func (r *productPlazaRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 func scanProductPlaza(row scanner) (*domain.ProductPlaza, error) {
 	var p domain.ProductPlaza
-	err := row.Scan(&p.ID, &p.VenueID, &p.Name, &p.Description, &p.LocationID, &p.CreatedAt, &p.UpdatedAt)
+	err := row.Scan(&p.ID, &p.VenueID, &p.Name, &p.Description, &p.Localization, &p.LocationID, &p.CreatedAt, &p.UpdatedAt)
 	return &p, err
 }

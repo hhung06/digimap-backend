@@ -46,10 +46,11 @@ func (h *productPlazaHandler) Create(c *gin.Context) {
 		return
 	}
 	p, err := h.svc.Create(c.Request.Context(), service.CreateProductPlazaInput{
-		VenueID:     venueID,
-		Name:        req.Name,
-		Description: req.Description,
-		LocationID:  req.LocationID,
+		VenueID:      venueID,
+		Name:         req.Name,
+		Description:  req.Description,
+		Localization: req.Localization,
+		LocationID:   req.LocationID,
 	})
 	if err != nil {
 		respondError(c, err)
@@ -70,9 +71,10 @@ func (h *productPlazaHandler) Update(c *gin.Context) {
 		return
 	}
 	p, err := h.svc.Update(c.Request.Context(), id, service.CreateProductPlazaInput{
-		Name:        req.Name,
-		Description: req.Description,
-		LocationID:  req.LocationID,
+		Name:         req.Name,
+		Description:  req.Description,
+		Localization: req.Localization,
+		LocationID:   req.LocationID,
 	})
 	if err != nil {
 		respondError(c, err)

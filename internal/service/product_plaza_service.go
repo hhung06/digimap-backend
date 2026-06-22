@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 
@@ -10,10 +11,11 @@ import (
 )
 
 type CreateProductPlazaInput struct {
-	VenueID     uuid.UUID
-	Name        string
-	Description string
-	LocationID  *uuid.UUID
+	VenueID      uuid.UUID
+	Name         string
+	Description  string
+	Localization json.RawMessage
+	LocationID   *uuid.UUID
 }
 
 type ProductPlazaService interface {
@@ -40,10 +42,11 @@ func (s *productPlazaService) Get(ctx context.Context, id uuid.UUID) (*domain.Pr
 
 func (s *productPlazaService) Create(ctx context.Context, in CreateProductPlazaInput) (*domain.ProductPlaza, error) {
 	p := &domain.ProductPlaza{
-		VenueID:     in.VenueID,
-		Name:        in.Name,
-		Description: in.Description,
-		LocationID:  in.LocationID,
+		VenueID:      in.VenueID,
+		Name:         in.Name,
+		Description:  in.Description,
+		Localization: in.Localization,
+		LocationID:   in.LocationID,
 	}
 	if err := s.repo.Create(ctx, p); err != nil {
 		return nil, err
@@ -59,6 +62,9 @@ func (s *productPlazaService) Update(ctx context.Context, id uuid.UUID, in Creat
 	p.Name = in.Name
 	p.Description = in.Description
 	p.LocationID = in.LocationID
+	if in.Localization != nil {
+		p.Localization = in.Localization
+	}
 	if err := s.repo.Update(ctx, p); err != nil {
 		return nil, err
 	}
