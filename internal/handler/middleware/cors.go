@@ -21,6 +21,7 @@ func CORS(cfg config.AppConfig) gin.HandlerFunc {
 	corsConfig.AllowHeaders = []string{
 		"Origin", "Content-Type", "Accept", "Authorization",
 		"Cache-Control", "X-Requested-With", "X-Request-ID", "X-Public-Key",
+		"X-Lang-Code",
 	}
 	corsConfig.ExposeHeaders = []string{"X-Request-ID"}
 	corsConfig.AllowCredentials = !corsConfig.AllowAllOrigins

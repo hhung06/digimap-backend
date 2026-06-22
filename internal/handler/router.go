@@ -87,7 +87,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	r.GET("/version", versionHandler)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	v1 := r.Group("/api/v1")
+	v1 := r.Group("/api/v1", middleware.LangCode())
 
 	// Rate limiters (Redis-backed, shared across replicas)
 	publicRL := middleware.RateLimitByIP(deps.RedisClient, "120-M") // 120 req/min per IP for public endpoints
