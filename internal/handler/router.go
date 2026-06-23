@@ -32,6 +32,7 @@ type Dependencies struct {
 	LocationCategoryService service.LocationCategoryService
 	LocationService         service.LocationService
 	ProductService          service.ProductService
+	MediaService            service.MediaService
 	StorageService          service.StorageService
 	EventService            service.EventService
 	UserService             service.UserService

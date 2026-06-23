@@ -172,6 +172,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	snapshotSvc := service.NewSnapshotService(snapshotRepo, venueRepo, languageRepo, locationRepo, locationCategoryRepo, productRepo, themeRepo, snapshotStorer, assetStorer, invalidator, appVersionSvc, cfg.App.Environment, searcher, logger)
 	locationSvc := service.NewLocationService(locationRepo, venueRepo, assetStorer, invalidator, appVersionSvc, cfg.App.Environment)
 	productSvc := service.NewProductService(productRepo)
+	mediaSvc := service.NewMediaService(assetStorer, cfg.App.Environment)
 	storageSvc := service.NewStorageService(assetStorer)
 	eventSvc := service.NewEventService(eventRepo)
 	userSvc := service.NewUserService(userRepo, mailer)
@@ -206,6 +207,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		LocationCategoryService: locationCategorySvc,
 		LocationService:         locationSvc,
 		ProductService:          productSvc,
+		MediaService:            mediaSvc,
 		StorageService:          storageSvc,
 		EventService:            eventSvc,
 		UserService:             userSvc,
