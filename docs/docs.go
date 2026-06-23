@@ -2881,7 +2881,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.ArticleRequest"
+                            "$ref": "#/definitions/dto.UpdateArticleRequest"
                         }
                     }
                 ],
@@ -11209,6 +11209,9 @@ const docTemplate = `{
                 "image": {
                     "type": "string"
                 },
+                "image_url": {
+                    "type": "string"
+                },
                 "sort_order": {
                     "type": "integer"
                 },
@@ -11248,10 +11251,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "published_period_end": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-30"
                 },
                 "published_period_start": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-01"
                 },
                 "status": {
                     "type": "string"
@@ -11301,10 +11308,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "published_period_end": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-30"
                 },
                 "published_period_start": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-01"
                 },
                 "status": {
                     "type": "string"
@@ -11664,6 +11675,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "is_used": {
+                    "type": "boolean"
+                },
                 "issued_at": {
                     "type": "string"
                 },
@@ -11884,6 +11898,10 @@ const docTemplate = `{
         },
         "dto.CreateNotificationRequest": {
             "type": "object",
+            "required": [
+                "content",
+                "title"
+            ],
             "properties": {
                 "content": {
                     "type": "string"
@@ -12603,6 +12621,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "parent_id": {
+                    "type": "string"
+                },
                 "short_name": {
                     "type": "string"
                 },
@@ -12653,6 +12674,12 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "parent": {
+                    "$ref": "#/definitions/dto.LocationCategorySummaryResponse"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
                 "short_name": {
                     "type": "string"
                 },
@@ -12662,10 +12689,54 @@ const docTemplate = `{
                 "source": {
                     "type": "string"
                 },
+                "subcategories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LocationCategorySummaryResponse"
+                    }
+                },
                 "type": {
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                },
+                "venue_id": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.LocationCategorySummaryResponse": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "sort_index": {
+                    "type": "integer"
+                },
+                "type": {
                     "type": "string"
                 },
                 "venue_id": {
@@ -13601,6 +13672,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "external_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -13649,8 +13723,14 @@ const docTemplate = `{
         "dto.TokenResponse": {
             "type": "object",
             "properties": {
+                "access_expires_in": {
+                    "type": "integer"
+                },
                 "access_token": {
                     "type": "string"
+                },
+                "refresh_expires_in": {
+                    "type": "integer"
                 },
                 "refresh_token": {
                     "type": "string"
@@ -13689,10 +13769,65 @@ const docTemplate = `{
                 "device_id": {
                     "type": "string"
                 },
+                "origin": {
+                    "type": "string",
+                    "enum": [
+                        "product",
+                        "exhibitor"
+                    ]
+                },
                 "term": {
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdateArticleRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "localization": {
+                    "type": "object"
+                },
+                "location_id": {
+                    "type": "string"
+                },
+                "navigate": {
+                    "type": "string"
+                },
+                "placement": {
+                    "type": "string"
+                },
+                "published_at": {
+                    "type": "string"
+                },
+                "published_period_end": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-30"
+                },
+                "published_period_start": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-01"
+                },
+                "remove_images": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }

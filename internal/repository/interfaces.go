@@ -265,6 +265,7 @@ type ArticleRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Article, error)
 	Create(ctx context.Context, a *domain.Article) error
 	Update(ctx context.Context, a *domain.Article) error
+	UpdateWithImages(ctx context.Context, a *domain.Article, change domain.ArticleMediaChange) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	CreateImage(ctx context.Context, img *domain.ArticleImage) error
 	DeleteImage(ctx context.Context, id uuid.UUID) error

@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -12,11 +14,16 @@ import (
 )
 
 type articleHandler struct {
-	svc service.ArticleService
+	svc      service.ArticleService
+	mediaSvc service.MediaService
 }
 
-func newArticleHandler(svc service.ArticleService) *articleHandler {
-	return &articleHandler{svc: svc}
+func newArticleHandler(svc service.ArticleService, mediaSvc ...service.MediaService) *articleHandler {
+	var media service.MediaService
+	if len(mediaSvc) > 0 {
+		media = mediaSvc[0]
+	}
+	return &articleHandler{svc: svc, mediaSvc: media}
 }
 
 // @Summary     List articles
@@ -45,7 +52,7 @@ func (h *articleHandler) List(c *gin.Context) {
 	}
 	items := make([]dto.ArticleResponse, len(articles))
 	for i, a := range articles {
-		items[i] = dto.ArticleToResponse(a)
+		items[i] = h.articleResponse(c.Request.Context(), a)
 	}
 	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
@@ -73,7 +80,7 @@ func (h *articleHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.ArticleToResponse(a)))
+	c.JSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Create article
@@ -104,17 +111,17 @@ func (h *articleHandler) Create(c *gin.Context) {
 		VenueID: &venueID, ExternalID: req.ExternalID, LocationID: req.LocationID,
 		Placement: req.Placement, Navigate: req.Navigate,
 		Title: req.Title, Label: req.Label, Content: req.Content,
-		Status: req.Status,
-		PublishedAt: req.PublishedAt,
-		PublishedPeriodStart: req.PublishedPeriodStart,
-		PublishedPeriodEnd:   req.PublishedPeriodEnd,
-		Localization: req.Localization,
+		Status:               req.Status,
+		PublishedAt:          req.PublishedAt,
+		PublishedPeriodStart: dto.DateToTimePtr(req.PublishedPeriodStart),
+		PublishedPeriodEnd:   dto.DateToTimePtr(req.PublishedPeriodEnd),
+		Localization:         req.Localization,
 	}
 	if err := h.svc.Create(c.Request.Context(), a); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, dto.OK(dto.ArticleToResponse(a)))
+	c.JSON(http.StatusCreated, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Update article
@@ -125,7 +132,7 @@ func (h *articleHandler) Create(c *gin.Context) {
 // @Security    BearerAuth
 // @Param       id        path     string               true "Venue ID"
 // @Param       articleID path     string               true "Article ID"
-// @Param       body      body     dto.ArticleRequest   true "Article details"
+// @Param       body      body     dto.UpdateArticleRequest true "Article details"
 // @Success     200       {object} dto.Response{data=dto.ArticleResponse}
 // @Failure     400       {object} dto.Response
 // @Failure     401       {object} dto.Response
@@ -135,6 +142,10 @@ func (h *articleHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("articleID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid article id"))
+		return
+	}
+	if isMultipartRequest(c) {
+		h.updateMultipart(c, id)
 		return
 	}
 	var req dto.UpdateArticleRequest
@@ -152,7 +163,59 @@ func (h *articleHandler) Update(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.ArticleToResponse(a)))
+	c.JSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
+}
+
+func (h *articleHandler) updateMultipart(c *gin.Context, id uuid.UUID) {
+	var req dto.UpdateArticleRequest
+	if err := bindMultipartData(c, &req, 1<<20); err != nil {
+		respondError(c, err)
+		return
+	}
+	files, hasFiles, err := multipartFiles(c, "images")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	removeImages := req.RemoveImages != nil && *req.RemoveImages
+	if removeImages && hasFiles {
+		respondError(c, domain.NewValidation(map[string]string{"images": "cannot upload images when remove_images is true"}))
+		return
+	}
+
+	a, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	req.ApplyTo(a)
+
+	if hasFiles {
+		uploads := make([]service.MediaUpload, 0, len(files))
+		for _, file := range files {
+			upload, closer, err := mediaUpload(file)
+			if err != nil {
+				respondError(c, err)
+				return
+			}
+			defer closer.Close()
+			uploads = append(uploads, upload)
+		}
+		if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.ArticleMediaReplacement{Replace: true, Uploads: uploads}); err != nil {
+			respondError(c, err)
+			return
+		}
+	} else if removeImages {
+		if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.ArticleMediaReplacement{Replace: true, Remove: true}); err != nil {
+			respondError(c, err)
+			return
+		}
+	} else if err := h.svc.Update(c.Request.Context(), a); err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Delete article
@@ -212,7 +275,12 @@ func (h *articleHandler) CreateImage(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, dto.OK(dto.ArticleImageToResponse(img)))
+	resp := dto.ArticleImageToResponse(img)
+	if h.mediaSvc != nil {
+		target := service.MediaTarget{Entity: "articles", RecordID: img.ArticleID, Field: "images"}
+		resp.ImageURL = h.mediaSvc.URL(c.Request.Context(), target, img.Image)
+	}
+	c.JSON(http.StatusCreated, dto.OK(resp))
 }
 
 // @Summary     Delete article image
@@ -239,4 +307,20 @@ func (h *articleHandler) DeleteImage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func isMultipartRequest(c *gin.Context) bool {
+	return strings.HasPrefix(strings.ToLower(c.GetHeader("Content-Type")), "multipart/form-data")
+}
+
+func (h *articleHandler) articleResponse(ctx context.Context, a *domain.Article) dto.ArticleResponse {
+	resp := dto.ArticleToResponse(a)
+	if h.mediaSvc == nil || a == nil {
+		return resp
+	}
+	target := service.MediaTarget{Entity: "articles", RecordID: a.ID, Field: "images"}
+	for i := range resp.Images {
+		resp.Images[i].ImageURL = h.mediaSvc.URL(ctx, target, resp.Images[i].Image)
+	}
+	return resp
 }

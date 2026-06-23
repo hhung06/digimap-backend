@@ -1511,6 +1511,10 @@ func (m *ArticleRepository) Update(ctx context.Context, a *domain.Article) error
 	return m.Called(ctx, a).Error(0)
 }
 
+func (m *ArticleRepository) UpdateWithImages(ctx context.Context, a *domain.Article, change domain.ArticleMediaChange) error {
+	return m.Called(ctx, a, change).Error(0)
+}
+
 func (m *ArticleRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }

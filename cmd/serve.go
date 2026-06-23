@@ -181,7 +181,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	beaconSvc := service.NewBeaconService(beaconRepo)
 	connectionSvc := service.NewConnectionService(connectionRepo)
 	adSvc := service.NewAdvertisementService(adRepo)
-	articleSvc := service.NewArticleService(articleRepo)
+	articleSvc := service.NewArticleService(articleRepo, mediaSvc)
 	couponSvc := service.NewCouponService(couponRepo, couponUserRepo)
 	videoSvc := service.NewVideoService(videoRepo)
 	tagSvc := service.NewTagService(tagRepo)

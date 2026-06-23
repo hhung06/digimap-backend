@@ -338,7 +338,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.POST("/:id/ads/:adID/publish", adH.Publish)
 
 		// Article sub-resources
-		articleH := newArticleHandler(deps.ArticleService)
+		articleH := newArticleHandler(deps.ArticleService, deps.MediaService)
 
 		venues.GET("/:id/articles", articleH.List)
 		venues.POST("/:id/articles", articleH.Create)

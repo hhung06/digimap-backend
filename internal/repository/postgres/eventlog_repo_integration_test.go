@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
 	postgresrepo "github.com/hhung06/digimap-backend/internal/repository/postgres"
@@ -30,7 +31,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 		postgres.WithUsername("testuser"),
 		postgres.WithPassword("testpass"),
 		testcontainers.WithWaitStrategy(
-			testcontainers.NewLogConsumerWaiter("database system is ready to accept connections"),
+			wait.ForLog("database system is ready to accept connections"),
 		),
 	)
 	require.NoError(t, err)

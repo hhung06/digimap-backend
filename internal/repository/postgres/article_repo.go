@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
@@ -77,7 +78,65 @@ func (r *articleRepository) Create(ctx context.Context, a *domain.Article) error
 }
 
 func (r *articleRepository) Update(ctx context.Context, a *domain.Article) error {
-	return r.pool.QueryRow(ctx,
+	return r.UpdateWithImages(ctx, a, domain.ArticleMediaChange{Replace: false})
+}
+
+func (r *articleRepository) UpdateWithImages(ctx context.Context, a *domain.Article, change domain.ArticleMediaChange) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+
+	if err := updateArticleScalar(ctx, tx, a); err != nil {
+		return err
+	}
+
+	var images []*domain.ArticleImage
+	if change.Replace {
+		if _, err := tx.Exec(ctx,
+			`UPDATE article_images SET deleted_at=NOW(), updated_at=NOW()
+             WHERE article_id=$1 AND deleted_at IS NULL`,
+			a.ID,
+		); err != nil {
+			return err
+		}
+		images = make([]*domain.ArticleImage, 0, len(change.Keys))
+		for i, key := range change.Keys {
+			img := &domain.ArticleImage{
+				ID:        newID(),
+				ArticleID: a.ID,
+				Image:     key,
+				SortOrder: i,
+			}
+			if err := tx.QueryRow(ctx,
+				`INSERT INTO article_images (id,article_id,image,sort_order)
+                 VALUES ($1,$2,$3,$4) RETURNING created_at,updated_at`,
+				img.ID, img.ArticleID, img.Image, img.SortOrder,
+			).Scan(&img.CreatedAt, &img.UpdatedAt); err != nil {
+				return err
+			}
+			images = append(images, img)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	committed = true
+	if change.Replace {
+		a.Images = images
+	}
+	return nil
+}
+
+func updateArticleScalar(ctx context.Context, q pgx.Tx, a *domain.Article) error {
+	return q.QueryRow(ctx,
 		`UPDATE articles SET
          external_id=$2,location_id=$3,placement=$4,navigate=$5,title=$6,label=$7,content=$8,
          status=$9,published_at=$10,published_period_start=$11,published_period_end=$12,localization=$13

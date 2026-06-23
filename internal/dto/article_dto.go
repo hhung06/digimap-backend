@@ -21,8 +21,8 @@ type ArticleResponse struct {
 	Content              *string                `json:"content,omitempty"`
 	Status               string                 `json:"status"`
 	PublishedAt          *time.Time             `json:"published_at,omitempty"`
-	PublishedPeriodStart *time.Time             `json:"published_period_start,omitempty"`
-	PublishedPeriodEnd   *time.Time             `json:"published_period_end,omitempty"`
+	PublishedPeriodStart *Date                  `json:"published_period_start,omitempty" swaggertype:"string" format:"date" example:"2026-06-01"`
+	PublishedPeriodEnd   *Date                  `json:"published_period_end,omitempty" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage        `json:"localization,omitempty" swaggertype:"object"`
 	Images               []ArticleImageResponse `json:"images,omitempty"`
 	CreatedAt            time.Time              `json:"created_at"`
@@ -33,6 +33,7 @@ type ArticleImageResponse struct {
 	ID        uuid.UUID `json:"id"`
 	ArticleID uuid.UUID `json:"article_id"`
 	Image     string    `json:"image"`
+	ImageURL  *string   `json:"image_url"`
 	SortOrder int       `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -48,8 +49,8 @@ type ArticleRequest struct {
 	Content              *string         `json:"content"`
 	Status               string          `json:"status"`
 	PublishedAt          *time.Time      `json:"published_at"`
-	PublishedPeriodStart *time.Time      `json:"published_period_start"`
-	PublishedPeriodEnd   *time.Time      `json:"published_period_end"`
+	PublishedPeriodStart *Date           `json:"published_period_start" swaggertype:"string" format:"date" example:"2026-06-01"`
+	PublishedPeriodEnd   *Date           `json:"published_period_end" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage `json:"localization" swaggertype:"object"`
 }
 
@@ -63,9 +64,10 @@ type UpdateArticleRequest struct {
 	Content              *string         `json:"content"`
 	Status               *string         `json:"status"`
 	PublishedAt          *time.Time      `json:"published_at"`
-	PublishedPeriodStart *time.Time      `json:"published_period_start"`
-	PublishedPeriodEnd   *time.Time      `json:"published_period_end"`
+	PublishedPeriodStart *Date           `json:"published_period_start" swaggertype:"string" format:"date" example:"2026-06-01"`
+	PublishedPeriodEnd   *Date           `json:"published_period_end" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage `json:"localization" swaggertype:"object"`
+	RemoveImages         *bool           `json:"remove_images"`
 }
 
 func (r UpdateArticleRequest) ApplyTo(a *domain.Article) {
@@ -97,10 +99,12 @@ func (r UpdateArticleRequest) ApplyTo(a *domain.Article) {
 		a.PublishedAt = r.PublishedAt
 	}
 	if r.PublishedPeriodStart != nil {
-		a.PublishedPeriodStart = r.PublishedPeriodStart
+		t := r.PublishedPeriodStart.Time()
+		a.PublishedPeriodStart = &t
 	}
 	if r.PublishedPeriodEnd != nil {
-		a.PublishedPeriodEnd = r.PublishedPeriodEnd
+		t := r.PublishedPeriodEnd.Time()
+		a.PublishedPeriodEnd = &t
 	}
 	if r.Localization != nil {
 		a.Localization = r.Localization
@@ -118,8 +122,8 @@ func ArticleToResponse(a *domain.Article) ArticleResponse {
 		Placement: a.Placement, Navigate: a.Navigate,
 		Title: a.Title, Label: a.Label, Content: a.Content, Status: a.Status,
 		PublishedAt:          a.PublishedAt,
-		PublishedPeriodStart: a.PublishedPeriodStart,
-		PublishedPeriodEnd:   a.PublishedPeriodEnd,
+		PublishedPeriodStart: articleDate(a.PublishedPeriodStart),
+		PublishedPeriodEnd:   articleDate(a.PublishedPeriodEnd),
 		Localization:         a.Localization,
 		CreatedAt:            a.CreatedAt, UpdatedAt: a.UpdatedAt,
 	}
@@ -135,4 +139,20 @@ func ArticleImageToResponse(img *domain.ArticleImage) ArticleImageResponse {
 		Image: img.Image, SortOrder: img.SortOrder,
 		CreatedAt: img.CreatedAt, UpdatedAt: img.UpdatedAt,
 	}
+}
+
+func DateToTimePtr(d *Date) *time.Time {
+	if d == nil {
+		return nil
+	}
+	t := d.Time()
+	return &t
+}
+
+func articleDate(t *time.Time) *Date {
+	if t == nil {
+		return nil
+	}
+	d := DateFromTime(*t)
+	return &d
 }
