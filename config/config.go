@@ -29,7 +29,7 @@ type AppConfig struct {
 	Debug              bool
 	DefaultPageSize    int
 	CORSAllowedOrigins []string
-	DataEncryptionKey string
+	DataEncryptionKey  string
 }
 
 type FirebaseConfig struct {
@@ -154,15 +154,20 @@ func Load() (*Config, error) {
 	v.SetDefault("JWT_REFRESH_EXPIRY", "24h")
 	v.SetDefault("JWT_ISSUER", "digimap-backend")
 
+	s3AssetsBucket := v.GetString("AWS_S3_ASSETS_BUCKET")
+	if s3AssetsBucket == "" {
+		s3AssetsBucket = v.GetString("AWS_S3_BUCKET")
+	}
+
 	cfg := &Config{
 		App: AppConfig{
-			Environment:         v.GetString("APP_ENV"),
-			LogLevel:            v.GetString("LOG_LEVEL"),
-			LogFormat:           v.GetString("LOG_FORMAT"),
-			Debug:               v.GetBool("DEBUG"),
-			DefaultPageSize:     v.GetInt("DEFAULT_PAGE_SIZE"),
-			CORSAllowedOrigins:  strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ","),
-			DataEncryptionKey: v.GetString("DATA_ENCRYPTION_KEY"),
+			Environment:        v.GetString("APP_ENV"),
+			LogLevel:           v.GetString("LOG_LEVEL"),
+			LogFormat:          v.GetString("LOG_FORMAT"),
+			Debug:              v.GetBool("DEBUG"),
+			DefaultPageSize:    v.GetInt("DEFAULT_PAGE_SIZE"),
+			CORSAllowedOrigins: strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ","),
+			DataEncryptionKey:  v.GetString("DATA_ENCRYPTION_KEY"),
 		},
 		Server: ServerConfig{
 			Port:         v.GetInt("PORT"),
@@ -195,7 +200,7 @@ func Load() (*Config, error) {
 			Region:                   v.GetString("AWS_REGION"),
 			AccessKeyID:              v.GetString("AWS_ACCESS_KEY_ID"),
 			SecretAccessKey:          v.GetString("AWS_SECRET_ACCESS_KEY"),
-			S3AssetsBucket:           v.GetString("AWS_S3_ASSETS_BUCKET"),
+			S3AssetsBucket:           s3AssetsBucket,
 			S3SnapshotBucket:         v.GetString("AWS_S3_SNAPSHOT_BUCKET"),
 			S3SyncBucket:             v.GetString("AWS_S3_SYNC_BUCKET"),
 			CloudFrontDistributionID: v.GetString("AWS_CF_DISTRIBUTION_ID"),

@@ -24,6 +24,7 @@ import (
 
 type articleServiceStub struct {
 	article        *domain.Article
+	createCalled   bool
 	updateCalled   bool
 	mediaChange    service.ArticleMediaReplacement
 	mediaFilenames []string
@@ -40,7 +41,28 @@ func (s *articleServiceStub) Get(_ context.Context, id uuid.UUID) (*domain.Artic
 	return &domain.Article{ID: id, Title: "Existing"}, nil
 }
 
-func (s *articleServiceStub) Create(context.Context, *domain.Article) error { return nil }
+func (s *articleServiceStub) Create(_ context.Context, a *domain.Article) error {
+	s.createCalled = true
+	s.article = a
+	return nil
+}
+
+func (s *articleServiceStub) CreateWithMedia(_ context.Context, a *domain.Article, uploads []service.MediaUpload) error {
+	s.createCalled = true
+	s.mediaFilenames = nil
+	for _, upload := range uploads {
+		s.mediaFilenames = append(s.mediaFilenames, upload.Filename)
+		if upload.Reader != nil {
+			_, _ = io.ReadAll(upload.Reader)
+		}
+	}
+	a.Images = []*domain.ArticleImage{}
+	for i, name := range s.mediaFilenames {
+		a.Images = append(a.Images, &domain.ArticleImage{ArticleID: a.ID, Image: "key-" + name, SortOrder: i})
+	}
+	s.article = a
+	return nil
+}
 
 func (s *articleServiceStub) Update(_ context.Context, a *domain.Article) error {
 	s.updateCalled = true
@@ -117,6 +139,30 @@ func TestArticleHandlerJSONUpdatePreservesImagesAndReturnsImageURL(t *testing.T)
 	assert.Equal(t, oldURL, first["image_url"])
 }
 
+func TestArticleHandlerGetDoesNotHTMLEscapePresignedImageURL(t *testing.T) {
+	articleID := uuid.New()
+	key := "local/media/articles/" + articleID.String() + "/images/old.png"
+	presignedURL := "https://bucket.s3.ap-northeast-1.amazonaws.com/" + key + "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=access-key"
+	svc := &articleServiceStub{article: &domain.Article{
+		ID:     articleID,
+		Title:  "Existing",
+		Images: []*domain.ArticleImage{{ArticleID: articleID, Image: key}},
+	}}
+	h := newArticleHandler(svc, articleMediaURLStub{urls: map[string]*string{key: &presignedURL}})
+	rec := httptest.NewRecorder()
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(rec)
+	c.Params = gin.Params{{Key: "articleID", Value: articleID.String()}}
+	c.Request = httptest.NewRequest(http.MethodGet, "/articles/"+articleID.String(), nil)
+
+	h.Get(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "&X-Amz-Credential=")
+	assert.NotContains(t, body, `\u0026X-Amz-Credential=`)
+}
+
 func TestArticleHandlerMultipartUpdateWithDateOnlyAndRepeatedImagesReplacesImages(t *testing.T) {
 	articleID := uuid.New()
 	start := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
@@ -136,6 +182,30 @@ func TestArticleHandlerMultipartUpdateWithDateOnlyAndRepeatedImagesReplacesImage
 	assert.Equal(t, []string{"one.png", "two.png"}, svc.mediaFilenames)
 	require.NotNil(t, svc.article.PublishedPeriodStart)
 	assert.Equal(t, start, *svc.article.PublishedPeriodStart)
+}
+
+func TestArticleHandlerMultipartUpdateKeepsSelectedImagesWithoutUploads(t *testing.T) {
+	articleID := uuid.New()
+	keepID := uuid.New()
+	dropID := uuid.New()
+	svc := &articleServiceStub{article: &domain.Article{
+		ID: articleID,
+		Images: []*domain.ArticleImage{
+			{ID: keepID, ArticleID: articleID, Image: "keep.png"},
+			{ID: dropID, ArticleID: articleID, Image: "drop.png"},
+		},
+	}}
+	h := newArticleHandler(svc, nil)
+	rec, c := multipartArticleUpdateContext(t, articleID, `{"keep_image_ids":["`+keepID.String()+`"]}`, nil)
+
+	h.Update(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.False(t, svc.updateCalled)
+	assert.True(t, svc.mediaChange.Replace)
+	assert.False(t, svc.mediaChange.Remove)
+	assert.Equal(t, []uuid.UUID{keepID}, svc.mediaChange.KeepImageIDs)
+	assert.Empty(t, svc.mediaChange.Uploads)
 }
 
 func TestArticleHandlerMultipartRemoveImagesClearsImages(t *testing.T) {

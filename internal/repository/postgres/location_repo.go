@@ -63,7 +63,7 @@ func (r *locationRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Loca
 	return l, nil
 }
 
-func (r *locationRepo) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error) {
+func (r *locationRepo) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, categoryID *uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error) {
 	var countQ, q string
 	var args []interface{}
 
@@ -73,8 +73,14 @@ func (r *locationRepo) List(ctx context.Context, venueID uuid.UUID, typeFilter *
 
 	// Add type filter if provided
 	if typeFilter != nil {
-		baseWhere += ` AND common_location_type = $2`
+		baseWhere += ` AND common_location_type = $` + strconv.Itoa(len(args)+1)
 		args = append(args, *typeFilter)
+	}
+
+	// Add category filter if provided
+	if categoryID != nil {
+		baseWhere += ` AND id IN (SELECT location_id FROM location_category_links WHERE category_id = $` + strconv.Itoa(len(args)+1) + `)`
+		args = append(args, *categoryID)
 	}
 
 	countQ = `SELECT COUNT(*) FROM locations WHERE ` + baseWhere

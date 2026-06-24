@@ -186,9 +186,9 @@ func TestLocationService_List_Success(t *testing.T) {
 	p := domain.Pagination{Page: 1, PageSize: 20}
 	expected := []*domain.Location{{CommonName: "Cafe"}, {CommonName: "ATM"}}
 
-	repo.On("List", ctx, venueID, (*int)(nil), p).Return(expected, int64(2), nil)
+	repo.On("List", ctx, venueID, (*int)(nil), (*uuid.UUID)(nil), p).Return(expected, int64(2), nil)
 
-	got, total, err := svc.List(ctx, venueID, nil, p)
+	got, total, err := svc.List(ctx, venueID, nil, nil, p)
 	require.NoError(t, err)
 	assert.Len(t, got, 2)
 	assert.Equal(t, int64(2), total)

@@ -229,7 +229,7 @@ type LocationResponse struct {
 	IsSearchable          bool                       `json:"is_searchable"`
 	Source                string                     `json:"source"`
 	PlaceWorkHours        json.RawMessage            `json:"place_work_hours,omitempty" swaggertype:"object"`
-	Custom                json.RawMessage            `json:"custom,omitempty" swaggertype:"object"`
+	Custom                json.RawMessage            `json:"custom" swaggertype:"object"`
 	Localization          json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
 	StartTime             *time.Time                 `json:"start_time,omitempty"`
 	EndTime               *time.Time                 `json:"end_time,omitempty"`
@@ -439,6 +439,9 @@ func LocationToResponse(l *domain.Location) LocationResponse {
 		Custom: l.Custom, Localization: l.Localization,
 		StartTime: l.StartTime, EndTime: l.EndTime,
 		CreatedAt: l.CreatedAt, UpdatedAt: l.UpdatedAt,
+	}
+	if len(r.Custom) == 0 {
+		r.Custom = json.RawMessage("{}")
 	}
 	for _, c := range l.Categories {
 		r.Categories = append(r.Categories, LocationCategoryToResponse(c))

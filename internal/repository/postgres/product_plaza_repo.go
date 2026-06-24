@@ -29,11 +29,17 @@ func (r *productPlazaRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	return p, err
 }
 
-func (r *productPlazaRepo) List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error) {
-	q := `SELECT ` + productPlazaSelectCols + ` FROM product_plazas WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY name`
-	rows, err := r.pool.Query(ctx, q, venueID)
+func (r *productPlazaRepo) List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error) {
+	var total int64
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM product_plazas WHERE venue_id = $1 AND deleted_at IS NULL`, venueID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	q := `SELECT ` + productPlazaSelectCols + ` FROM product_plazas WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY name LIMIT $2 OFFSET $3`
+	rows, err := r.pool.Query(ctx, q, venueID, pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -41,11 +47,11 @@ func (r *productPlazaRepo) List(ctx context.Context, venueID uuid.UUID) ([]*doma
 	for rows.Next() {
 		p, err := scanProductPlaza(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		result = append(result, p)
 	}
-	return result, rows.Err()
+	return result, total, rows.Err()
 }
 
 func (r *productPlazaRepo) Create(ctx context.Context, p *domain.ProductPlaza) error {

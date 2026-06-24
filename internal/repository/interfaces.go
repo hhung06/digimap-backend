@@ -95,7 +95,7 @@ type LocationCategoryRepository interface {
 // LocationRepository handles locations, images, and promotions.
 type LocationRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Location, error)
-	List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error)
+	List(ctx context.Context, venueID uuid.UUID, typeFilter *int, categoryID *uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error)
 	SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Location, error)
 	Create(ctx context.Context, l *domain.Location) error
 	Update(ctx context.Context, l *domain.Location) error
@@ -399,7 +399,7 @@ type ThemeRepository interface {
 // ProductPlazaRepository handles product plaza CRUD.
 type ProductPlazaRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error)
-	List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error)
+	List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error)
 	Create(ctx context.Context, p *domain.ProductPlaza) error
 	Update(ctx context.Context, p *domain.ProductPlaza) error
 	Delete(ctx context.Context, id uuid.UUID) error

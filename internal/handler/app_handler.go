@@ -143,7 +143,7 @@ func (h *appHandler) Search(c *gin.Context) {
 func (h *appHandler) ListLocations(c *gin.Context) {
 	venueID := middleware.GetVenueID(c)
 	p := paginationFromQuery(c)
-	locations, total, err := h.locations.List(c.Request.Context(), venueID, nil, p)
+	locations, total, err := h.locations.List(c.Request.Context(), venueID, nil, nil, p)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -227,9 +227,10 @@ func (h *appHandler) ListProductCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(items))
 }
 
+
 func (h *appHandler) ListProductPlazas(c *gin.Context) {
 	venueID := middleware.GetVenueID(c)
-	plazas, err := h.productPlazas.List(c.Request.Context(), venueID)
+	plazas, _, err := h.productPlazas.List(c.Request.Context(), venueID, 1, 1000)
 	if err != nil {
 		respondError(c, err)
 		return

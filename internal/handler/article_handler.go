@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
@@ -54,7 +56,7 @@ func (h *articleHandler) List(c *gin.Context) {
 	for i, a := range articles {
 		items[i] = h.articleResponse(c.Request.Context(), a)
 	}
-	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
+	c.PureJSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
 // @Summary     Get article
@@ -80,7 +82,7 @@ func (h *articleHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
+	c.PureJSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Create article
@@ -102,26 +104,51 @@ func (h *articleHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
 		return
 	}
+	if isMultipartRequest(c) {
+		h.createMultipart(c, venueID)
+		return
+	}
 	var req dto.ArticleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	a := &domain.Article{
-		VenueID: &venueID, ExternalID: req.ExternalID, LocationID: req.LocationID,
-		Placement: req.Placement, Navigate: req.Navigate,
-		Title: req.Title, Label: req.Label, Content: req.Content,
-		Status:               req.Status,
-		PublishedAt:          req.PublishedAt,
-		PublishedPeriodStart: dto.DateToTimePtr(req.PublishedPeriodStart),
-		PublishedPeriodEnd:   dto.DateToTimePtr(req.PublishedPeriodEnd),
-		Localization:         req.Localization,
-	}
+	a := articleFromRequest(venueID, req)
 	if err := h.svc.Create(c.Request.Context(), a); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, dto.OK(h.articleResponse(c.Request.Context(), a)))
+	c.PureJSON(http.StatusCreated, dto.OK(h.articleResponse(c.Request.Context(), a)))
+}
+
+func (h *articleHandler) createMultipart(c *gin.Context, venueID uuid.UUID) {
+	var req dto.ArticleRequest
+	if err := bindMultipartData(c, &req, 1<<20); err != nil {
+		respondError(c, err)
+		return
+	}
+	files, hasFiles, err := multipartFiles(c, "images")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	uploads, closers, err := articleMediaUploads(files)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	defer closeAll(closers)
+	a := articleFromRequest(venueID, req)
+	if hasFiles {
+		err = h.svc.CreateWithMedia(c.Request.Context(), a, uploads)
+	} else {
+		err = h.svc.Create(c.Request.Context(), a)
+	}
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.PureJSON(http.StatusCreated, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Update article
@@ -163,7 +190,7 @@ func (h *articleHandler) Update(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
+	c.PureJSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 func (h *articleHandler) updateMultipart(c *gin.Context, id uuid.UUID) {
@@ -190,23 +217,23 @@ func (h *articleHandler) updateMultipart(c *gin.Context, id uuid.UUID) {
 	}
 	req.ApplyTo(a)
 
-	if hasFiles {
-		uploads := make([]service.MediaUpload, 0, len(files))
-		for _, file := range files {
-			upload, closer, err := mediaUpload(file)
-			if err != nil {
-				respondError(c, err)
-				return
-			}
-			defer closer.Close()
-			uploads = append(uploads, upload)
-		}
-		if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.ArticleMediaReplacement{Replace: true, Uploads: uploads}); err != nil {
+	if removeImages {
+		if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.ArticleMediaReplacement{Replace: true, Remove: true}); err != nil {
 			respondError(c, err)
 			return
 		}
-	} else if removeImages {
-		if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.ArticleMediaReplacement{Replace: true, Remove: true}); err != nil {
+	} else if hasFiles || req.KeepImageIDs != nil {
+		uploads, closers, err := articleMediaUploads(files)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		defer closeAll(closers)
+		keepImageIDs := []uuid.UUID(nil)
+		if req.KeepImageIDs != nil {
+			keepImageIDs = *req.KeepImageIDs
+		}
+		if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.ArticleMediaReplacement{Replace: true, KeepImageIDs: keepImageIDs, Uploads: uploads}); err != nil {
 			respondError(c, err)
 			return
 		}
@@ -215,7 +242,7 @@ func (h *articleHandler) updateMultipart(c *gin.Context, id uuid.UUID) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
+	c.PureJSON(http.StatusOK, dto.OK(h.articleResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Delete article
@@ -280,7 +307,7 @@ func (h *articleHandler) CreateImage(c *gin.Context) {
 		target := service.MediaTarget{Entity: "articles", RecordID: img.ArticleID, Field: "images"}
 		resp.ImageURL = h.mediaSvc.URL(c.Request.Context(), target, img.Image)
 	}
-	c.JSON(http.StatusCreated, dto.OK(resp))
+	c.PureJSON(http.StatusCreated, dto.OK(resp))
 }
 
 // @Summary     Delete article image
@@ -311,6 +338,40 @@ func (h *articleHandler) DeleteImage(c *gin.Context) {
 
 func isMultipartRequest(c *gin.Context) bool {
 	return strings.HasPrefix(strings.ToLower(c.GetHeader("Content-Type")), "multipart/form-data")
+}
+
+func articleFromRequest(venueID uuid.UUID, req dto.ArticleRequest) *domain.Article {
+	return &domain.Article{
+		VenueID: &venueID, ExternalID: req.ExternalID, LocationID: req.LocationID,
+		Placement: req.Placement, Navigate: req.Navigate,
+		Title: req.Title, Label: req.Label, Content: req.Content,
+		Status:               req.Status,
+		PublishedAt:          req.PublishedAt,
+		PublishedPeriodStart: dto.DateToTimePtr(req.PublishedPeriodStart),
+		PublishedPeriodEnd:   dto.DateToTimePtr(req.PublishedPeriodEnd),
+		Localization:         req.Localization,
+	}
+}
+
+func articleMediaUploads(files []*multipart.FileHeader) ([]service.MediaUpload, []io.Closer, error) {
+	uploads := make([]service.MediaUpload, 0, len(files))
+	closers := make([]io.Closer, 0, len(files))
+	for _, file := range files {
+		upload, closer, err := mediaUpload(file)
+		if err != nil {
+			closeAll(closers)
+			return nil, nil, err
+		}
+		uploads = append(uploads, upload)
+		closers = append(closers, closer)
+	}
+	return uploads, closers, nil
+}
+
+func closeAll(closers []io.Closer) {
+	for _, closer := range closers {
+		_ = closer.Close()
+	}
 }
 
 func (h *articleHandler) articleResponse(ctx context.Context, a *domain.Article) dto.ArticleResponse {

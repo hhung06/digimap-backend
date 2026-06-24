@@ -22,16 +22,17 @@ func (h *productPlazaHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
 		return
 	}
-	plazas, err := h.svc.List(c.Request.Context(), venueID)
+	p := paginationFromQuery(c)
+	plazas, total, err := h.svc.List(c.Request.Context(), venueID, p.Page, p.PageSize)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
 	items := make([]dto.ProductPlazaResponse, len(plazas))
-	for i, p := range plazas {
-		items[i] = dto.ProductPlazaToResponse(p)
+	for i, plaza := range plazas {
+		items[i] = dto.ProductPlazaToResponse(plaza)
 	}
-	c.JSON(http.StatusOK, dto.OK(items))
+	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
 func (h *productPlazaHandler) Create(c *gin.Context) {

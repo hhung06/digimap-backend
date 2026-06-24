@@ -272,8 +272,8 @@ func venueFromCreateRequest(req dto.CreateVenueRequest) *domain.Venue {
 		Address: req.Address, City: req.City, State: req.State,
 		Country: req.Country, Postal: req.Postal,
 		Lat: req.Lat, Lng: req.Lng, Timezone: req.Timezone,
-		Telephone:   req.Telephone,
-		Description: req.Description,
+		Telephone:    req.Telephone,
+		Description:  req.Description,
 		Localization: req.Localization,
 		AppConfigs:   req.AppConfigs, AppDomains: req.AppDomains, SubDomains: req.SubDomains,
 		SEOTitle: req.SEOTitle, SEODescription: req.SEODescription, SEOKeywords: req.SEOKeywords,
@@ -281,7 +281,6 @@ func venueFromCreateRequest(req dto.CreateVenueRequest) *domain.Venue {
 		StartAt: req.StartAt, EndAt: req.EndAt,
 	}
 }
-
 
 func venuesToResponse(venues []*domain.Venue) []dto.VenueResponse {
 	items := make([]dto.VenueResponse, len(venues))

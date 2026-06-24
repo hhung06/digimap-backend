@@ -239,7 +239,7 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 	// Load shared data once — per-language differences are in serialization only.
 	allPagination := domain.Pagination{Page: 1, PageSize: 100000}
 
-	locations, _, err := s.locationRepo.List(ctx, snap.VenueID, nil, allPagination)
+	locations, _, err := s.locationRepo.List(ctx, snap.VenueID, nil, nil, allPagination)
 	if err != nil {
 		fmt.Printf("[snapshot] publishV2: list locations: %v\n", err)
 		return

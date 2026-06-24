@@ -68,6 +68,7 @@ type UpdateArticleRequest struct {
 	PublishedPeriodEnd   *Date           `json:"published_period_end" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage `json:"localization" swaggertype:"object"`
 	RemoveImages         *bool           `json:"remove_images"`
+	KeepImageIDs         *[]uuid.UUID    `json:"keep_image_ids"`
 }
 
 func (r UpdateArticleRequest) ApplyTo(a *domain.Article) {

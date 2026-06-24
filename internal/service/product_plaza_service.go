@@ -19,7 +19,7 @@ type CreateProductPlazaInput struct {
 }
 
 type ProductPlazaService interface {
-	List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error)
+	List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error)
 	Create(ctx context.Context, in CreateProductPlazaInput) (*domain.ProductPlaza, error)
 	Update(ctx context.Context, id uuid.UUID, in CreateProductPlazaInput) (*domain.ProductPlaza, error)
@@ -32,8 +32,8 @@ func NewProductPlazaService(repo repository.ProductPlazaRepository) ProductPlaza
 	return &productPlazaService{repo: repo}
 }
 
-func (s *productPlazaService) List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error) {
-	return s.repo.List(ctx, venueID)
+func (s *productPlazaService) List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error) {
+	return s.repo.List(ctx, venueID, page, pageSize)
 }
 
 func (s *productPlazaService) Get(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error) {

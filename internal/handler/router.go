@@ -455,7 +455,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.GET("/products", appH.ListProducts)
 		appKey.GET("/products/:productID", appH.GetProduct)
 		appKey.GET("/product-categories", appH.ListProductCategories)
-		appKey.GET("/product-plazas", appH.ListProductPlazas)
+appKey.GET("/product-plazas", appH.ListProductPlazas)
 		appKey.GET("/product-plazas/:plazaID", appH.GetProductPlaza)
 		appKey.GET("/articles", appH.ListArticles)
 		appKey.GET("/articles/:articleID", appH.GetArticle)

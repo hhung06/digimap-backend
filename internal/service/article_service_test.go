@@ -85,6 +85,56 @@ func TestArticleService_Create_Success(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
+func TestArticleService_CreateWithMediaUploadsAfterCreate(t *testing.T) {
+	repo := &mocks.ArticleRepository{}
+	media := &articleMediaServiceSpy{}
+	svc := service.NewArticleService(repo, media)
+	ctx := context.Background()
+	articleID := uuid.New()
+	target := service.MediaTarget{Entity: "articles", RecordID: articleID, Field: "images"}
+	firstKey := storage.MediaKey("develop", target.Entity, target.RecordID, target.Field, uuid.New(), "png")
+	secondKey := storage.MediaKey("develop", target.Entity, target.RecordID, target.Field, uuid.New(), "jpg")
+	a := &domain.Article{ID: articleID, Title: "New Article"}
+
+	repo.On("Create", ctx, a).Return(nil)
+	repo.On("UpdateWithImages", ctx, a, domain.ArticleMediaChange{Replace: true, Keys: []string{firstKey, secondKey}}).Return(nil)
+	media.uploadKeys = []string{firstKey, secondKey}
+
+	err := svc.CreateWithMedia(ctx, a, []service.MediaUpload{
+		{Filename: "hero.png", ContentType: "image/png", Size: 3, Reader: bytes.NewReader([]byte("one"))},
+		{Filename: "detail.jpg", ContentType: "image/jpeg", Size: 3, Reader: bytes.NewReader([]byte("two"))},
+	})
+
+	require.NoError(t, err)
+	assert.Empty(t, media.deleted)
+	repo.AssertExpectations(t)
+}
+
+func TestArticleService_CreateWithMediaDBFailureDeletesUploadedKeys(t *testing.T) {
+	repo := &mocks.ArticleRepository{}
+	media := &articleMediaServiceSpy{}
+	svc := service.NewArticleService(repo, media)
+	ctx := context.Background()
+	articleID := uuid.New()
+	target := service.MediaTarget{Entity: "articles", RecordID: articleID, Field: "images"}
+	newKey := storage.MediaKey("develop", target.Entity, target.RecordID, target.Field, uuid.New(), "png")
+	a := &domain.Article{ID: articleID, Title: "New Article"}
+
+	repo.On("Create", ctx, a).Return(nil)
+	repo.On("UpdateWithImages", ctx, a, domain.ArticleMediaChange{Replace: true, Keys: []string{newKey}}).Return(assert.AnError)
+	media.uploadKeys = []string{newKey}
+
+	err := svc.CreateWithMedia(ctx, a, []service.MediaUpload{
+		{Filename: "hero.png", ContentType: "image/png", Size: 3, Reader: bytes.NewReader([]byte("png"))},
+	})
+
+	require.ErrorIs(t, err, assert.AnError)
+	require.Len(t, media.deleted, 1)
+	assert.Equal(t, target, media.deleted[0].target)
+	assert.Equal(t, newKey, media.deleted[0].key)
+	repo.AssertExpectations(t)
+}
+
 func TestArticleService_Update_Success(t *testing.T) {
 	repo := &mocks.ArticleRepository{}
 	svc := newTestArticleService(repo)
@@ -220,6 +270,45 @@ func TestArticleService_UpdateWithMediaDBFailureDeletesUploadedKeys(t *testing.T
 	require.Len(t, media.deleted, 1)
 	assert.Equal(t, target, media.deleted[0].target)
 	assert.Equal(t, newKey, media.deleted[0].key)
+	repo.AssertExpectations(t)
+}
+
+func TestArticleService_UpdateWithMediaKeepsSelectedImagesAndDeletesDropped(t *testing.T) {
+	repo := &mocks.ArticleRepository{}
+	media := &articleMediaServiceSpy{}
+	svc := service.NewArticleService(repo, media)
+	ctx := context.Background()
+	articleID := uuid.New()
+	target := service.MediaTarget{Entity: "articles", RecordID: articleID, Field: "images"}
+	keepID := uuid.New()
+	dropID := uuid.New()
+	keepKey := storage.MediaKey("develop", target.Entity, target.RecordID, target.Field, uuid.New(), "png")
+	dropKey := storage.MediaKey("develop", target.Entity, target.RecordID, target.Field, uuid.New(), "jpg")
+	newKey := storage.MediaKey("develop", target.Entity, target.RecordID, target.Field, uuid.New(), "webp")
+	a := &domain.Article{
+		ID:    articleID,
+		Title: "Updated",
+		Images: []*domain.ArticleImage{
+			{ID: keepID, ArticleID: articleID, Image: keepKey, SortOrder: 1},
+			{ID: dropID, ArticleID: articleID, Image: dropKey, SortOrder: 2},
+		},
+	}
+
+	repo.On("UpdateWithImages", ctx, a, domain.ArticleMediaChange{Replace: true, Keys: []string{keepKey, newKey}}).Return(nil)
+	media.uploadKeys = []string{newKey}
+
+	err := svc.UpdateWithMedia(ctx, a, service.ArticleMediaReplacement{
+		Replace:      true,
+		KeepImageIDs: []uuid.UUID{keepID},
+		Uploads: []service.MediaUpload{{
+			Filename: "hero.webp", ContentType: "image/webp", Size: 4, Reader: bytes.NewReader([]byte("webp")),
+		}},
+	})
+
+	require.NoError(t, err)
+	require.Len(t, media.deleted, 1)
+	assert.Equal(t, target, media.deleted[0].target)
+	assert.Equal(t, dropKey, media.deleted[0].key)
 	repo.AssertExpectations(t)
 }
 

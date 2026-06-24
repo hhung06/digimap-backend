@@ -216,8 +216,16 @@ func (h *locationHandler) ListLocations(c *gin.Context) {
 		}
 	}
 
+	// Parse optional ?categories= filter
+	var categoryID *uuid.UUID
+	if cat := c.Query("categories"); cat != "" {
+		if id, err := uuid.Parse(cat); err == nil {
+			categoryID = &id
+		}
+	}
+
 	ctx := c.Request.Context()
-	locations, total, err := h.locationSvc.List(ctx, venueID, typeFilter, p)
+	locations, total, err := h.locationSvc.List(ctx, venueID, typeFilter, categoryID, p)
 	if err != nil {
 		respondError(c, err)
 		return

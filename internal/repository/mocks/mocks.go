@@ -763,8 +763,8 @@ func (m *LocationRepository) FindByID(ctx context.Context, id uuid.UUID) (*domai
 	return nil, args.Error(1)
 }
 
-func (m *LocationRepository) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, p domain.Pagination) ([]*domain.Location, int64, error) {
-	args := m.Called(ctx, venueID, typeFilter, p)
+func (m *LocationRepository) List(ctx context.Context, venueID uuid.UUID, typeFilter *int, categoryID *uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error) {
+	args := m.Called(ctx, venueID, typeFilter, categoryID, p)
 	if locs, ok := args.Get(0).([]*domain.Location); ok {
 		return locs, args.Get(1).(int64), args.Error(2)
 	}
@@ -907,12 +907,12 @@ func (m *ProductPlazaRepository) FindByID(ctx context.Context, id uuid.UUID) (*d
 	return nil, args.Error(1)
 }
 
-func (m *ProductPlazaRepository) List(ctx context.Context, venueID uuid.UUID) ([]*domain.ProductPlaza, error) {
-	args := m.Called(ctx, venueID)
+func (m *ProductPlazaRepository) List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error) {
+	args := m.Called(ctx, venueID, page, pageSize)
 	if p, ok := args.Get(0).([]*domain.ProductPlaza); ok {
-		return p, args.Error(1)
+		return p, args.Get(1).(int64), args.Error(2)
 	}
-	return nil, args.Error(1)
+	return nil, args.Get(1).(int64), args.Error(2)
 }
 
 func (m *ProductPlazaRepository) Create(ctx context.Context, p *domain.ProductPlaza) error {
