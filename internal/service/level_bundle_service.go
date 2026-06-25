@@ -15,6 +15,7 @@ import (
 type LevelBundleService interface {
 	ListBySnapshot(ctx context.Context, snapshotID uuid.UUID) ([]*domain.LevelBundle, error)
 	Create(ctx context.Context, snapshotID, venueID, levelID uuid.UUID, bundle []byte) (*domain.LevelBundle, error)
+	GetContent(ctx context.Context, id uuid.UUID) ([]byte, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -57,7 +58,7 @@ func (s *levelBundleService) Create(ctx context.Context, snapshotID, venueID, le
 		id = uuid.New()
 	}
 
-	key := fmt.Sprintf("%s/%s/level-bundles/%s/%s.json", s.env, venueID, snapshotID, levelID)
+	key := storage.LevelBundleKey(s.env, venueID, snapshotID, levelID)
 	if err := s.storer.PutObject(ctx, key, bundle); err != nil {
 		return nil, fmt.Errorf("upload level bundle: %w", err)
 	}
@@ -73,6 +74,20 @@ func (s *levelBundleService) Create(ctx context.Context, snapshotID, venueID, le
 		return nil, fmt.Errorf("create level bundle record: %w", err)
 	}
 	return b, nil
+}
+
+// GetContent fetches the raw stored bundle blob from S3 for the given bundle ID.
+func (s *levelBundleService) GetContent(ctx context.Context, id uuid.UUID) ([]byte, error) {
+	b, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	key := storage.LevelBundleKey(s.env, b.VenueID, b.SnapshotID, b.LevelID)
+	data, err := s.storer.GetObject(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("fetch level bundle content: %w", err)
+	}
+	return data, nil
 }
 
 func (s *levelBundleService) Delete(ctx context.Context, id uuid.UUID) error {

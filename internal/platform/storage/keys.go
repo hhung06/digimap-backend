@@ -40,6 +40,11 @@ func SnapshotDraftKey(env string, venueID, snapshotID uuid.UUID) string {
 	return env + "/" + venueID.String() + "/snapshots/draft/" + snapshotID.String() + ".json"
 }
 
+// LevelBundleKey returns the S3 key for a per-level bundle blob.
+func LevelBundleKey(env string, venueID, snapshotID, levelID uuid.UUID) string {
+	return env + "/" + venueID.String() + "/level-bundles/" + snapshotID.String() + "/" + levelID.String() + ".json"
+}
+
 // GlobalThemeKey returns the S3 key for a global venue theme JSON file.
 // Django: {env}/venue_themes/global/{name}.json
 func GlobalThemeKey(env, name string) string {

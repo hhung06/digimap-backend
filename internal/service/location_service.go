@@ -124,6 +124,7 @@ type LocationService interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	Duplicate(ctx context.Context, id uuid.UUID) (*domain.Location, error)
 	SetTop(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error
+	SetTopWithMedia(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int, upload *MediaUpload) error
 	GeoSearch(ctx context.Context, lat, lng, radiusKm float64, venueID *uuid.UUID) ([]*domain.Location, error)
 
 	// Images
@@ -139,6 +140,7 @@ type locationService struct {
 	invalidator cdn.Invalidator
 	appVersions *AppVersionService
 	env         string
+	mediaSvc    MediaService
 }
 
 func NewLocationService(
@@ -148,7 +150,12 @@ func NewLocationService(
 	invalidator cdn.Invalidator,
 	appVersions *AppVersionService,
 	env string,
+	mediaSvc ...MediaService,
 ) LocationService {
+	var media MediaService
+	if len(mediaSvc) > 0 {
+		media = mediaSvc[0]
+	}
 	return &locationService{
 		repo:        repo,
 		venueRepo:   venueRepo,
@@ -156,6 +163,7 @@ func NewLocationService(
 		invalidator: invalidator,
 		appVersions: appVersions,
 		env:         env,
+		mediaSvc:    media,
 	}
 }
 
@@ -242,6 +250,43 @@ func (s *locationService) SetTop(ctx context.Context, id uuid.UUID, isTop bool, 
 	}
 	// Run publish in the background so the HTTP response is not blocked.
 	// Mirrors Django's threading.Thread approach (api/locations/views.py:368).
+	venueID := loc.VenueID
+	go func() {
+		if err := s.publishTopLocations(context.Background(), venueID); err != nil {
+			fmt.Printf("top-location publish error venue=%s: %v\n", venueID, err)
+		}
+	}()
+	return nil
+}
+
+func (s *locationService) SetTopWithMedia(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int, upload *MediaUpload) error {
+	loc, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if upload != nil {
+		if s.mediaSvc == nil {
+			return &domain.AppError{Err: domain.ErrInternal, Message: "media service is not configured"}
+		}
+		target := MediaTarget{Entity: "locations", RecordID: id, Field: "top_logo"}
+		key, err := s.mediaSvc.Upload(ctx, target, *upload)
+		if err != nil {
+			return err
+		}
+		oldKey := loc.TopLogo
+		loc.TopLogo = key
+		loc.TopLogoType = upload.ContentType
+		if err := s.repo.Update(ctx, loc); err != nil {
+			_ = s.mediaSvc.DeleteOwned(ctx, target, key)
+			return err
+		}
+		if oldKey != "" && oldKey != key {
+			_ = s.mediaSvc.DeleteOwned(ctx, target, oldKey)
+		}
+	}
+	if err := s.repo.SetTopLocation(ctx, id, isTop, sortIndex); err != nil {
+		return err
+	}
 	venueID := loc.VenueID
 	go func() {
 		if err := s.publishTopLocations(context.Background(), venueID); err != nil {

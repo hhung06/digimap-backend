@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -25,8 +26,74 @@ func newTestLocationService(repo *mocks.LocationRepository, _ *mocks.StorerMock)
 	return service.NewLocationService(repo, venueRepo, storage.NewLogStorer(), cdn.NewLogInvalidator(), nil, "test")
 }
 
+func newTestLocationServiceWithMedia(repo *mocks.LocationRepository, media service.MediaService) service.LocationService {
+	venueRepo := &mocks.VenueRepository{}
+	venueRepo.On("FindByID", mock.Anything, mock.Anything).Return((*domain.Venue)(nil), domain.NewNotFound("venue not found"))
+	return service.NewLocationService(repo, venueRepo, storage.NewLogStorer(), cdn.NewLogInvalidator(), nil, "test", media)
+}
+
+type locationMediaServiceSpy struct {
+	key     string
+	targets []service.MediaTarget
+	uploads []service.MediaUpload
+	deleted []string
+}
+
+func (s *locationMediaServiceSpy) Upload(_ context.Context, target service.MediaTarget, upload service.MediaUpload) (string, error) {
+	s.targets = append(s.targets, target)
+	s.uploads = append(s.uploads, upload)
+	return s.key, nil
+}
+
+func (s *locationMediaServiceSpy) URL(context.Context, service.MediaTarget, string) *string {
+	return nil
+}
+
+func (s *locationMediaServiceSpy) DeleteOwned(_ context.Context, _ service.MediaTarget, key string) error {
+	s.deleted = append(s.deleted, key)
+	return nil
+}
+
 func newTestLocationCategoryService(repo *mocks.LocationCategoryRepository) service.LocationCategoryService {
 	return service.NewLocationCategoryService(repo)
+}
+
+func TestLocationService_SetTopWithMediaUploadsAndStoresTopLogo(t *testing.T) {
+	repo := &mocks.LocationRepository{}
+	locationID := uuid.New()
+	venueID := uuid.New()
+	oldKey := "test/media/locations/" + locationID.String() + "/top_logo/old.png"
+	newKey := "test/media/locations/" + locationID.String() + "/top_logo/new.png"
+	media := &locationMediaServiceSpy{key: newKey}
+	svc := newTestLocationServiceWithMedia(repo, media)
+	sortIndex := 3
+	loc := &domain.Location{
+		ID:          locationID,
+		VenueID:     venueID,
+		TopLogo:     oldKey,
+		TopLogoType: "image/png",
+	}
+
+	repo.On("FindByID", mock.Anything, locationID).Return(loc, nil).Once()
+	repo.On("Update", mock.Anything, mock.MatchedBy(func(updated *domain.Location) bool {
+		return updated.ID == locationID &&
+			updated.TopLogo == newKey &&
+			updated.TopLogoType == "image/png"
+	})).Return(nil).Once()
+	repo.On("SetTopLocation", mock.Anything, locationID, true, &sortIndex).Return(nil).Once()
+
+	err := svc.SetTopWithMedia(context.Background(), locationID, true, &sortIndex, &service.MediaUpload{
+		Filename:    "marker.png",
+		ContentType: "image/png",
+		Size:        4,
+		Reader:      strings.NewReader("body"),
+	})
+
+	require.NoError(t, err)
+	require.Len(t, media.targets, 1)
+	assert.Equal(t, service.MediaTarget{Entity: "locations", RecordID: locationID, Field: "top_logo"}, media.targets[0])
+	assert.Equal(t, []string{oldKey}, media.deleted)
+	repo.AssertExpectations(t)
 }
 
 func TestLocationCategoryService_Create_SubcategorySuccess(t *testing.T) {

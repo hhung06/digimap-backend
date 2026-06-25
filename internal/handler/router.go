@@ -144,6 +144,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles", bundleH.List)
 		adminOnly.POST("/venues/:id/snapshots/:snapshotID/bundles", bundleH.Create)
+		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles/:bundleID/content", bundleH.GetContent)
 		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/bundles/:bundleID", bundleH.Delete)
 
 		assetH := newAssetHandler(deps.AssetService)
@@ -176,7 +177,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.PUT("/venues/:id/product-plazas/:plazaID", plazaH.Update)
 		adminOnly.DELETE("/venues/:id/product-plazas/:plazaID", plazaH.Delete)
 
-		geoLocH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry)
+		geoLocH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry, deps.MediaService)
 		adminOnly.GET("/geo-search", geoLocH.GeoSearch)
 	}
 
@@ -213,7 +214,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/levels/:levelID/geo-references/:refID", levelH.DeleteGeoReference)
 
 		// Location sub-resources
-		locH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry)
+		locH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry, deps.MediaService)
 
 		venues.GET("/:id/categories", locH.ListCategories)
 		venues.POST("/:id/categories", locH.CreateCategory)
@@ -455,7 +456,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.GET("/products", appH.ListProducts)
 		appKey.GET("/products/:productID", appH.GetProduct)
 		appKey.GET("/product-categories", appH.ListProductCategories)
-appKey.GET("/product-plazas", appH.ListProductPlazas)
+		appKey.GET("/product-plazas", appH.ListProductPlazas)
 		appKey.GET("/product-plazas/:plazaID", appH.GetProductPlaza)
 		appKey.GET("/articles", appH.ListArticles)
 		appKey.GET("/articles/:articleID", appH.GetArticle)

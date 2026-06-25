@@ -86,6 +86,35 @@ func (h *levelBundleHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.OK(dto.LevelBundleToResponse(b)))
 }
 
+// @Summary     Get level bundle content
+// @Description Return the raw stored bundle blob for a level bundle (system admin only).
+// @Description The body is the opaque encrypted DigimapStoredScene JSON uploaded by the editor.
+// @Tags        snapshots
+// @Produce     application/octet-stream
+// @Security    BearerAuth
+// @Param       id         path string true "Venue ID"
+// @Param       snapshotID path string true "Snapshot ID"
+// @Param       bundleID   path string true "Bundle ID"
+// @Success     200
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     403 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}/content [get]
+func (h *levelBundleHandler) GetContent(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("bundleID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid bundle id"))
+		return
+	}
+	data, err := h.svc.GetContent(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Data(http.StatusOK, "application/octet-stream", data)
+}
+
 // @Summary     Delete level bundle
 // @Description Delete a level bundle (system admin only)
 // @Tags        snapshots

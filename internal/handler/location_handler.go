@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -16,6 +17,7 @@ import (
 type locationHandler struct {
 	categorySvc service.LocationCategoryService
 	locationSvc service.LocationService
+	mediaSvc    service.MediaService
 	enrichers   *enricher.Registry
 }
 
@@ -23,8 +25,13 @@ func newLocationHandler(
 	categorySvc service.LocationCategoryService,
 	locationSvc service.LocationService,
 	enrichers *enricher.Registry,
+	mediaSvc ...service.MediaService,
 ) *locationHandler {
-	return &locationHandler{categorySvc: categorySvc, locationSvc: locationSvc, enrichers: enrichers}
+	var media service.MediaService
+	if len(mediaSvc) > 0 {
+		media = mediaSvc[0]
+	}
+	return &locationHandler{categorySvc: categorySvc, locationSvc: locationSvc, mediaSvc: media, enrichers: enrichers}
 }
 
 // ── Location categories ───────────────────────────────────────────────────────
@@ -233,9 +240,9 @@ func (h *locationHandler) ListLocations(c *gin.Context) {
 	extras, _ := h.enrichers.EnrichForVenue(ctx, venueID, enricher.ResourceLocation)
 	items := make([]any, len(locations))
 	for i, loc := range locations {
-		items[i] = enricher.MergeInto(dto.LocationToResponse(loc), extras)
+		items[i] = enricher.MergeInto(h.locationResponse(ctx, loc), extras)
 	}
-	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
+	c.PureJSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
 }
 
 // @Summary     Get location
@@ -268,7 +275,7 @@ func (h *locationHandler) GetLocation(c *gin.Context) {
 		return
 	}
 	extras, _ := h.enrichers.EnrichForVenue(ctx, venueID, enricher.ResourceLocation)
-	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.LocationToResponse(l), extras)))
+	c.PureJSON(http.StatusOK, dto.OK(enricher.MergeInto(h.locationResponse(ctx, l), extras)))
 }
 
 // @Summary     Create location
@@ -300,7 +307,7 @@ func (h *locationHandler) CreateLocation(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, dto.OK(dto.LocationToResponse(l)))
+	c.PureJSON(http.StatusCreated, dto.OK(h.locationResponse(c.Request.Context(), l)))
 }
 
 // @Summary     Update location
@@ -339,7 +346,7 @@ func (h *locationHandler) UpdateLocation(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.LocationToResponse(l)))
+	c.PureJSON(http.StatusOK, dto.OK(h.locationResponse(c.Request.Context(), l)))
 }
 
 // @Summary     Delete location
@@ -390,19 +397,20 @@ func (h *locationHandler) DuplicateLocation(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, dto.OK(dto.LocationToResponse(clone)))
+	c.PureJSON(http.StatusCreated, dto.OK(h.locationResponse(c.Request.Context(), clone)))
 }
 
 // @Summary     Set top location
 // @Description Pin or unpin a location as a top result (requires editor role)
 // @Tags        locations
 // @Accept      json
+// @Accept      multipart/form-data
 // @Produce     json
 // @Security    BearerAuth
 // @Param       id         path     string                    true "Venue ID"
 // @Param       locationID path     string                    true "Location ID"
 // @Param       body       body     dto.SetTopLocationRequest true "Set top details"
-// @Success     200        {object} dto.Response
+// @Success     200        {object} dto.Response{data=dto.LocationResponse}
 // @Failure     400        {object} dto.Response
 // @Failure     401        {object} dto.Response
 // @Failure     403        {object} dto.Response
@@ -414,15 +422,42 @@ func (h *locationHandler) SetTop(c *gin.Context) {
 		return
 	}
 	var req dto.SetTopLocationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid request body"))
-		return
+	var upload *service.MediaUpload
+	if isMultipartRequest(c) {
+		if err := bindMultipartData(c, &req, 1<<20); err != nil {
+			respondError(c, err)
+			return
+		}
+		file, found, err := multipartFile(c, "top_logo")
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		if found {
+			media, mediaCloser, err := mediaUpload(file)
+			if err != nil {
+				respondError(c, err)
+				return
+			}
+			upload = &media
+			defer func() { _ = mediaCloser.Close() }()
+		}
+	} else {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid request body"))
+			return
+		}
 	}
-	if err := h.locationSvc.SetTop(c.Request.Context(), id, req.IsTop, req.SortIndex); err != nil {
+	if err := h.locationSvc.SetTopWithMedia(c.Request.Context(), id, req.IsTop, req.SortIndex, upload); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(gin.H{"is_top": req.IsTop}))
+	loc, err := h.locationSvc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.PureJSON(http.StatusOK, dto.OK(h.locationResponse(c.Request.Context(), loc)))
 }
 
 // ── Location images ───────────────────────────────────────────────────────────
@@ -535,12 +570,21 @@ func (h *locationHandler) GeoSearch(c *gin.Context) {
 
 	items := make([]dto.LocationResponse, len(locs))
 	for i, loc := range locs {
-		items[i] = dto.LocationToResponse(loc)
+		items[i] = h.locationResponse(c.Request.Context(), loc)
 	}
-	c.JSON(http.StatusOK, dto.OK(items))
+	c.PureJSON(http.StatusOK, dto.OK(items))
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
+
+func (h *locationHandler) locationResponse(ctx context.Context, loc *domain.Location) dto.LocationResponse {
+	resp := dto.LocationToResponse(loc)
+	if h.mediaSvc != nil && loc != nil && loc.TopLogo != "" {
+		target := service.MediaTarget{Entity: "locations", RecordID: loc.ID, Field: "top_logo"}
+		resp.TopLogoURL = h.mediaSvc.URL(ctx, target, loc.TopLogo)
+	}
+	return resp
+}
 
 func parseVenueID(c *gin.Context) (uuid.UUID, error) {
 	return uuid.Parse(c.Param("id"))
@@ -555,8 +599,34 @@ func locationFromCreateRequest(venueID uuid.UUID, req dto.CreateLocationRequest)
 		CommonLocationType: req.CommonLocationType, CommonLocationSubType: req.CommonLocationSubType,
 		CommonLatitude: req.CommonLatitude, CommonLongitude: req.CommonLongitude,
 		CommonAddress:      req.CommonAddress,
+		CommonLogo:         req.CommonLogo,
+		CommonLargeLogo:    req.CommonLargeLogo,
+		CommonMediumLogo:   req.CommonMediumLogo,
+		CommonSmallLogo:    req.CommonSmallLogo,
 		CommonContactEmail: req.CommonContactEmail, CommonContactPhone: req.CommonContactPhone,
-		PlaceWorkHours: req.PlaceWorkHours, Custom: req.Custom, Localization: req.Localization,
+		CommonShowShortName:          req.CommonShowShortName,
+		CommonLocationState:          req.CommonLocationState,
+		CommonLocationStateStartDate: req.CommonLocationStateStartDate,
+		CommonLocationStateEndDate:   req.CommonLocationStateEndDate,
+		CommonSocialWebsite:          req.CommonSocialWebsite,
+		CommonSocialTwitter:          req.CommonSocialTwitter,
+		CommonSocialTiktok:           req.CommonSocialTiktok,
+		CommonSocialFacebook:         req.CommonSocialFacebook,
+		CommonSocialInstagram:        req.CommonSocialInstagram,
+		TopLogo:                      req.TopLogo, TopLogoType: req.TopLogoType,
+		IconDefault:            req.IconDefault,
+		BoothNumber:            req.BoothNumber,
+		BoothEventDate:         req.BoothEventDate,
+		BoothSize:              req.BoothSize,
+		BoothServicesOffered:   req.BoothServicesOffered,
+		BoothProductsShowcased: req.BoothProductsShowcased,
+		PersonFullName:         req.PersonFullName,
+		PersonJobTitle:         req.PersonJobTitle,
+		RoomNumber:             req.RoomNumber,
+		RoomDepartment:         req.RoomDepartment,
+		RoomBedCount:           req.RoomBedCount,
+		RoomEquipmentDetails:   req.RoomEquipmentDetails,
+		PlaceWorkHours:         req.PlaceWorkHours, Custom: req.Custom, Localization: req.Localization,
 		Source: req.Source, StartTime: req.StartTime, EndTime: req.EndTime,
 		IsSearchable: req.IsSearchable,
 	}

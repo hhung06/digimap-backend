@@ -35,7 +35,7 @@ func (h *levelTypeHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	lt, err := h.svc.Create(c.Request.Context(), req.Name, req.Icon)
+	lt, err := h.svc.Create(c.Request.Context(), req.Name, req.Icon, req.Value)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -54,7 +54,7 @@ func (h *levelTypeHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	lt, err := h.svc.Update(c.Request.Context(), id, req.Name, req.Icon)
+	lt, err := h.svc.Update(c.Request.Context(), id, req.Name, req.Icon, req.Value)
 	if err != nil {
 		respondError(c, err)
 		return

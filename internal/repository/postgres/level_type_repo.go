@@ -18,7 +18,7 @@ func NewLevelTypeRepository(pool *pgxpool.Pool) repository.LevelTypeRepository {
 	return &levelTypeRepo{pool: pool}
 }
 
-const levelTypeSelectCols = `id, name, icon, created_at, updated_at`
+const levelTypeSelectCols = `id, name, icon, value, created_at, updated_at`
 
 func (r *levelTypeRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.LevelType, error) {
 	q := `SELECT ` + levelTypeSelectCols + ` FROM level_types WHERE id = $1 AND deleted_at IS NULL`
@@ -53,18 +53,18 @@ func (r *levelTypeRepo) Create(ctx context.Context, lt *domain.LevelType) error 
 		lt.ID = newID()
 	}
 	const q = `
-		INSERT INTO level_types (id, venue_id, name, icon)
-		VALUES ($1, NULL, $2, $3)
+		INSERT INTO level_types (id, venue_id, name, icon, value)
+		VALUES ($1, NULL, $2, $3, $4)
 		RETURNING created_at, updated_at`
-	return r.pool.QueryRow(ctx, q, lt.ID, lt.Name, lt.Icon).Scan(&lt.CreatedAt, &lt.UpdatedAt)
+	return r.pool.QueryRow(ctx, q, lt.ID, lt.Name, lt.Icon, lt.Value).Scan(&lt.CreatedAt, &lt.UpdatedAt)
 }
 
 func (r *levelTypeRepo) Update(ctx context.Context, lt *domain.LevelType) error {
 	const q = `
-		UPDATE level_types SET name = $2, icon = $3
+		UPDATE level_types SET name = $2, icon = $3, value = $4
 		WHERE id = $1 AND deleted_at IS NULL
 		RETURNING updated_at`
-	err := r.pool.QueryRow(ctx, q, lt.ID, lt.Name, lt.Icon).Scan(&lt.UpdatedAt)
+	err := r.pool.QueryRow(ctx, q, lt.ID, lt.Name, lt.Icon, lt.Value).Scan(&lt.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.NewNotFound("level type not found")
 	}
@@ -77,6 +77,6 @@ func (r *levelTypeRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 func scanLevelType(row scanner) (*domain.LevelType, error) {
 	var lt domain.LevelType
-	err := row.Scan(&lt.ID, &lt.Name, &lt.Icon, &lt.CreatedAt, &lt.UpdatedAt)
+	err := row.Scan(&lt.ID, &lt.Name, &lt.Icon, &lt.Value, &lt.CreatedAt, &lt.UpdatedAt)
 	return &lt, err
 }

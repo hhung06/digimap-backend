@@ -1,0 +1,1 @@
+ALTER TABLE level_types DROP COLUMN IF EXISTS value;

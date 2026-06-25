@@ -204,39 +204,63 @@ type AmenityRequest struct {
 // ── Location ──────────────────────────────────────────────────────────────────
 
 type LocationResponse struct {
-	ID                    uuid.UUID                  `json:"id"`
-	VenueID               uuid.UUID                  `json:"venue_id"`
-	LevelID               *uuid.UUID                 `json:"level_id,omitempty"`
-	MainCategoryID        *uuid.UUID                 `json:"main_category_id,omitempty"`
-	ExternalID            string                     `json:"external_id,omitempty"`
-	CommonHidden          bool                       `json:"common_hidden"`
-	CommonName            string                     `json:"common_name"`
-	CommonShortName       string                     `json:"common_short_name,omitempty"`
-	CommonDescription     string                     `json:"common_description,omitempty"`
-	CommonColor           string                     `json:"common_color,omitempty"`
-	CommonLocationType    int                        `json:"common_location_type"`
-	CommonLocationSubType int                        `json:"common_location_sub_type"`
-	CommonLatitude        float64                    `json:"common_latitude"`
-	CommonLongitude       float64                    `json:"common_longitude"`
-	CommonAddress         string                     `json:"common_address,omitempty"`
-	CommonLogo            string                     `json:"common_logo,omitempty"`
-	CommonLargeLogo       string                     `json:"common_large_logo,omitempty"`
-	CommonMediumLogo      string                     `json:"common_medium_logo,omitempty"`
-	CommonSmallLogo       string                     `json:"common_small_logo,omitempty"`
-	CommonContactEmail    string                     `json:"common_contact_email,omitempty"`
-	CommonContactPhone    string                     `json:"common_contact_phone,omitempty"`
-	IsTopLocation         bool                       `json:"is_top_location"`
-	IsSearchable          bool                       `json:"is_searchable"`
-	Source                string                     `json:"source"`
-	PlaceWorkHours        json.RawMessage            `json:"place_work_hours,omitempty" swaggertype:"object"`
-	Custom                json.RawMessage            `json:"custom" swaggertype:"object"`
-	Localization          json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
-	StartTime             *time.Time                 `json:"start_time,omitempty"`
-	EndTime               *time.Time                 `json:"end_time,omitempty"`
-	Categories            []LocationCategoryResponse `json:"categories,omitempty"`
-	Images                []LocationImageResponse    `json:"images,omitempty"`
-	CreatedAt             time.Time                  `json:"created_at"`
-	UpdatedAt             time.Time                  `json:"updated_at"`
+	ID                           uuid.UUID                  `json:"id"`
+	VenueID                      uuid.UUID                  `json:"venue_id"`
+	LevelID                      *uuid.UUID                 `json:"level_id,omitempty"`
+	MainCategoryID               *uuid.UUID                 `json:"main_category_id,omitempty"`
+	ExternalID                   string                     `json:"external_id,omitempty"`
+	CommonHidden                 bool                       `json:"common_hidden"`
+	CommonName                   string                     `json:"common_name"`
+	CommonShortName              string                     `json:"common_short_name,omitempty"`
+	CommonDescription            string                     `json:"common_description,omitempty"`
+	CommonColor                  string                     `json:"common_color,omitempty"`
+	CommonLocationType           int                        `json:"common_location_type"`
+	CommonLocationSubType        int                        `json:"common_location_sub_type"`
+	CommonLatitude               float64                    `json:"common_latitude"`
+	CommonLongitude              float64                    `json:"common_longitude"`
+	CommonAddress                string                     `json:"common_address,omitempty"`
+	CommonLogo                   string                     `json:"common_logo,omitempty"`
+	CommonLargeLogo              string                     `json:"common_large_logo,omitempty"`
+	CommonMediumLogo             string                     `json:"common_medium_logo,omitempty"`
+	CommonSmallLogo              string                     `json:"common_small_logo,omitempty"`
+	CommonContactEmail           string                     `json:"common_contact_email,omitempty"`
+	CommonContactPhone           string                     `json:"common_contact_phone,omitempty"`
+	CommonShowShortName          bool                       `json:"common_show_short_name"`
+	CommonLocationState          *int                       `json:"common_location_state,omitempty"`
+	CommonLocationStateStartDate *time.Time                 `json:"common_location_state_start_date,omitempty"`
+	CommonLocationStateEndDate   *time.Time                 `json:"common_location_state_end_date,omitempty"`
+	CommonSocialWebsite          string                     `json:"common_social_website,omitempty"`
+	CommonSocialTwitter          string                     `json:"common_social_twitter,omitempty"`
+	CommonSocialTiktok           string                     `json:"common_social_tiktok,omitempty"`
+	CommonSocialFacebook         string                     `json:"common_social_facebook,omitempty"`
+	CommonSocialInstagram        string                     `json:"common_social_instagram,omitempty"`
+	TopLogo                      string                     `json:"top_logo,omitempty"`
+	TopLogoURL                   *string                    `json:"top_logo_url,omitempty"`
+	TopLogoType                  string                     `json:"top_logo_type,omitempty"`
+	IconDefault                  string                     `json:"icon_default,omitempty"`
+	BoothNumber                  string                     `json:"booth_number,omitempty"`
+	BoothEventDate               *time.Time                 `json:"booth_event_date,omitempty"`
+	BoothSize                    string                     `json:"booth_size,omitempty"`
+	BoothServicesOffered         string                     `json:"booth_services_offered,omitempty"`
+	BoothProductsShowcased       string                     `json:"booth_products_showcased,omitempty"`
+	PersonFullName               string                     `json:"person_full_name,omitempty"`
+	PersonJobTitle               string                     `json:"person_job_title,omitempty"`
+	RoomNumber                   string                     `json:"room_number,omitempty"`
+	RoomDepartment               string                     `json:"room_department,omitempty"`
+	RoomBedCount                 *int                       `json:"room_bed_count,omitempty"`
+	RoomEquipmentDetails         string                     `json:"room_equipment_details,omitempty"`
+	IsTopLocation                bool                       `json:"is_top_location"`
+	IsSearchable                 bool                       `json:"is_searchable"`
+	Source                       string                     `json:"source"`
+	PlaceWorkHours               json.RawMessage            `json:"place_work_hours,omitempty" swaggertype:"object"`
+	Custom                       json.RawMessage            `json:"custom" swaggertype:"object"`
+	Localization                 json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
+	StartTime                    *time.Time                 `json:"start_time,omitempty"`
+	EndTime                      *time.Time                 `json:"end_time,omitempty"`
+	Categories                   []LocationCategoryResponse `json:"categories,omitempty"`
+	Images                       []LocationImageResponse    `json:"images,omitempty"`
+	CreatedAt                    time.Time                  `json:"created_at"`
+	UpdatedAt                    time.Time                  `json:"updated_at"`
 }
 
 type LocationImageResponse struct {
@@ -250,56 +274,109 @@ type LocationImageResponse struct {
 }
 
 type CreateLocationRequest struct {
-	LevelID               *uuid.UUID      `json:"level_id"`
-	MainCategoryID        *uuid.UUID      `json:"main_category_id"`
-	CategoryIDs           []uuid.UUID     `json:"category_ids"`
-	ExternalID            string          `json:"external_id"`
-	CommonHidden          bool            `json:"common_hidden"`
-	CommonName            string          `json:"common_name" binding:"required"`
-	CommonShortName       string          `json:"common_short_name"`
-	CommonDescription     string          `json:"common_description"`
-	CommonColor           string          `json:"common_color"`
-	CommonLocationType    int             `json:"common_location_type"`
-	CommonLocationSubType int             `json:"common_location_sub_type"`
-	CommonLatitude        float64         `json:"common_latitude"`
-	CommonLongitude       float64         `json:"common_longitude"`
-	CommonAddress         string          `json:"common_address"`
-	CommonContactEmail    string          `json:"common_contact_email"`
-	CommonContactPhone    string          `json:"common_contact_phone"`
-	PlaceWorkHours        json.RawMessage `json:"place_work_hours" swaggertype:"object"`
-	Custom                json.RawMessage `json:"custom" swaggertype:"object"`
-	Localization          json.RawMessage `json:"localization" swaggertype:"object"`
-	Source                string          `json:"source"`
-	StartTime             *time.Time      `json:"start_time"`
-	EndTime               *time.Time      `json:"end_time"`
-	IsSearchable          bool            `json:"is_searchable"`
+	LevelID                      *uuid.UUID      `json:"level_id"`
+	MainCategoryID               *uuid.UUID      `json:"main_category_id"`
+	CategoryIDs                  []uuid.UUID     `json:"category_ids"`
+	ExternalID                   string          `json:"external_id"`
+	CommonHidden                 bool            `json:"common_hidden"`
+	CommonName                   string          `json:"common_name" binding:"required"`
+	CommonShortName              string          `json:"common_short_name"`
+	CommonDescription            string          `json:"common_description"`
+	CommonColor                  string          `json:"common_color"`
+	CommonLocationType           int             `json:"common_location_type"`
+	CommonLocationSubType        int             `json:"common_location_sub_type"`
+	CommonLatitude               float64         `json:"common_latitude"`
+	CommonLongitude              float64         `json:"common_longitude"`
+	CommonAddress                string          `json:"common_address"`
+	CommonLogo                   string          `json:"common_logo"`
+	CommonLargeLogo              string          `json:"common_large_logo"`
+	CommonMediumLogo             string          `json:"common_medium_logo"`
+	CommonSmallLogo              string          `json:"common_small_logo"`
+	CommonContactEmail           string          `json:"common_contact_email"`
+	CommonContactPhone           string          `json:"common_contact_phone"`
+	CommonShowShortName          bool            `json:"common_show_short_name"`
+	CommonLocationState          *int            `json:"common_location_state"`
+	CommonLocationStateStartDate *time.Time      `json:"common_location_state_start_date"`
+	CommonLocationStateEndDate   *time.Time      `json:"common_location_state_end_date"`
+	CommonSocialWebsite          string          `json:"common_social_website"`
+	CommonSocialTwitter          string          `json:"common_social_twitter"`
+	CommonSocialTiktok           string          `json:"common_social_tiktok"`
+	CommonSocialFacebook         string          `json:"common_social_facebook"`
+	CommonSocialInstagram        string          `json:"common_social_instagram"`
+	TopLogo                      string          `json:"top_logo"`
+	TopLogoType                  string          `json:"top_logo_type"`
+	IconDefault                  string          `json:"icon_default"`
+	BoothNumber                  string          `json:"booth_number"`
+	BoothEventDate               *time.Time      `json:"booth_event_date"`
+	BoothSize                    string          `json:"booth_size"`
+	BoothServicesOffered         string          `json:"booth_services_offered"`
+	BoothProductsShowcased       string          `json:"booth_products_showcased"`
+	PersonFullName               string          `json:"person_full_name"`
+	PersonJobTitle               string          `json:"person_job_title"`
+	RoomNumber                   string          `json:"room_number"`
+	RoomDepartment               string          `json:"room_department"`
+	RoomBedCount                 *int            `json:"room_bed_count"`
+	RoomEquipmentDetails         string          `json:"room_equipment_details"`
+	PlaceWorkHours               json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Custom                       json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization                 json.RawMessage `json:"localization" swaggertype:"object"`
+	Source                       string          `json:"source"`
+	StartTime                    *time.Time      `json:"start_time"`
+	EndTime                      *time.Time      `json:"end_time"`
+	IsSearchable                 bool            `json:"is_searchable"`
 }
 
 type UpdateLocationRequest struct {
-	LevelID               *uuid.UUID      `json:"level_id"`
-	MainCategoryID        *uuid.UUID      `json:"main_category_id"`
-	CategoryIDs           []uuid.UUID     `json:"category_ids"`
-	ExternalID            *string         `json:"external_id"`
-	CommonHidden          *bool           `json:"common_hidden"`
-	CommonName            *string         `json:"common_name"`
-	CommonShortName       *string         `json:"common_short_name"`
-	CommonDescription     *string         `json:"common_description"`
-	CommonColor           *string         `json:"common_color"`
-	CommonLocationType    *int            `json:"common_location_type"`
-	CommonLocationSubType *int            `json:"common_location_sub_type"`
-	CommonLatitude        *float64        `json:"common_latitude"`
-	CommonLongitude       *float64        `json:"common_longitude"`
-	CommonAddress         *string         `json:"common_address"`
-	CommonLogo            *string         `json:"common_logo"`
-	CommonContactEmail    *string         `json:"common_contact_email"`
-	CommonContactPhone    *string         `json:"common_contact_phone"`
-	PlaceWorkHours        json.RawMessage `json:"place_work_hours" swaggertype:"object"`
-	Custom                json.RawMessage `json:"custom" swaggertype:"object"`
-	Localization          json.RawMessage `json:"localization" swaggertype:"object"`
-	Source                *string         `json:"source"`
-	StartTime             *time.Time      `json:"start_time"`
-	EndTime               *time.Time      `json:"end_time"`
-	IsSearchable          *bool           `json:"is_searchable"`
+	LevelID                      *uuid.UUID      `json:"level_id"`
+	MainCategoryID               *uuid.UUID      `json:"main_category_id"`
+	CategoryIDs                  []uuid.UUID     `json:"category_ids"`
+	ExternalID                   *string         `json:"external_id"`
+	CommonHidden                 *bool           `json:"common_hidden"`
+	CommonName                   *string         `json:"common_name"`
+	CommonShortName              *string         `json:"common_short_name"`
+	CommonDescription            *string         `json:"common_description"`
+	CommonColor                  *string         `json:"common_color"`
+	CommonLocationType           *int            `json:"common_location_type"`
+	CommonLocationSubType        *int            `json:"common_location_sub_type"`
+	CommonLatitude               *float64        `json:"common_latitude"`
+	CommonLongitude              *float64        `json:"common_longitude"`
+	CommonAddress                *string         `json:"common_address"`
+	CommonLogo                   *string         `json:"common_logo"`
+	CommonLargeLogo              *string         `json:"common_large_logo"`
+	CommonMediumLogo             *string         `json:"common_medium_logo"`
+	CommonSmallLogo              *string         `json:"common_small_logo"`
+	CommonContactEmail           *string         `json:"common_contact_email"`
+	CommonContactPhone           *string         `json:"common_contact_phone"`
+	CommonShowShortName          *bool           `json:"common_show_short_name"`
+	CommonLocationState          *int            `json:"common_location_state"`
+	CommonLocationStateStartDate *time.Time      `json:"common_location_state_start_date"`
+	CommonLocationStateEndDate   *time.Time      `json:"common_location_state_end_date"`
+	CommonSocialWebsite          *string         `json:"common_social_website"`
+	CommonSocialTwitter          *string         `json:"common_social_twitter"`
+	CommonSocialTiktok           *string         `json:"common_social_tiktok"`
+	CommonSocialFacebook         *string         `json:"common_social_facebook"`
+	CommonSocialInstagram        *string         `json:"common_social_instagram"`
+	TopLogo                      *string         `json:"top_logo"`
+	TopLogoType                  *string         `json:"top_logo_type"`
+	IconDefault                  *string         `json:"icon_default"`
+	BoothNumber                  *string         `json:"booth_number"`
+	BoothEventDate               *time.Time      `json:"booth_event_date"`
+	BoothSize                    *string         `json:"booth_size"`
+	BoothServicesOffered         *string         `json:"booth_services_offered"`
+	BoothProductsShowcased       *string         `json:"booth_products_showcased"`
+	PersonFullName               *string         `json:"person_full_name"`
+	PersonJobTitle               *string         `json:"person_job_title"`
+	RoomNumber                   *string         `json:"room_number"`
+	RoomDepartment               *string         `json:"room_department"`
+	RoomBedCount                 *int            `json:"room_bed_count"`
+	RoomEquipmentDetails         *string         `json:"room_equipment_details"`
+	PlaceWorkHours               json.RawMessage `json:"place_work_hours" swaggertype:"object"`
+	Custom                       json.RawMessage `json:"custom" swaggertype:"object"`
+	Localization                 json.RawMessage `json:"localization" swaggertype:"object"`
+	Source                       *string         `json:"source"`
+	StartTime                    *time.Time      `json:"start_time"`
+	EndTime                      *time.Time      `json:"end_time"`
+	IsSearchable                 *bool           `json:"is_searchable"`
 }
 
 func (r UpdateLocationRequest) ApplyTo(l *domain.Location) {
@@ -345,11 +422,89 @@ func (r UpdateLocationRequest) ApplyTo(l *domain.Location) {
 	if r.CommonLogo != nil {
 		l.CommonLogo = *r.CommonLogo
 	}
+	if r.CommonLargeLogo != nil {
+		l.CommonLargeLogo = *r.CommonLargeLogo
+	}
+	if r.CommonMediumLogo != nil {
+		l.CommonMediumLogo = *r.CommonMediumLogo
+	}
+	if r.CommonSmallLogo != nil {
+		l.CommonSmallLogo = *r.CommonSmallLogo
+	}
 	if r.CommonContactEmail != nil {
 		l.CommonContactEmail = *r.CommonContactEmail
 	}
 	if r.CommonContactPhone != nil {
 		l.CommonContactPhone = *r.CommonContactPhone
+	}
+	if r.CommonShowShortName != nil {
+		l.CommonShowShortName = *r.CommonShowShortName
+	}
+	if r.CommonLocationState != nil {
+		l.CommonLocationState = r.CommonLocationState
+	}
+	if r.CommonLocationStateStartDate != nil {
+		l.CommonLocationStateStartDate = r.CommonLocationStateStartDate
+	}
+	if r.CommonLocationStateEndDate != nil {
+		l.CommonLocationStateEndDate = r.CommonLocationStateEndDate
+	}
+	if r.CommonSocialWebsite != nil {
+		l.CommonSocialWebsite = *r.CommonSocialWebsite
+	}
+	if r.CommonSocialTwitter != nil {
+		l.CommonSocialTwitter = *r.CommonSocialTwitter
+	}
+	if r.CommonSocialTiktok != nil {
+		l.CommonSocialTiktok = *r.CommonSocialTiktok
+	}
+	if r.CommonSocialFacebook != nil {
+		l.CommonSocialFacebook = *r.CommonSocialFacebook
+	}
+	if r.CommonSocialInstagram != nil {
+		l.CommonSocialInstagram = *r.CommonSocialInstagram
+	}
+	if r.TopLogo != nil {
+		l.TopLogo = *r.TopLogo
+	}
+	if r.TopLogoType != nil {
+		l.TopLogoType = *r.TopLogoType
+	}
+	if r.IconDefault != nil {
+		l.IconDefault = *r.IconDefault
+	}
+	if r.BoothNumber != nil {
+		l.BoothNumber = *r.BoothNumber
+	}
+	if r.BoothEventDate != nil {
+		l.BoothEventDate = r.BoothEventDate
+	}
+	if r.BoothSize != nil {
+		l.BoothSize = *r.BoothSize
+	}
+	if r.BoothServicesOffered != nil {
+		l.BoothServicesOffered = *r.BoothServicesOffered
+	}
+	if r.BoothProductsShowcased != nil {
+		l.BoothProductsShowcased = *r.BoothProductsShowcased
+	}
+	if r.PersonFullName != nil {
+		l.PersonFullName = *r.PersonFullName
+	}
+	if r.PersonJobTitle != nil {
+		l.PersonJobTitle = *r.PersonJobTitle
+	}
+	if r.RoomNumber != nil {
+		l.RoomNumber = *r.RoomNumber
+	}
+	if r.RoomDepartment != nil {
+		l.RoomDepartment = *r.RoomDepartment
+	}
+	if r.RoomBedCount != nil {
+		l.RoomBedCount = r.RoomBedCount
+	}
+	if r.RoomEquipmentDetails != nil {
+		l.RoomEquipmentDetails = *r.RoomEquipmentDetails
 	}
 	if r.PlaceWorkHours != nil {
 		l.PlaceWorkHours = r.PlaceWorkHours
@@ -434,7 +589,29 @@ func LocationToResponse(l *domain.Location) LocationResponse {
 		CommonLogo: l.CommonLogo, CommonLargeLogo: l.CommonLargeLogo,
 		CommonMediumLogo: l.CommonMediumLogo, CommonSmallLogo: l.CommonSmallLogo,
 		CommonContactEmail: l.CommonContactEmail, CommonContactPhone: l.CommonContactPhone,
-		IsTopLocation: l.IsTopLocation, IsSearchable: l.IsSearchable,
+		CommonShowShortName:          l.CommonShowShortName,
+		CommonLocationState:          l.CommonLocationState,
+		CommonLocationStateStartDate: l.CommonLocationStateStartDate,
+		CommonLocationStateEndDate:   l.CommonLocationStateEndDate,
+		CommonSocialWebsite:          l.CommonSocialWebsite,
+		CommonSocialTwitter:          l.CommonSocialTwitter,
+		CommonSocialTiktok:           l.CommonSocialTiktok,
+		CommonSocialFacebook:         l.CommonSocialFacebook,
+		CommonSocialInstagram:        l.CommonSocialInstagram,
+		TopLogo:                      l.TopLogo, TopLogoType: l.TopLogoType,
+		IconDefault:            l.IconDefault,
+		BoothNumber:            l.BoothNumber,
+		BoothEventDate:         l.BoothEventDate,
+		BoothSize:              l.BoothSize,
+		BoothServicesOffered:   l.BoothServicesOffered,
+		BoothProductsShowcased: l.BoothProductsShowcased,
+		PersonFullName:         l.PersonFullName,
+		PersonJobTitle:         l.PersonJobTitle,
+		RoomNumber:             l.RoomNumber,
+		RoomDepartment:         l.RoomDepartment,
+		RoomBedCount:           l.RoomBedCount,
+		RoomEquipmentDetails:   l.RoomEquipmentDetails,
+		IsTopLocation:          l.IsTopLocation, IsSearchable: l.IsSearchable,
 		Source: l.Source, PlaceWorkHours: l.PlaceWorkHours,
 		Custom: l.Custom, Localization: l.Localization,
 		StartTime: l.StartTime, EndTime: l.EndTime,
