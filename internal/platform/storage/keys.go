@@ -57,6 +57,26 @@ func CustomThemeKey(env string, venueID uuid.UUID, name string) string {
 	return env + "/venue_themes/custom/" + venueID.String() + "/" + name + ".json"
 }
 
+// LibraryAssetKey returns the S3 key for a library asset.
+// Django equivalent: {env}/library/{id}_{filename}
+func LibraryAssetKey(env string, id uuid.UUID, filename string) string {
+	if env == "" || filename == "" {
+		return ""
+	}
+	return env + "/library/" + id.String() + "_" + filename
+}
+
+// Asset3DKey returns the S3 key for a 3D asset file.
+// suffix is "" for the main file, "_thumbnail" for thumbnail, "_material" for material.
+// ext should not include the leading dot (e.g. "glb", "jpg").
+// Django equivalent: {env}/assets_3D/{id}{suffix}.{ext}
+func Asset3DKey(env string, id uuid.UUID, suffix, ext string) string {
+	if env == "" || ext == "" {
+		return ""
+	}
+	return env + "/assets_3D/" + id.String() + suffix + "." + ext
+}
+
 // MediaKey returns an immutable key for one backend-owned media upload.
 func MediaKey(env, entity string, recordID uuid.UUID, field string, uploadID uuid.UUID, ext string) string {
 	if !isCanonicalMediaSegment(env) || !isCanonicalMediaSegment(entity) || !isCanonicalMediaSegment(field) {

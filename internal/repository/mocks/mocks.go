@@ -641,8 +641,8 @@ func (m *AssetRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.A
 	return nil, args.Error(1)
 }
 
-func (m *AssetRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Asset, int64, error) {
-	args := m.Called(ctx, venueID, p)
+func (m *AssetRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination, assetType string) ([]*domain.Asset, int64, error) {
+	args := m.Called(ctx, venueID, p, assetType)
 	if a, ok := args.Get(0).([]*domain.Asset); ok {
 		return a, args.Get(1).(int64), args.Error(2)
 	}
@@ -662,6 +662,22 @@ func (m *AssetRepository) Update(ctx context.Context, a *domain.Asset) error {
 func (m *AssetRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
+}
+
+func (m *AssetRepository) ListAll(ctx context.Context, assetType string) ([]*domain.Asset, error) {
+	args := m.Called(ctx, assetType)
+	if a, ok := args.Get(0).([]*domain.Asset); ok {
+		return a, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *AssetRepository) ListLibrary(ctx context.Context, env, status, assetType string) ([]*domain.Asset, error) {
+	args := m.Called(ctx, env, status, assetType)
+	if a, ok := args.Get(0).([]*domain.Asset); ok {
+		return a, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 // ── LevelTypeRepository ───────────────────────────────────────────────────────

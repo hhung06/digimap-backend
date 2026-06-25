@@ -81,6 +81,7 @@ type AWSConfig struct {
 	S3SnapshotBucket         string // snapshot draft/publish JSON blobs
 	S3SyncBucket             string // venue sync data (VenueSyncFlag / SyncData JSON)
 	CloudFrontDistributionID string
+	CFAssetsDomain           string // e.g. "assets.example.com" — used to build 3D asset URLs
 }
 
 type SMTPConfig struct {
@@ -204,6 +205,7 @@ func Load() (*Config, error) {
 			S3SnapshotBucket:         v.GetString("AWS_S3_SNAPSHOT_BUCKET"),
 			S3SyncBucket:             v.GetString("AWS_S3_SYNC_BUCKET"),
 			CloudFrontDistributionID: v.GetString("AWS_CF_DISTRIBUTION_ID"),
+				CFAssetsDomain:           v.GetString("AWS_CF_ASSETS_DOMAIN"),
 		},
 		SMTP: SMTPConfig{
 			Host:      v.GetString("EMAIL_HOST"),

@@ -367,11 +367,16 @@ type LevelBundleRepository interface {
 // AssetRepository handles asset metadata persistence.
 type AssetRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Asset, error)
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Asset, int64, error)
+	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination, assetType string) ([]*domain.Asset, int64, error)
+	ListAll(ctx context.Context, assetType string) ([]*domain.Asset, error)
+	// ListLibrary returns assets uploaded via the library (key prefix {env}/library/),
+	// optionally filtered by status and assetType. Used by GET /library-assets/.
+	ListLibrary(ctx context.Context, env, status, assetType string) ([]*domain.Asset, error)
 	Create(ctx context.Context, a *domain.Asset) error
 	Update(ctx context.Context, a *domain.Asset) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+
 
 // LevelTypeRepository handles level type CRUD.
 type LevelTypeRepository interface {

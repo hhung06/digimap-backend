@@ -16,7 +16,7 @@ import (
 
 func TestAssetService_Create(t *testing.T) {
 	repo := &mocks.AssetRepository{}
-	svc := service.NewAssetService(repo)
+	svc := service.NewAssetService(repo, nil, "local", "")
 	ctx := context.Background()
 
 	venueID := uuid.New()
@@ -43,7 +43,7 @@ func TestAssetService_Create(t *testing.T) {
 
 func TestAssetService_Delete_NotFound(t *testing.T) {
 	repo := &mocks.AssetRepository{}
-	svc := service.NewAssetService(repo)
+	svc := service.NewAssetService(repo, nil, "local", "")
 	ctx := context.Background()
 
 	id := uuid.New()

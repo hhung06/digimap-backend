@@ -150,9 +150,17 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		assetH := newAssetHandler(deps.AssetService)
 		adminOnly.GET("/venues/:id/assets", assetH.List)
 		adminOnly.POST("/venues/:id/assets", assetH.Create)
+		adminOnly.POST("/venues/:id/assets/upload-3d", assetH.Upload3D)
 		adminOnly.GET("/venues/:id/assets/:assetID", assetH.Get)
 		adminOnly.PUT("/venues/:id/assets/:assetID", assetH.Update)
 		adminOnly.DELETE("/venues/:id/assets/:assetID", assetH.Delete)
+		// Global asset endpoints — no venue scope, mirror indoormap-backend API paths.
+		adminOnly.GET("/all-assets", assetH.AllAssets)
+		adminOnly.GET("/library-assets", assetH.ListLibraryAssets)
+		adminOnly.POST("/library-assets", assetH.UploadLibraryAsset)
+		adminOnly.GET("/library-assets/:assetID", assetH.Get)
+		adminOnly.PUT("/library-assets/:assetID", assetH.UpdateLibraryAsset)
+		adminOnly.DELETE("/library-assets/:assetID", assetH.Delete)
 
 		ltH := newLevelTypeHandler(deps.LevelTypeService)
 		adminOnly.GET("/level-types", ltH.List)

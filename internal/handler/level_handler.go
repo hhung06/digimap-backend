@@ -42,9 +42,25 @@ func (h *levelHandler) ListMapGroups(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	levels, err := h.svc.List(c.Request.Context(), venueID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	byGroup := make(map[uuid.UUID][]dto.LevelResponse)
+	for _, l := range levels {
+		if l.MapGroupID != nil {
+			byGroup[*l.MapGroupID] = append(byGroup[*l.MapGroupID], dto.LevelToResponse(l))
+		}
+	}
 	items := make([]dto.MapGroupResponse, len(groups))
 	for i, mg := range groups {
-		items[i] = dto.MapGroupToResponse(mg)
+		r := dto.MapGroupToResponse(mg)
+		r.Maps = byGroup[mg.ID]
+		if r.Maps == nil {
+			r.Maps = []dto.LevelResponse{}
+		}
+		items[i] = r
 	}
 	c.JSON(http.StatusOK, dto.OK(items))
 }

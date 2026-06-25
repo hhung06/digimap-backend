@@ -331,14 +331,15 @@ func VenueToResponse(v *domain.Venue) VenueResponse {
 // ── Level ─────────────────────────────────────────────────────────────────────
 
 type MapGroupResponse struct {
-	ID        uuid.UUID `json:"id"`
-	VenueID   uuid.UUID `json:"venue_id"`
-	Type      string    `json:"type,omitempty"`
-	Name      string    `json:"name,omitempty"`
-	ShortName string    `json:"short_name,omitempty"`
-	SortIndex int       `json:"sort_index"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID       `json:"id"`
+	VenueID   uuid.UUID       `json:"venue_id"`
+	Type      string          `json:"type,omitempty"`
+	Name      string          `json:"name,omitempty"`
+	ShortName string          `json:"short_name,omitempty"`
+	SortIndex int             `json:"sort_index"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+	Maps      []LevelResponse `json:"maps"`
 }
 
 type MapGroupRequest struct {

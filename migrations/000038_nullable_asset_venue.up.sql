@@ -1,0 +1,1 @@
+ALTER TABLE assets ALTER COLUMN venue_id DROP NOT NULL;
