@@ -21,7 +21,7 @@ type ThemeResponse struct {
 }
 
 type ThemeRequest struct {
-	Name string          `json:"name" binding:"required"`
+	Name string          `json:"name"`
 	Data json.RawMessage `json:"data"`
 }
 

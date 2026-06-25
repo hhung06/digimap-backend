@@ -76,6 +76,10 @@ func (h *themeHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "name is required"))
+		return
+	}
 	t, err := h.svc.Create(c.Request.Context(), venueID, req.Name, req.Data)
 	if err != nil {
 		respondError(c, err)
