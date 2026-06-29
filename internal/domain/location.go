@@ -98,8 +98,9 @@ type Location struct {
 	EndTime                      *time.Time
 	IsSearchable                 bool
 	// Eagerly loaded relations
-	Categories []*LocationCategory
-	Images     []*LocationImage
+	MainCategory *LocationCategory
+	Categories   []*LocationCategory
+	Images       []*LocationImage
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	DeletedAt  *time.Time

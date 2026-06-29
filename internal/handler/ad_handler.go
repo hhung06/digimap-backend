@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,12 +14,17 @@ import (
 )
 
 type adHandler struct {
-	svc      service.AdvertisementService
+	svc       service.AdvertisementService
 	enrichers *enricher.Registry
+	mediaSvc  service.MediaService
 }
 
-func newAdHandler(svc service.AdvertisementService, enrichers *enricher.Registry) *adHandler {
-	return &adHandler{svc: svc, enrichers: enrichers}
+func newAdHandler(svc service.AdvertisementService, enrichers *enricher.Registry, mediaSvc ...service.MediaService) *adHandler {
+	var media service.MediaService
+	if len(mediaSvc) > 0 {
+		media = mediaSvc[0]
+	}
+	return &adHandler{svc: svc, enrichers: enrichers, mediaSvc: media}
 }
 
 // @Summary     List advertisements
@@ -48,9 +54,9 @@ func (h *adHandler) List(c *gin.Context) {
 	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceAd)
 	items := make([]any, len(ads))
 	for i, a := range ads {
-		items[i] = enricher.MergeInto(dto.AdvertisementToResponse(a), extras)
+		items[i] = enricher.MergeInto(h.advertisementResponse(c.Request.Context(), a), extras)
 	}
-	c.JSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
+	c.PureJSON(http.StatusOK, dto.Paginated(items, int64(total), p.Page, p.PageSize))
 }
 
 // @Summary     Get advertisement
@@ -82,13 +88,14 @@ func (h *adHandler) Get(c *gin.Context) {
 		return
 	}
 	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceAd)
-	c.JSON(http.StatusOK, dto.OK(enricher.MergeInto(dto.AdvertisementToResponse(a), extras)))
+	c.PureJSON(http.StatusOK, dto.OK(enricher.MergeInto(h.advertisementResponse(c.Request.Context(), a), extras)))
 }
 
 // @Summary     Create advertisement
 // @Description Create a new advertisement (requires editor role)
 // @Tags        ads
 // @Accept      json
+// @Accept      multipart/form-data
 // @Produce     json
 // @Security    BearerAuth
 // @Param       id   path     string                      true "Venue ID"
@@ -105,31 +112,54 @@ func (h *adHandler) Create(c *gin.Context) {
 		return
 	}
 	var req dto.AdvertisementRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
-		return
+	var upload *service.MediaUpload
+	if isMultipartRequest(c) {
+		if err := bindMultipartData(c, &req, 1<<20); err != nil {
+			respondError(c, err)
+			return
+		}
+		file, found, err := multipartFile(c, "content_image")
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		if found {
+			media, mediaCloser, err := mediaUpload(file)
+			if err != nil {
+				respondError(c, err)
+				return
+			}
+			defer func() { _ = mediaCloser.Close() }()
+			upload = &media
+		}
+	} else {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
+			return
+		}
 	}
 	a := &domain.Advertisement{
 		VenueID: &venueID, LocationID: req.LocationID,
 		Type: req.Type, Status: "draft", Navigate: req.Navigate,
-		ContentImageURL: req.ContentImageURL, ContentCTAURL: req.ContentCTAURL,
+		ContentImage: req.ContentImage, ContentCTAURL: req.ContentCTAURL,
 		Placement: req.Placement,
 		SizeWidth: req.SizeWidth, SizeHeight: req.SizeHeight,
 		RewardType: req.RewardType, RewardAmount: req.RewardAmount,
 		DisplayDuration: req.DisplayDuration,
-		StartAt: req.StartAt, EndAt: req.EndAt,
+		StartAt:         req.StartAt, EndAt: req.EndAt,
 	}
-	if err := h.svc.Create(c.Request.Context(), a); err != nil {
+	if err := h.svc.CreateWithMedia(c.Request.Context(), a, upload); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, dto.OK(dto.AdvertisementToResponse(a)))
+	c.PureJSON(http.StatusCreated, dto.OK(h.advertisementResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Update advertisement
 // @Description Update an advertisement (requires editor role)
 // @Tags        ads
 // @Accept      json
+// @Accept      multipart/form-data
 // @Produce     json
 // @Security    BearerAuth
 // @Param       id   path     string                     true "Venue ID"
@@ -147,21 +177,47 @@ func (h *adHandler) Update(c *gin.Context) {
 		return
 	}
 	var req dto.UpdateAdvertisementRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
-		return
+	var upload *service.MediaUpload
+	if isMultipartRequest(c) {
+		if err := bindMultipartData(c, &req, 1<<20); err != nil {
+			respondError(c, err)
+			return
+		}
+		file, found, err := multipartFile(c, "content_image")
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		if found {
+			media, mediaCloser, err := mediaUpload(file)
+			if err != nil {
+				respondError(c, err)
+				return
+			}
+			defer func() { _ = mediaCloser.Close() }()
+			upload = &media
+		}
+	} else {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
+			return
+		}
 	}
 	a, err := h.svc.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
+	oldKey := stringValue(a.ContentImage)
 	req.ApplyTo(a)
-	if err := h.svc.Update(c.Request.Context(), a); err != nil {
+	if err := h.svc.UpdateWithMedia(c.Request.Context(), a, service.AdvertisementMediaReplacement{
+		OldKey: oldKey,
+		Upload: upload,
+	}); err != nil {
 		respondError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, dto.OK(dto.AdvertisementToResponse(a)))
+	c.PureJSON(http.StatusOK, dto.OK(h.advertisementResponse(c.Request.Context(), a)))
 }
 
 // @Summary     Delete advertisement
@@ -212,4 +268,21 @@ func (h *adHandler) Publish(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(nil))
+}
+
+func (h *adHandler) advertisementResponse(ctx context.Context, a *domain.Advertisement) dto.AdvertisementResponse {
+	resp := dto.AdvertisementToResponse(a)
+	if h.mediaSvc == nil || a == nil || a.ContentImage == nil {
+		return resp
+	}
+	target := service.MediaTarget{Entity: "ads", RecordID: a.ID, Field: "content_image"}
+	resp.ContentImageURL = h.mediaSvc.URL(ctx, target, *a.ContentImage)
+	return resp
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }

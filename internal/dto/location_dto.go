@@ -204,10 +204,10 @@ type AmenityRequest struct {
 // ── Location ──────────────────────────────────────────────────────────────────
 
 type LocationResponse struct {
-	ID                           uuid.UUID                  `json:"id"`
-	VenueID                      uuid.UUID                  `json:"venue_id"`
-	LevelID                      *uuid.UUID                 `json:"level_id,omitempty"`
-	MainCategoryID               *uuid.UUID                 `json:"main_category_id,omitempty"`
+	ID                           uuid.UUID                        `json:"id"`
+	VenueID                      uuid.UUID                        `json:"venue_id"`
+	LevelID                      *uuid.UUID                       `json:"level_id,omitempty"`
+	MainCategory                 *LocationCategorySummaryResponse `json:"main_category,omitempty"`
 	ExternalID                   string                     `json:"external_id,omitempty"`
 	CommonHidden                 bool                       `json:"common_hidden"`
 	CommonName                   string                     `json:"common_name"`
@@ -220,6 +220,7 @@ type LocationResponse struct {
 	CommonLongitude              float64                    `json:"common_longitude"`
 	CommonAddress                string                     `json:"common_address,omitempty"`
 	CommonLogo                   string                     `json:"common_logo,omitempty"`
+	CommonLogoURL                *string                    `json:"common_logo_url,omitempty"`
 	CommonLargeLogo              string                     `json:"common_large_logo,omitempty"`
 	CommonMediumLogo             string                     `json:"common_medium_logo,omitempty"`
 	CommonSmallLogo              string                     `json:"common_small_logo,omitempty"`
@@ -257,7 +258,7 @@ type LocationResponse struct {
 	Localization                 json.RawMessage            `json:"localization,omitempty" swaggertype:"object"`
 	StartTime                    *time.Time                 `json:"start_time,omitempty"`
 	EndTime                      *time.Time                 `json:"end_time,omitempty"`
-	Categories                   []LocationCategoryResponse `json:"categories,omitempty"`
+	CommonCategories             []LocationCategoryResponse `json:"common_categories,omitempty"`
 	Images                       []LocationImageResponse    `json:"images,omitempty"`
 	CreatedAt                    time.Time                  `json:"created_at"`
 	UpdatedAt                    time.Time                  `json:"updated_at"`
@@ -275,8 +276,8 @@ type LocationImageResponse struct {
 
 type CreateLocationRequest struct {
 	LevelID                      *uuid.UUID      `json:"level_id"`
-	MainCategoryID               *uuid.UUID      `json:"main_category_id"`
-	CategoryIDs                  []uuid.UUID     `json:"category_ids"`
+	MainCategory                 *uuid.UUID      `json:"main_category"`
+	CommonCategories             []uuid.UUID     `json:"common_categories"`
 	ExternalID                   string          `json:"external_id"`
 	CommonHidden                 bool            `json:"common_hidden"`
 	CommonName                   string          `json:"common_name" binding:"required"`
@@ -328,8 +329,8 @@ type CreateLocationRequest struct {
 
 type UpdateLocationRequest struct {
 	LevelID                      *uuid.UUID      `json:"level_id"`
-	MainCategoryID               *uuid.UUID      `json:"main_category_id"`
-	CategoryIDs                  []uuid.UUID     `json:"category_ids"`
+	MainCategory                 *uuid.UUID      `json:"main_category"`
+	CommonCategories             []uuid.UUID     `json:"common_categories"`
 	ExternalID                   *string         `json:"external_id"`
 	CommonHidden                 *bool           `json:"common_hidden"`
 	CommonName                   *string         `json:"common_name"`
@@ -377,14 +378,15 @@ type UpdateLocationRequest struct {
 	StartTime                    *time.Time      `json:"start_time"`
 	EndTime                      *time.Time      `json:"end_time"`
 	IsSearchable                 *bool           `json:"is_searchable"`
+	IsTopLocation                *bool           `json:"is_top_location"`
 }
 
 func (r UpdateLocationRequest) ApplyTo(l *domain.Location) {
 	if r.LevelID != nil {
 		l.LevelID = r.LevelID
 	}
-	if r.MainCategoryID != nil {
-		l.MainCategoryID = r.MainCategoryID
+	if r.MainCategory != nil {
+		l.MainCategoryID = r.MainCategory
 	}
 	if r.ExternalID != nil {
 		l.ExternalID = *r.ExternalID
@@ -527,6 +529,9 @@ func (r UpdateLocationRequest) ApplyTo(l *domain.Location) {
 	if r.IsSearchable != nil {
 		l.IsSearchable = *r.IsSearchable
 	}
+	if r.IsTopLocation != nil {
+		l.IsTopLocation = *r.IsTopLocation
+	}
 }
 
 type SetTopLocationRequest struct {
@@ -580,7 +585,7 @@ type PromotionRequest struct {
 func LocationToResponse(l *domain.Location) LocationResponse {
 	r := LocationResponse{
 		ID: l.ID, VenueID: l.VenueID, LevelID: l.LevelID,
-		MainCategoryID: l.MainCategoryID, ExternalID: l.ExternalID,
+		ExternalID: l.ExternalID,
 		CommonHidden: l.CommonHidden, CommonName: l.CommonName,
 		CommonShortName: l.CommonShortName, CommonDescription: l.CommonDescription,
 		CommonColor: l.CommonColor, CommonLocationType: l.CommonLocationType,
@@ -620,8 +625,12 @@ func LocationToResponse(l *domain.Location) LocationResponse {
 	if len(r.Custom) == 0 {
 		r.Custom = json.RawMessage("{}")
 	}
+	if l.MainCategory != nil {
+		mc := LocationCategoryToSummaryResponse(l.MainCategory)
+		r.MainCategory = &mc
+	}
 	for _, c := range l.Categories {
-		r.Categories = append(r.Categories, LocationCategoryToResponse(c))
+		r.CommonCategories = append(r.CommonCategories, LocationCategoryToResponse(c))
 	}
 	for _, img := range l.Images {
 		r.Images = append(r.Images, LocationImageResponse{

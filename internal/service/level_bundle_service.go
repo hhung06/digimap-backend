@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -85,6 +86,9 @@ func (s *levelBundleService) GetContent(ctx context.Context, id uuid.UUID) ([]by
 	key := storage.LevelBundleKey(s.env, b.VenueID, b.SnapshotID, b.LevelID)
 	data, err := s.storer.GetObject(ctx, key)
 	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotFound) {
+			return nil, fmt.Errorf("level bundle content: %w", domain.ErrNotFound)
+		}
 		return nil, fmt.Errorf("fetch level bundle content: %w", err)
 	}
 	return data, nil

@@ -10,7 +10,7 @@ definitions:
     properties:
       content_cta_url:
         type: string
-      content_image_url:
+      content_image:
         type: string
       display_duration:
         type: integer
@@ -38,6 +38,8 @@ definitions:
   dto.AdvertisementResponse:
     properties:
       content_cta_url:
+        type: string
+      content_image:
         type: string
       content_image_url:
         type: string
@@ -543,12 +545,22 @@ definitions:
     type: object
   dto.CreateLocationRequest:
     properties:
-      category_ids:
+      booth_event_date:
+        type: string
+      booth_number:
+        type: string
+      booth_products_showcased:
+        type: string
+      booth_services_offered:
+        type: string
+      booth_size:
+        type: string
+      common_address:
+        type: string
+      common_categories:
         items:
           type: string
         type: array
-      common_address:
-        type: string
       common_color:
         type: string
       common_contact_email:
@@ -559,17 +571,43 @@ definitions:
         type: string
       common_hidden:
         type: boolean
+      common_large_logo:
+        type: string
       common_latitude:
         type: number
+      common_location_state:
+        type: integer
+      common_location_state_end_date:
+        type: string
+      common_location_state_start_date:
+        type: string
       common_location_sub_type:
         type: integer
       common_location_type:
         type: integer
+      common_logo:
+        type: string
       common_longitude:
         type: number
+      common_medium_logo:
+        type: string
       common_name:
         type: string
       common_short_name:
+        type: string
+      common_show_short_name:
+        type: boolean
+      common_small_logo:
+        type: string
+      common_social_facebook:
+        type: string
+      common_social_instagram:
+        type: string
+      common_social_tiktok:
+        type: string
+      common_social_twitter:
+        type: string
+      common_social_website:
         type: string
       custom:
         type: object
@@ -577,19 +615,37 @@ definitions:
         type: string
       external_id:
         type: string
+      icon_default:
+        type: string
       is_searchable:
         type: boolean
       level_id:
         type: string
       localization:
         type: object
-      main_category_id:
+      main_category:
+        type: string
+      person_full_name:
+        type: string
+      person_job_title:
         type: string
       place_work_hours:
         type: object
+      room_bed_count:
+        type: integer
+      room_department:
+        type: string
+      room_equipment_details:
+        type: string
+      room_number:
+        type: string
       source:
         type: string
       start_time:
+        type: string
+      top_logo:
+        type: string
+      top_logo_type:
         type: string
     required:
     - common_name
@@ -1185,12 +1241,22 @@ definitions:
     type: object
   dto.LocationResponse:
     properties:
-      categories:
+      booth_event_date:
+        type: string
+      booth_number:
+        type: string
+      booth_products_showcased:
+        type: string
+      booth_services_offered:
+        type: string
+      booth_size:
+        type: string
+      common_address:
+        type: string
+      common_categories:
         items:
           $ref: '#/definitions/dto.LocationCategoryResponse'
         type: array
-      common_address:
-        type: string
       common_color:
         type: string
       common_contact_email:
@@ -1205,11 +1271,19 @@ definitions:
         type: string
       common_latitude:
         type: number
+      common_location_state:
+        type: integer
+      common_location_state_end_date:
+        type: string
+      common_location_state_start_date:
+        type: string
       common_location_sub_type:
         type: integer
       common_location_type:
         type: integer
       common_logo:
+        type: string
+      common_logo_url:
         type: string
       common_longitude:
         type: number
@@ -1219,7 +1293,19 @@ definitions:
         type: string
       common_short_name:
         type: string
+      common_show_short_name:
+        type: boolean
       common_small_logo:
+        type: string
+      common_social_facebook:
+        type: string
+      common_social_instagram:
+        type: string
+      common_social_tiktok:
+        type: string
+      common_social_twitter:
+        type: string
+      common_social_website:
         type: string
       created_at:
         type: string
@@ -1228,6 +1314,8 @@ definitions:
       end_time:
         type: string
       external_id:
+        type: string
+      icon_default:
         type: string
       id:
         type: string
@@ -1243,13 +1331,31 @@ definitions:
         type: string
       localization:
         type: object
-      main_category_id:
+      main_category:
+        $ref: '#/definitions/dto.LocationCategorySummaryResponse'
+      person_full_name:
+        type: string
+      person_job_title:
         type: string
       place_work_hours:
         type: object
+      room_bed_count:
+        type: integer
+      room_department:
+        type: string
+      room_equipment_details:
+        type: string
+      room_number:
+        type: string
       source:
         type: string
       start_time:
+        type: string
+      top_logo:
+        type: string
+      top_logo_type:
+        type: string
+      top_logo_url:
         type: string
       updated_at:
         type: string
@@ -1305,6 +1411,10 @@ definitions:
         type: string
       id:
         type: string
+      maps:
+        items:
+          $ref: '#/definitions/dto.LevelResponse'
+        type: array
       name:
         type: string
       short_name:
@@ -1843,6 +1953,10 @@ definitions:
         type: string
       external_id:
         type: string
+      keep_image_ids:
+        items:
+          type: string
+        type: array
       label:
         type: string
       localization:
@@ -1942,12 +2056,22 @@ definitions:
     type: object
   dto.UpdateLocationRequest:
     properties:
-      category_ids:
+      booth_event_date:
+        type: string
+      booth_number:
+        type: string
+      booth_products_showcased:
+        type: string
+      booth_services_offered:
+        type: string
+      booth_size:
+        type: string
+      common_address:
+        type: string
+      common_categories:
         items:
           type: string
         type: array
-      common_address:
-        type: string
       common_color:
         type: string
       common_contact_email:
@@ -1958,8 +2082,16 @@ definitions:
         type: string
       common_hidden:
         type: boolean
+      common_large_logo:
+        type: string
       common_latitude:
         type: number
+      common_location_state:
+        type: integer
+      common_location_state_end_date:
+        type: string
+      common_location_state_start_date:
+        type: string
       common_location_sub_type:
         type: integer
       common_location_type:
@@ -1968,9 +2100,25 @@ definitions:
         type: string
       common_longitude:
         type: number
+      common_medium_logo:
+        type: string
       common_name:
         type: string
       common_short_name:
+        type: string
+      common_show_short_name:
+        type: boolean
+      common_small_logo:
+        type: string
+      common_social_facebook:
+        type: string
+      common_social_instagram:
+        type: string
+      common_social_tiktok:
+        type: string
+      common_social_twitter:
+        type: string
+      common_social_website:
         type: string
       custom:
         type: object
@@ -1978,19 +2126,39 @@ definitions:
         type: string
       external_id:
         type: string
+      icon_default:
+        type: string
       is_searchable:
+        type: boolean
+      is_top_location:
         type: boolean
       level_id:
         type: string
       localization:
         type: object
-      main_category_id:
+      main_category:
+        type: string
+      person_full_name:
+        type: string
+      person_job_title:
         type: string
       place_work_hours:
         type: object
+      room_bed_count:
+        type: integer
+      room_department:
+        type: string
+      room_equipment_details:
+        type: string
+      room_number:
+        type: string
       source:
         type: string
       start_time:
+        type: string
+      top_logo:
+        type: string
+      top_logo_type:
         type: string
     type: object
   dto.UpdateNotificationRequest:
@@ -3605,6 +3773,7 @@ paths:
     post:
       consumes:
       - application/json
+      - multipart/form-data
       description: Create a new advertisement (requires editor role)
       parameters:
       - description: Venue ID
@@ -3728,6 +3897,7 @@ paths:
     put:
       consumes:
       - application/json
+      - multipart/form-data
       description: Update an advertisement (requires editor role)
       parameters:
       - description: Venue ID
@@ -6654,6 +6824,7 @@ paths:
     put:
       consumes:
       - application/json
+      - multipart/form-data
       description: Pin or unpin a location as a top result (requires editor role)
       parameters:
       - description: Venue ID
@@ -6678,7 +6849,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.LocationResponse'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -7914,6 +8090,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete level bundle
+      tags:
+      - snapshots
+  /venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}/content:
+    get:
+      description: |-
+        Return the raw stored bundle blob for a level bundle (system admin only).
+        The body is the opaque encrypted DigimapStoredScene JSON uploaded by the editor.
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Snapshot ID
+        in: path
+        name: snapshotID
+        required: true
+        type: string
+      - description: Bundle ID
+        in: path
+        name: bundleID
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get level bundle content
       tags:
       - snapshots
   /venues/{id}/snapshots/{snapshotID}/publish:

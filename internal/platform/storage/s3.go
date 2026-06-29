@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -11,9 +12,13 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	smithy "github.com/aws/smithy-go"
 
 	"github.com/hhung06/digimap-backend/config"
 )
+
+// ErrObjectNotFound is returned by GetObject when the requested key does not exist in the bucket.
+var ErrObjectNotFound = errors.New("storage: object not found")
 
 // Storer manages object storage operations.
 type Storer interface {
@@ -147,6 +152,12 @@ func (s *s3Storer) GetObject(ctx context.Context, key string) ([]byte, error) {
 		Key:    aws.String(key),
 	})
 	if err != nil {
+		var nsk *s3types.NoSuchKey
+		var apiErr smithy.APIError
+		if errors.As(err, &nsk) ||
+			(errors.As(err, &apiErr) && (apiErr.ErrorCode() == "NoSuchKey" || apiErr.ErrorCode() == "NotFound")) {
+			return nil, fmt.Errorf("s3 get %s: %w", key, ErrObjectNotFound)
+		}
 		return nil, fmt.Errorf("s3 get %s: %w", key, err)
 	}
 	defer out.Body.Close()
@@ -188,5 +199,5 @@ func (s *LogStorer) DeleteObject(_ context.Context, key string) error {
 
 func (s *LogStorer) GetObject(_ context.Context, key string) ([]byte, error) {
 	fmt.Printf("[DEV S3] GetObject key=%s\n", key)
-	return []byte("{}"), nil
+	return nil, fmt.Errorf("s3 get %s: %w", key, ErrObjectNotFound)
 }

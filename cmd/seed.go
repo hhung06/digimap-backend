@@ -437,12 +437,12 @@ func runSeed(_ *cobra.Command, _ []string) error {
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO advertisements (
 			venue_id, location_id, type, status, navigate,
-			content_image_url, content_cta_url, placement,
+			content_image, content_cta_url, placement,
 			size_width, size_height, display_duration,
 			published_at, start_at, end_at
 		) VALUES (
 			$1,$2, 'dialog', 'published', 'location',
-			'https://example.com/ads/sake-promo.jpg', 'https://foodex2026.example.com/sake',
+			NULL, 'https://foodex2026.example.com/sake',
 			'home_screen', 800, 600, 10,
 			NOW(), NOW(), NOW() + INTERVAL '5 days'
 		) RETURNING id`, venueID, loc1ID).Scan(&ad1ID); err != nil {
@@ -451,11 +451,11 @@ func runSeed(_ *cobra.Command, _ []string) error {
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO advertisements (
 			venue_id, type, status, placement,
-			content_image_url, size_width, size_height,
+			content_image, size_width, size_height,
 			start_at, end_at
 		) VALUES (
 			$1, 'banner', 'published', 'map_screen',
-			'https://example.com/ads/futuretech-banner.jpg', 1200, 200,
+			NULL, 1200, 200,
 			NOW(), NOW() + INTERVAL '5 days'
 		) RETURNING id`, venueID).Scan(&ad2ID); err != nil {
 		return fmt.Errorf("insert ad 2: %w", err)

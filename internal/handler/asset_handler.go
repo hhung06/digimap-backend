@@ -51,32 +51,29 @@ func (h *assetHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.OK(dto.AssetToResponse(a, h.svc.AssetURL(a.Thumbnail), h.svc.AssetURL(a.Material))))
 }
 
+// Create handles POST /venues/:id/assets.
+// The editor sends a batch of base64 data-URLs: [{id, file}, ...].
 func (h *assetHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
 		return
 	}
-	var req dto.CreateAssetRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var items []dto.Upload2DAssetItem
+	if err := c.ShouldBindJSON(&items); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
-	userID := middleware.GetUserID(c)
-	a, err := h.svc.Create(c.Request.Context(), service.CreateAssetInput{
-		VenueID:     &venueID,
-		Name:        req.Name,
-		Key:         req.Key,
-		ContentType: req.ContentType,
-		SizeBytes:   req.SizeBytes,
-		URL:         req.URL,
-		CreatedBy:   &userID,
-	})
-	if err != nil {
-		respondError(c, err)
-		return
+	results := make([]dto.AssetResponse, 0, len(items))
+	for _, item := range items {
+		a, err := h.svc.Upload2D(c.Request.Context(), venueID, item.ID, item.File)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		results = append(results, dto.AssetToResponse(a, h.svc.AssetURL(a.Thumbnail), h.svc.AssetURL(a.Material)))
 	}
-	c.JSON(http.StatusCreated, dto.OK(dto.AssetToResponse(a, "", "")))
+	c.JSON(http.StatusCreated, dto.OK(results))
 }
 
 func (h *assetHandler) Update(c *gin.Context) {

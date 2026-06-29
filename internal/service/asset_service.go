@@ -1,10 +1,13 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"mime"
+	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -62,6 +65,9 @@ type AssetService interface {
 	ListLibrary(ctx context.Context, status, assetType string) ([]*domain.Asset, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.Asset, error)
 	Create(ctx context.Context, in CreateAssetInput) (*domain.Asset, error)
+	// Upload2D decodes a base64 data-URL, uploads it to S3, and registers the asset record.
+	// id is the client-assigned UUID string; dataURL is "data:<mime>;base64,<data>".
+	Upload2D(ctx context.Context, venueID uuid.UUID, id, dataURL string) (*domain.Asset, error)
 	Update(ctx context.Context, id uuid.UUID, name string) (*domain.Asset, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	Upload3D(ctx context.Context, in Upload3DAssetInput) (*domain.Asset, error)
@@ -118,6 +124,74 @@ func (s *assetService) Create(ctx context.Context, in CreateAssetInput) (*domain
 	}
 	if err := s.repo.Create(ctx, a); err != nil {
 		return nil, err
+	}
+	return a, nil
+}
+
+// allowed2DMimeTypes is the allowlist for canvas image uploads.
+// SVG is excluded because it can embed JavaScript.
+var allowed2DMimeTypes = map[string]string{
+	"image/png":  "png",
+	"image/jpeg": "jpg",
+	"image/webp": "webp",
+	"image/gif":  "gif",
+}
+
+func (s *assetService) Upload2D(ctx context.Context, venueID uuid.UUID, id, dataURL string) (*domain.Asset, error) {
+	assetID, err := uuid.Parse(id)
+	if err != nil {
+		// Client sent a non-UUID identifier — generate one server-side.
+		assetID = uuid.New()
+	}
+
+	// If the asset already exists, verify it belongs to this venue (prevent cross-venue overwrite).
+	if existing, err := s.repo.FindByID(ctx, assetID); err == nil {
+		if existing.VenueID == nil || *existing.VenueID != venueID {
+			return nil, domain.NewValidation(map[string]string{"id": "asset belongs to a different venue"})
+		}
+	}
+
+	// Parse "data:<contentType>;base64,<data>" — only used to verify client claim.
+	comma := strings.Index(dataURL, ",")
+	if comma < 0 {
+		return nil, domain.NewValidation(map[string]string{"file": "invalid data URL"})
+	}
+	encoded := dataURL[comma+1:]
+
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, domain.NewValidation(map[string]string{"file": "invalid base64 encoding"})
+	}
+
+	// Detect content-type from actual bytes — do not trust the data-URL header.
+	detected := http.DetectContentType(raw)
+	mediaType, _, _ := mime.ParseMediaType(detected)
+	ext, ok := allowed2DMimeTypes[mediaType]
+	if !ok {
+		return nil, domain.NewValidation(map[string]string{"file": "unsupported file type; allowed: png, jpeg, webp, gif"})
+	}
+
+	key := storage.Asset2DKey(s.env, assetID, ext)
+	if err := s.storer.PutMedia(ctx, key, mediaType, int64(len(raw)), bytes.NewReader(raw)); err != nil {
+		return nil, fmt.Errorf("upload 2D asset: %w", err)
+	}
+
+	a := &domain.Asset{
+		ID:          assetID,
+		VenueID:     &venueID,
+		Name:        id,
+		Key:         key,
+		ContentType: mediaType,
+		SizeBytes:   int64(len(raw)),
+		URL:         s.AssetURL(key),
+		AssetType:   domain.AssetType2D,
+	}
+	// Upsert: a duplicate-key error means the asset was already created (e.g. retry); safe to ignore.
+	if createErr := s.repo.Create(ctx, a); createErr != nil {
+		// Re-fetch the existing record so timestamps are accurate.
+		if existing, fetchErr := s.repo.FindByID(ctx, assetID); fetchErr == nil {
+			return existing, nil
+		}
 	}
 	return a, nil
 }

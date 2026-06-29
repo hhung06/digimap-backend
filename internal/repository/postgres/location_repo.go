@@ -55,6 +55,12 @@ func (r *locationRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Loca
 		return nil, err
 	}
 	l.Categories = cats
+	if l.MainCategoryID != nil {
+		mc, err := r.loadMainCategory(ctx, *l.MainCategoryID)
+		if err == nil {
+			l.MainCategory = mc
+		}
+	}
 	imgs, err := r.ListImages(ctx, id)
 	if err != nil {
 		return nil, err
@@ -413,6 +419,16 @@ func (r *locationRepo) loadCategories(ctx context.Context, locationID uuid.UUID)
 		cats = append(cats, c)
 	}
 	return cats, rows.Err()
+}
+
+func (r *locationRepo) loadMainCategory(ctx context.Context, id uuid.UUID) (*domain.LocationCategory, error) {
+	const q = `
+		SELECT id, venue_id, parent_id, external_id, name, short_name, color,
+		       icon, icon_default, sort_index, visible, description,
+		       type, image, localization, source,
+		       created_at, updated_at, deleted_at
+		FROM location_categories WHERE id = $1 AND deleted_at IS NULL`
+	return scanLocationCategory(r.pool.QueryRow(ctx, q, id))
 }
 
 func scanLocation(row pgx.Row) (*domain.Location, error) {

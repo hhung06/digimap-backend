@@ -13,7 +13,7 @@ type Advertisement struct {
 	Type            string
 	Status          string
 	Navigate        *string
-	ContentImageURL *string
+	ContentImage    *string
 	ContentCTAURL   *string
 	Placement       string
 	SizeWidth       *int

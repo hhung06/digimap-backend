@@ -58,7 +58,7 @@ func (h *memoHandler) Create(c *gin.Context) {
 	loc := &domain.Location{
 		VenueID:               venueID,
 		LevelID:               req.LevelID,
-		MainCategoryID:        req.MainCategoryID,
+		MainCategoryID:        req.MainCategory,
 		ExternalID:            req.ExternalID,
 		CommonHidden:          req.CommonHidden,
 		CommonName:            req.CommonName,

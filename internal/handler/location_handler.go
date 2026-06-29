@@ -307,6 +307,10 @@ func (h *locationHandler) CreateLocation(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	// Reload to hydrate categories with names
+	if reloaded, err := h.locationSvc.Get(c.Request.Context(), l.ID); err == nil {
+		l = reloaded
+	}
 	c.PureJSON(http.StatusCreated, dto.OK(h.locationResponse(c.Request.Context(), l)))
 }
 
@@ -342,9 +346,13 @@ func (h *locationHandler) UpdateLocation(c *gin.Context) {
 		return
 	}
 	req.ApplyTo(l)
-	if err := h.locationSvc.Update(c.Request.Context(), l, req.CategoryIDs); err != nil {
+	if err := h.locationSvc.Update(c.Request.Context(), l, req.CommonCategories); err != nil {
 		respondError(c, err)
 		return
+	}
+	// Reload to hydrate categories with names
+	if reloaded, err := h.locationSvc.Get(c.Request.Context(), id); err == nil {
+		l = reloaded
 	}
 	c.PureJSON(http.StatusOK, dto.OK(h.locationResponse(c.Request.Context(), l)))
 }
@@ -583,6 +591,20 @@ func (h *locationHandler) locationResponse(ctx context.Context, loc *domain.Loca
 		target := service.MediaTarget{Entity: "locations", RecordID: loc.ID, Field: "top_logo"}
 		resp.TopLogoURL = h.mediaSvc.URL(ctx, target, loc.TopLogo)
 	}
+	if h.mediaSvc != nil && loc != nil && loc.CommonLogo != "" {
+		target := service.MediaTarget{Entity: "locations", RecordID: loc.ID, Field: "common_logo"}
+		resp.CommonLogoURL = h.mediaSvc.URL(ctx, target, loc.CommonLogo)
+	}
+	if h.mediaSvc != nil && loc != nil {
+		target := service.MediaTarget{Entity: "locations", RecordID: loc.ID, Field: "pictures"}
+		for i, img := range resp.Images {
+			if img.Original != "" {
+				if url := h.mediaSvc.URL(ctx, target, img.Original); url != nil {
+					resp.Images[i].Original = *url
+				}
+			}
+		}
+	}
 	return resp
 }
 
@@ -591,8 +613,12 @@ func parseVenueID(c *gin.Context) (uuid.UUID, error) {
 }
 
 func locationFromCreateRequest(venueID uuid.UUID, req dto.CreateLocationRequest) *domain.Location {
-	return &domain.Location{
-		VenueID: venueID, LevelID: req.LevelID, MainCategoryID: req.MainCategoryID,
+	cats := make([]*domain.LocationCategory, 0, len(req.CommonCategories))
+	for _, id := range req.CommonCategories {
+		cats = append(cats, &domain.LocationCategory{ID: id})
+	}
+	l := &domain.Location{
+		VenueID: venueID, LevelID: req.LevelID, MainCategoryID: req.MainCategory,
 		ExternalID: req.ExternalID, CommonHidden: req.CommonHidden,
 		CommonName: req.CommonName, CommonShortName: req.CommonShortName,
 		CommonDescription: req.CommonDescription, CommonColor: req.CommonColor,
@@ -630,4 +656,6 @@ func locationFromCreateRequest(venueID uuid.UUID, req dto.CreateLocationRequest)
 		Source: req.Source, StartTime: req.StartTime, EndTime: req.EndTime,
 		IsSearchable: req.IsSearchable,
 	}
+	l.Categories = cats
+	return l
 }

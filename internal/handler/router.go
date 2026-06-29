@@ -337,7 +337,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/connections/:connectionID/levels/:clID", connH.RemoveLevel)
 
 		// Advertisement sub-resources
-		adH := newAdHandler(deps.AdvertisementService, deps.EnricherRegistry)
+		adH := newAdHandler(deps.AdvertisementService, deps.EnricherRegistry, deps.MediaService)
 
 		venues.GET("/:id/ads", adH.List)
 		venues.POST("/:id/ads", adH.Create)
@@ -410,6 +410,10 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	// ── Storage (pre-signed uploads) ──────────────────────────────────────────
 	prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
 	adminJWT.POST("/storage/presign-upload", prodH.PresignUpload)
+
+	// ── Media uploads (server-side, validated, key→_url convention) ───────────
+	mediaH := newMediaHandler(deps.MediaService)
+	adminJWT.POST("/media", mediaH.Upload)
 
 	// ── Profile + invitation accept ────────────────────────────────────────────
 	userH := newUserHandler(deps.UserService)

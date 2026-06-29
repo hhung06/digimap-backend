@@ -35,6 +35,13 @@ type CreateAssetRequest struct {
 	URL         string `json:"url"          binding:"required"`
 }
 
+// Upload2DAssetItem is one entry in the batch-upload request sent by the editor.
+// ID is the client-assigned file ID (UUID string). File is a base64 data URL.
+type Upload2DAssetItem struct {
+	ID   string `json:"id"   binding:"required"`
+	File string `json:"file" binding:"required"`
+}
+
 type UpdateAssetRequest struct {
 	Name string `json:"name" binding:"required"`
 }

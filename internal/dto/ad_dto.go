@@ -15,6 +15,7 @@ type AdvertisementResponse struct {
 	Type            string     `json:"type"`
 	Status          string     `json:"status"`
 	Navigate        *string    `json:"navigate,omitempty"`
+	ContentImage    *string    `json:"content_image,omitempty"`
 	ContentImageURL *string    `json:"content_image_url,omitempty"`
 	ContentCTAURL   *string    `json:"content_cta_url,omitempty"`
 	Placement       string     `json:"placement"`
@@ -34,7 +35,7 @@ type AdvertisementRequest struct {
 	LocationID      *uuid.UUID `json:"location_id"`
 	Type            string     `json:"type"`
 	Navigate        *string    `json:"navigate"`
-	ContentImageURL *string    `json:"content_image_url"`
+	ContentImage    *string    `json:"content_image"`
 	ContentCTAURL   *string    `json:"content_cta_url"`
 	Placement       string     `json:"placement"`
 	SizeWidth       *int       `json:"size_width"`
@@ -50,7 +51,7 @@ type UpdateAdvertisementRequest struct {
 	LocationID      *uuid.UUID `json:"location_id"`
 	Type            *string    `json:"type"`
 	Navigate        *string    `json:"navigate"`
-	ContentImageURL *string    `json:"content_image_url"`
+	ContentImage    *string    `json:"content_image"`
 	ContentCTAURL   *string    `json:"content_cta_url"`
 	Placement       *string    `json:"placement"`
 	SizeWidth       *int       `json:"size_width"`
@@ -72,8 +73,8 @@ func (r UpdateAdvertisementRequest) ApplyTo(a *domain.Advertisement) {
 	if r.Navigate != nil {
 		a.Navigate = r.Navigate
 	}
-	if r.ContentImageURL != nil {
-		a.ContentImageURL = r.ContentImageURL
+	if r.ContentImage != nil {
+		a.ContentImage = r.ContentImage
 	}
 	if r.ContentCTAURL != nil {
 		a.ContentCTAURL = r.ContentCTAURL
@@ -108,12 +109,12 @@ func AdvertisementToResponse(a *domain.Advertisement) AdvertisementResponse {
 	return AdvertisementResponse{
 		ID: a.ID, VenueID: a.VenueID, LocationID: a.LocationID,
 		Type: a.Type, Status: a.Status, Navigate: a.Navigate,
-		ContentImageURL: a.ContentImageURL, ContentCTAURL: a.ContentCTAURL,
+		ContentImage: a.ContentImage, ContentCTAURL: a.ContentCTAURL,
 		Placement: a.Placement,
 		SizeWidth: a.SizeWidth, SizeHeight: a.SizeHeight,
 		RewardType: a.RewardType, RewardAmount: a.RewardAmount,
 		DisplayDuration: a.DisplayDuration,
-		PublishedAt: a.PublishedAt, StartAt: a.StartAt, EndAt: a.EndAt,
+		PublishedAt:     a.PublishedAt, StartAt: a.StartAt, EndAt: a.EndAt,
 		CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
 	}
 }

@@ -2145,7 +2145,8 @@ const docTemplate = `{
                 ],
                 "description": "Create a new advertisement (requires editor role)",
                 "consumes": [
-                    "application/json"
+                    "application/json",
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -2290,7 +2291,8 @@ const docTemplate = `{
                 ],
                 "description": "Update an advertisement (requires editor role)",
                 "consumes": [
-                    "application/json"
+                    "application/json",
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -7086,7 +7088,8 @@ const docTemplate = `{
                 ],
                 "description": "Pin or unpin a location as a top result (requires editor role)",
                 "consumes": [
-                    "application/json"
+                    "application/json",
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -7124,7 +7127,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.LocationResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -9254,6 +9269,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}/content": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return the raw stored bundle blob for a level bundle (system admin only).\nThe body is the opaque encrypted DigimapStoredScene JSON uploaded by the editor.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "snapshots"
+                ],
+                "summary": "Get level bundle content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Snapshot ID",
+                        "name": "snapshotID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bundle ID",
+                        "name": "bundleID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/venues/{id}/snapshots/{snapshotID}/publish": {
             "post": {
                 "security": [
@@ -11033,7 +11117,7 @@ const docTemplate = `{
                 "content_cta_url": {
                     "type": "string"
                 },
-                "content_image_url": {
+                "content_image": {
                     "type": "string"
                 },
                 "display_duration": {
@@ -11075,6 +11159,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "content_cta_url": {
+                    "type": "string"
+                },
+                "content_image": {
                     "type": "string"
                 },
                 "content_image_url": {
@@ -11822,14 +11909,29 @@ const docTemplate = `{
                 "common_name"
             ],
             "properties": {
-                "category_ids": {
+                "booth_event_date": {
+                    "type": "string"
+                },
+                "booth_number": {
+                    "type": "string"
+                },
+                "booth_products_showcased": {
+                    "type": "string"
+                },
+                "booth_services_offered": {
+                    "type": "string"
+                },
+                "booth_size": {
+                    "type": "string"
+                },
+                "common_address": {
+                    "type": "string"
+                },
+                "common_categories": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "common_address": {
-                    "type": "string"
                 },
                 "common_color": {
                     "type": "string"
@@ -11846,8 +11948,20 @@ const docTemplate = `{
                 "common_hidden": {
                     "type": "boolean"
                 },
+                "common_large_logo": {
+                    "type": "string"
+                },
                 "common_latitude": {
                     "type": "number"
+                },
+                "common_location_state": {
+                    "type": "integer"
+                },
+                "common_location_state_end_date": {
+                    "type": "string"
+                },
+                "common_location_state_start_date": {
+                    "type": "string"
                 },
                 "common_location_sub_type": {
                     "type": "integer"
@@ -11855,13 +11969,40 @@ const docTemplate = `{
                 "common_location_type": {
                     "type": "integer"
                 },
+                "common_logo": {
+                    "type": "string"
+                },
                 "common_longitude": {
                     "type": "number"
+                },
+                "common_medium_logo": {
+                    "type": "string"
                 },
                 "common_name": {
                     "type": "string"
                 },
                 "common_short_name": {
+                    "type": "string"
+                },
+                "common_show_short_name": {
+                    "type": "boolean"
+                },
+                "common_small_logo": {
+                    "type": "string"
+                },
+                "common_social_facebook": {
+                    "type": "string"
+                },
+                "common_social_instagram": {
+                    "type": "string"
+                },
+                "common_social_tiktok": {
+                    "type": "string"
+                },
+                "common_social_twitter": {
+                    "type": "string"
+                },
+                "common_social_website": {
                     "type": "string"
                 },
                 "custom": {
@@ -11873,6 +12014,9 @@ const docTemplate = `{
                 "external_id": {
                     "type": "string"
                 },
+                "icon_default": {
+                    "type": "string"
+                },
                 "is_searchable": {
                     "type": "boolean"
                 },
@@ -11882,16 +12026,40 @@ const docTemplate = `{
                 "localization": {
                     "type": "object"
                 },
-                "main_category_id": {
+                "main_category": {
+                    "type": "string"
+                },
+                "person_full_name": {
+                    "type": "string"
+                },
+                "person_job_title": {
                     "type": "string"
                 },
                 "place_work_hours": {
                     "type": "object"
                 },
+                "room_bed_count": {
+                    "type": "integer"
+                },
+                "room_department": {
+                    "type": "string"
+                },
+                "room_equipment_details": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
                 "source": {
                     "type": "string"
                 },
                 "start_time": {
+                    "type": "string"
+                },
+                "top_logo": {
+                    "type": "string"
+                },
+                "top_logo_type": {
                     "type": "string"
                 }
             }
@@ -12793,14 +12961,29 @@ const docTemplate = `{
         "dto.LocationResponse": {
             "type": "object",
             "properties": {
-                "categories": {
+                "booth_event_date": {
+                    "type": "string"
+                },
+                "booth_number": {
+                    "type": "string"
+                },
+                "booth_products_showcased": {
+                    "type": "string"
+                },
+                "booth_services_offered": {
+                    "type": "string"
+                },
+                "booth_size": {
+                    "type": "string"
+                },
+                "common_address": {
+                    "type": "string"
+                },
+                "common_categories": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/dto.LocationCategoryResponse"
                     }
-                },
-                "common_address": {
-                    "type": "string"
                 },
                 "common_color": {
                     "type": "string"
@@ -12823,6 +13006,15 @@ const docTemplate = `{
                 "common_latitude": {
                     "type": "number"
                 },
+                "common_location_state": {
+                    "type": "integer"
+                },
+                "common_location_state_end_date": {
+                    "type": "string"
+                },
+                "common_location_state_start_date": {
+                    "type": "string"
+                },
                 "common_location_sub_type": {
                     "type": "integer"
                 },
@@ -12830,6 +13022,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "common_logo": {
+                    "type": "string"
+                },
+                "common_logo_url": {
                     "type": "string"
                 },
                 "common_longitude": {
@@ -12844,7 +13039,25 @@ const docTemplate = `{
                 "common_short_name": {
                     "type": "string"
                 },
+                "common_show_short_name": {
+                    "type": "boolean"
+                },
                 "common_small_logo": {
+                    "type": "string"
+                },
+                "common_social_facebook": {
+                    "type": "string"
+                },
+                "common_social_instagram": {
+                    "type": "string"
+                },
+                "common_social_tiktok": {
+                    "type": "string"
+                },
+                "common_social_twitter": {
+                    "type": "string"
+                },
+                "common_social_website": {
                     "type": "string"
                 },
                 "created_at": {
@@ -12857,6 +13070,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "external_id": {
+                    "type": "string"
+                },
+                "icon_default": {
                     "type": "string"
                 },
                 "id": {
@@ -12880,16 +13096,43 @@ const docTemplate = `{
                 "localization": {
                     "type": "object"
                 },
-                "main_category_id": {
+                "main_category": {
+                    "$ref": "#/definitions/dto.LocationCategorySummaryResponse"
+                },
+                "person_full_name": {
+                    "type": "string"
+                },
+                "person_job_title": {
                     "type": "string"
                 },
                 "place_work_hours": {
                     "type": "object"
                 },
+                "room_bed_count": {
+                    "type": "integer"
+                },
+                "room_department": {
+                    "type": "string"
+                },
+                "room_equipment_details": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
                 "source": {
                     "type": "string"
                 },
                 "start_time": {
+                    "type": "string"
+                },
+                "top_logo": {
+                    "type": "string"
+                },
+                "top_logo_type": {
+                    "type": "string"
+                },
+                "top_logo_url": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -12974,6 +13217,12 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "maps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LevelResponse"
+                    }
                 },
                 "name": {
                     "type": "string"
@@ -13793,6 +14042,12 @@ const docTemplate = `{
                 "external_id": {
                     "type": "string"
                 },
+                "keep_image_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "label": {
                     "type": "string"
                 },
@@ -13941,14 +14196,29 @@ const docTemplate = `{
         "dto.UpdateLocationRequest": {
             "type": "object",
             "properties": {
-                "category_ids": {
+                "booth_event_date": {
+                    "type": "string"
+                },
+                "booth_number": {
+                    "type": "string"
+                },
+                "booth_products_showcased": {
+                    "type": "string"
+                },
+                "booth_services_offered": {
+                    "type": "string"
+                },
+                "booth_size": {
+                    "type": "string"
+                },
+                "common_address": {
+                    "type": "string"
+                },
+                "common_categories": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "common_address": {
-                    "type": "string"
                 },
                 "common_color": {
                     "type": "string"
@@ -13965,8 +14235,20 @@ const docTemplate = `{
                 "common_hidden": {
                     "type": "boolean"
                 },
+                "common_large_logo": {
+                    "type": "string"
+                },
                 "common_latitude": {
                     "type": "number"
+                },
+                "common_location_state": {
+                    "type": "integer"
+                },
+                "common_location_state_end_date": {
+                    "type": "string"
+                },
+                "common_location_state_start_date": {
+                    "type": "string"
                 },
                 "common_location_sub_type": {
                     "type": "integer"
@@ -13980,10 +14262,34 @@ const docTemplate = `{
                 "common_longitude": {
                     "type": "number"
                 },
+                "common_medium_logo": {
+                    "type": "string"
+                },
                 "common_name": {
                     "type": "string"
                 },
                 "common_short_name": {
+                    "type": "string"
+                },
+                "common_show_short_name": {
+                    "type": "boolean"
+                },
+                "common_small_logo": {
+                    "type": "string"
+                },
+                "common_social_facebook": {
+                    "type": "string"
+                },
+                "common_social_instagram": {
+                    "type": "string"
+                },
+                "common_social_tiktok": {
+                    "type": "string"
+                },
+                "common_social_twitter": {
+                    "type": "string"
+                },
+                "common_social_website": {
                     "type": "string"
                 },
                 "custom": {
@@ -13995,7 +14301,13 @@ const docTemplate = `{
                 "external_id": {
                     "type": "string"
                 },
+                "icon_default": {
+                    "type": "string"
+                },
                 "is_searchable": {
+                    "type": "boolean"
+                },
+                "is_top_location": {
                     "type": "boolean"
                 },
                 "level_id": {
@@ -14004,16 +14316,40 @@ const docTemplate = `{
                 "localization": {
                     "type": "object"
                 },
-                "main_category_id": {
+                "main_category": {
+                    "type": "string"
+                },
+                "person_full_name": {
+                    "type": "string"
+                },
+                "person_job_title": {
                     "type": "string"
                 },
                 "place_work_hours": {
                     "type": "object"
                 },
+                "room_bed_count": {
+                    "type": "integer"
+                },
+                "room_department": {
+                    "type": "string"
+                },
+                "room_equipment_details": {
+                    "type": "string"
+                },
+                "room_number": {
+                    "type": "string"
+                },
                 "source": {
                     "type": "string"
                 },
                 "start_time": {
+                    "type": "string"
+                },
+                "top_logo": {
+                    "type": "string"
+                },
+                "top_logo_type": {
                     "type": "string"
                 }
             }

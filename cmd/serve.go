@@ -104,7 +104,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 		logger.Info("SMTP mailer: using log stub (EMAIL_HOST not set)")
 	}
 
-	var assetStorer, snapshotStorer storage.Storer
+	var assetStorer, snapshotStorer, syncStorer storage.Storer
 	var invalidator cdn.Invalidator
 	if cfg.AWS.S3AssetsBucket != "" {
 		assetStorer, err = storage.NewS3Storer(cfg.AWS, cfg.AWS.S3AssetsBucket)
@@ -115,6 +115,10 @@ func runServe(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("init s3 snapshot storer: %w", err)
 		}
+		syncStorer, err = storage.NewS3Storer(cfg.AWS, cfg.AWS.S3SyncBucket)
+		if err != nil {
+			return fmt.Errorf("init s3 sync storer: %w", err)
+		}
 		invalidator, err = cdn.NewCloudFrontInvalidator(cfg.AWS)
 		if err != nil {
 			return fmt.Errorf("init cloudfront invalidator: %w", err)
@@ -123,6 +127,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	} else {
 		assetStorer = storage.NewLogStorer()
 		snapshotStorer = storage.NewLogStorer()
+		syncStorer = storage.NewLogStorer()
 		invalidator = cdn.NewLogInvalidator()
 		logger.Info("storage/CDN: using log stubs (AWS_S3_ASSETS_BUCKET not set)")
 	}
@@ -180,13 +185,13 @@ func runServe(_ *cobra.Command, _ []string) error {
 	surveySvc := service.NewSurveyService(surveyRepo, notificationRepo, notificationSvc)
 	beaconSvc := service.NewBeaconService(beaconRepo)
 	connectionSvc := service.NewConnectionService(connectionRepo)
-	adSvc := service.NewAdvertisementService(adRepo)
+	adSvc := service.NewAdvertisementService(adRepo, mediaSvc)
 	articleSvc := service.NewArticleService(articleRepo, mediaSvc)
 	couponSvc := service.NewCouponService(couponRepo, couponUserRepo)
 	videoSvc := service.NewVideoService(videoRepo)
 	tagSvc := service.NewTagService(tagRepo)
 	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, venueRepo, redisClient)
-	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, assetStorer, cfg.App.Environment)
+	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, syncStorer, cfg.App.Environment)
 	assetSvc := service.NewAssetService(assetRepo, assetStorer, cfg.App.Environment, cfg.AWS.CFAssetsDomain)
 	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
 	themeSvc := service.NewThemeService(themeRepo, venueRepo, assetStorer, invalidator, cfg.App.Environment)

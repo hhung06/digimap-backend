@@ -17,7 +17,7 @@ func NewAdRepository(pool *pgxpool.Pool) *adRepository {
 
 const adSelectCols = `
     a.id, a.venue_id, a.location_id, a.type, a.status,
-    a.navigate, a.content_image_url, a.content_cta_url, a.placement,
+    a.navigate, a.content_image, a.content_cta_url, a.placement,
     a.size_width, a.size_height, a.reward_type, a.reward_amount, a.display_duration,
     a.published_at, a.start_at, a.end_at,
     a.created_at, a.updated_at`
@@ -55,15 +55,17 @@ func (r *adRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Adve
 }
 
 func (r *adRepository) Create(ctx context.Context, a *domain.Advertisement) error {
-	a.ID = newID()
+	if a.ID == uuid.Nil {
+		a.ID = newID()
+	}
 	return r.pool.QueryRow(ctx,
 		`INSERT INTO advertisements
-         (id,venue_id,location_id,type,status,navigate,content_image_url,content_cta_url,placement,
+         (id,venue_id,location_id,type,status,navigate,content_image,content_cta_url,placement,
           size_width,size_height,reward_type,reward_amount,display_duration,published_at,start_at,end_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          RETURNING created_at,updated_at`,
 		a.ID, a.VenueID, a.LocationID, a.Type, a.Status,
-		a.Navigate, a.ContentImageURL, a.ContentCTAURL, a.Placement,
+		a.Navigate, a.ContentImage, a.ContentCTAURL, a.Placement,
 		a.SizeWidth, a.SizeHeight, a.RewardType, a.RewardAmount, a.DisplayDuration,
 		a.PublishedAt, a.StartAt, a.EndAt,
 	).Scan(&a.CreatedAt, &a.UpdatedAt)
@@ -72,11 +74,11 @@ func (r *adRepository) Create(ctx context.Context, a *domain.Advertisement) erro
 func (r *adRepository) Update(ctx context.Context, a *domain.Advertisement) error {
 	return r.pool.QueryRow(ctx,
 		`UPDATE advertisements SET
-         location_id=$2,type=$3,status=$4,navigate=$5,content_image_url=$6,content_cta_url=$7,
+         location_id=$2,type=$3,status=$4,navigate=$5,content_image=$6,content_cta_url=$7,
          placement=$8,size_width=$9,size_height=$10,reward_type=$11,reward_amount=$12,
          display_duration=$13,published_at=$14,start_at=$15,end_at=$16
          WHERE id=$1 AND deleted_at IS NULL RETURNING updated_at`,
-		a.ID, a.LocationID, a.Type, a.Status, a.Navigate, a.ContentImageURL, a.ContentCTAURL,
+		a.ID, a.LocationID, a.Type, a.Status, a.Navigate, a.ContentImage, a.ContentCTAURL,
 		a.Placement, a.SizeWidth, a.SizeHeight, a.RewardType, a.RewardAmount,
 		a.DisplayDuration, a.PublishedAt, a.StartAt, a.EndAt,
 	).Scan(&a.UpdatedAt)
@@ -92,7 +94,7 @@ func scanAd(row scanner) (*domain.Advertisement, error) {
 	var a domain.Advertisement
 	if err := row.Scan(
 		&a.ID, &a.VenueID, &a.LocationID, &a.Type, &a.Status,
-		&a.Navigate, &a.ContentImageURL, &a.ContentCTAURL, &a.Placement,
+		&a.Navigate, &a.ContentImage, &a.ContentCTAURL, &a.Placement,
 		&a.SizeWidth, &a.SizeHeight, &a.RewardType, &a.RewardAmount, &a.DisplayDuration,
 		&a.PublishedAt, &a.StartAt, &a.EndAt,
 		&a.CreatedAt, &a.UpdatedAt,
