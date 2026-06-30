@@ -1,8 +1,13 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/png"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,7 +38,9 @@ func (s locationCategoryServiceStub) Update(context.Context, *domain.LocationCat
 func (s locationCategoryServiceStub) Delete(context.Context, uuid.UUID) error { return nil }
 
 type locationServiceStub struct {
-	location *domain.Location
+	location     *domain.Location
+	updateCalled bool
+	mediaChange  service.LocationMediaReplacement
 }
 
 func (s *locationServiceStub) Get(_ context.Context, id uuid.UUID) (*domain.Location, error) {
@@ -49,7 +56,18 @@ func (s *locationServiceStub) SearchByName(context.Context, uuid.UUID, string, i
 	return nil, nil
 }
 func (s *locationServiceStub) Create(context.Context, *domain.Location) error { return nil }
+func (s *locationServiceStub) CreateWithMedia(_ context.Context, l *domain.Location, replacement service.LocationMediaReplacement) error {
+	s.location = l
+	s.mediaChange = replacement
+	return nil
+}
 func (s *locationServiceStub) Update(context.Context, *domain.Location, []uuid.UUID) error {
+	s.updateCalled = true
+	return nil
+}
+func (s *locationServiceStub) UpdateWithMedia(_ context.Context, l *domain.Location, _ []uuid.UUID, replacement service.LocationMediaReplacement) error {
+	s.location = l
+	s.mediaChange = replacement
 	return nil
 }
 func (s *locationServiceStub) Delete(context.Context, uuid.UUID) error { return nil }
@@ -120,4 +138,66 @@ func TestLocationHandlerGetReturnsTopLogoURL(t *testing.T) {
 	data := body["data"].(map[string]any)
 	assert.Equal(t, key, data["top_logo"])
 	assert.Equal(t, presignedURL, data["top_logo_url"])
+}
+
+func TestLocationHandlerMultipartUpdateUploadsLogoVariantsAndKeepsImages(t *testing.T) {
+	locationID := uuid.New()
+	keepID := uuid.New()
+	svc := &locationServiceStub{location: &domain.Location{ID: locationID, CommonName: "Existing"}}
+	h := newLocationHandler(locationCategoryServiceStub{}, svc, nil)
+	rec, c := multipartLocationUpdateContext(t, locationID, `{"common_name":"Updated","keep_image_ids":["`+keepID.String()+`"]}`, []locationMultipartFile{
+		{field: "common_logo", filename: "logo.png", body: pngBytes(t)},
+		{field: "images", filename: "gallery.png", body: pngBytes(t)},
+	})
+
+	h.UpdateLocation(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.False(t, svc.updateCalled)
+	assert.Equal(t, "Updated", svc.location.CommonName)
+	assert.NotNil(t, svc.mediaChange.CommonLogo)
+	assert.True(t, svc.mediaChange.ReplaceImages)
+	assert.Equal(t, []uuid.UUID{keepID}, svc.mediaChange.KeepImageIDs)
+	assert.Len(t, svc.mediaChange.Uploads, 1)
+	assert.Equal(t, "gallery.png", svc.mediaChange.Uploads[0].Filename)
+}
+
+type locationMultipartFile struct {
+	field    string
+	filename string
+	body     []byte
+}
+
+func multipartLocationUpdateContext(t *testing.T, locationID uuid.UUID, data string, files []locationMultipartFile) (*httptest.ResponseRecorder, *gin.Context) {
+	t.Helper()
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	field, err := writer.CreateFormField("data")
+	require.NoError(t, err)
+	_, err = field.Write([]byte(data))
+	require.NoError(t, err)
+	for _, file := range files {
+		part, err := writer.CreateFormFile(file.field, file.filename)
+		require.NoError(t, err)
+		_, err = part.Write(file.body)
+		require.NoError(t, err)
+	}
+	require.NoError(t, writer.Close())
+
+	rec := httptest.NewRecorder()
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(rec)
+	c.Params = gin.Params{{Key: "locationID", Value: locationID.String()}}
+	c.Request = httptest.NewRequest(http.MethodPut, "/locations/"+locationID.String(), &body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+	return rec, c
+}
+
+func pngBytes(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	img.Set(0, 0, color.RGBA{R: 255, A: 255})
+	var buf bytes.Buffer
+	require.NoError(t, png.Encode(&buf, img))
+	return buf.Bytes()
 }

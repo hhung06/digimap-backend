@@ -66,6 +66,45 @@ func LibraryAssetKey(env string, id uuid.UUID, filename string) string {
 	return env + "/library/" + id.String() + "_" + filename
 }
 
+// Asset2DKey returns the S3 key for a 2D asset (canvas image).
+// ext should not include the leading dot (e.g. "png", "jpg").
+func Asset2DKey(env string, id uuid.UUID, ext string) string {
+	if env == "" || ext == "" {
+		return ""
+	}
+	return env + "/assets/" + id.String() + "." + ext
+}
+
+// BaseKey returns the viewer-fetched mesh bundle key.
+// Django: {env}/base/public/{venue_id}.digimap
+func BaseKey(env string, venueID uuid.UUID) string {
+	return env + "/base/public/" + venueID.String() + ".digimap"
+}
+
+// OverviewKey returns the viewer-fetched paths/theme bundle key.
+// Django: {env}/overview/public/{venue_id}.digimap
+func OverviewKey(env string, venueID uuid.UUID) string {
+	return env + "/overview/public/" + venueID.String() + ".digimap"
+}
+
+// LocationSimpleKey returns the viewer-fetched minimal-location bundle key.
+// Django: {env}/location_simple/public/{venue_id}.digimap
+func LocationSimpleKey(env string, venueID uuid.UUID) string {
+	return env + "/location_simple/public/" + venueID.String() + ".digimap"
+}
+
+// MetadataKey returns the viewer-fetched full metadata bundle key.
+// Django: {env}/metadata/public/{venue_id}.digimap
+func MetadataKey(env string, venueID uuid.UUID) string {
+	return env + "/metadata/public/" + venueID.String() + ".digimap"
+}
+
+// LocalizedKey returns the per-language overlay key fetched by the viewer for non-English locales.
+// Django: {env}/bundles/public/{venue_id}.digimap.{lang}
+func LocalizedKey(env string, venueID uuid.UUID, lang string) string {
+	return env + "/bundles/public/" + venueID.String() + ".digimap." + lang
+}
+
 // Asset3DKey returns the S3 key for a 3D asset file.
 // suffix is "" for the main file, "_thumbnail" for thumbnail, "_material" for material.
 // ext should not include the leading dot (e.g. "glb", "jpg").

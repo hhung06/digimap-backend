@@ -49,23 +49,9 @@ func (r *locationRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Loca
 	if err != nil {
 		return nil, err
 	}
-	// Load categories and images
-	cats, err := r.loadCategories(ctx, id)
-	if err != nil {
+	if err := r.hydrateLocationRelations(ctx, l); err != nil {
 		return nil, err
 	}
-	l.Categories = cats
-	if l.MainCategoryID != nil {
-		mc, err := r.loadMainCategory(ctx, *l.MainCategoryID)
-		if err == nil {
-			l.MainCategory = mc
-		}
-	}
-	imgs, err := r.ListImages(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	l.Images = imgs
 	return l, nil
 }
 
@@ -117,7 +103,35 @@ func (r *locationRepo) List(ctx context.Context, venueID uuid.UUID, typeFilter *
 	if rows.Err() != nil {
 		return nil, 0, rows.Err()
 	}
+	for _, l := range locations {
+		if err := r.hydrateLocationRelations(ctx, l); err != nil {
+			return nil, 0, err
+		}
+	}
 	return locations, total, nil
+}
+
+func (r *locationRepo) hydrateLocationRelations(ctx context.Context, l *domain.Location) error {
+	if l == nil {
+		return nil
+	}
+	cats, err := r.loadCategories(ctx, l.ID)
+	if err != nil {
+		return err
+	}
+	l.Categories = cats
+	if l.MainCategoryID != nil {
+		mc, err := r.loadMainCategory(ctx, *l.MainCategoryID)
+		if err == nil {
+			l.MainCategory = mc
+		}
+	}
+	imgs, err := r.ListImages(ctx, l.ID)
+	if err != nil {
+		return err
+	}
+	l.Images = imgs
+	return nil
 }
 
 func (r *locationRepo) Create(ctx context.Context, l *domain.Location) error {

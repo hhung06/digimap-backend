@@ -34,6 +34,7 @@ func newTestLocationServiceWithMedia(repo *mocks.LocationRepository, media servi
 
 type locationMediaServiceSpy struct {
 	key     string
+	keys    []string
 	targets []service.MediaTarget
 	uploads []service.MediaUpload
 	deleted []string
@@ -42,6 +43,11 @@ type locationMediaServiceSpy struct {
 func (s *locationMediaServiceSpy) Upload(_ context.Context, target service.MediaTarget, upload service.MediaUpload) (string, error) {
 	s.targets = append(s.targets, target)
 	s.uploads = append(s.uploads, upload)
+	if len(s.keys) > 0 {
+		key := s.keys[0]
+		s.keys = s.keys[1:]
+		return key, nil
+	}
 	return s.key, nil
 }
 
@@ -424,6 +430,69 @@ func TestLocationService_SetTop_DoesNotLaunchGoroutineWhenUpdateFails(t *testing
 
 	err := svc.SetTop(ctx, id, false, &sortIdx)
 	require.ErrorIs(t, err, assert.AnError)
+	repo.AssertExpectations(t)
+}
+
+func TestLocationService_UpdateWithMediaReplacesImagesAndLogoVariants(t *testing.T) {
+	ctx := context.Background()
+	repo := &mocks.LocationRepository{}
+	locationID := uuid.New()
+	keepID := uuid.New()
+	dropID := uuid.New()
+	oldLogo := "test/media/locations/" + locationID.String() + "/common_logo/old.png"
+	oldLarge := "test/media/locations/" + locationID.String() + "/common_large_logo/old.png"
+	oldImage := "test/media/locations/" + locationID.String() + "/pictures/drop.png"
+	media := &locationMediaServiceSpy{}
+	svc := newTestLocationServiceWithMedia(repo, media)
+	loc := &domain.Location{
+		ID:               locationID,
+		CommonName:       "Updated",
+		CommonLogo:       oldLogo,
+		CommonLargeLogo:  oldLarge,
+		CommonMediumLogo: "",
+		CommonSmallLogo:  "",
+		Images: []*domain.LocationImage{
+			{ID: keepID, LocationID: locationID, Original: "test/media/locations/" + locationID.String() + "/pictures/keep.png"},
+			{ID: dropID, LocationID: locationID, Original: oldImage},
+		},
+	}
+	media.keys = []string{"new-logo", "new-large", "new-medium", "new-small", "new-image"}
+
+	repo.On("Update", mock.Anything, mock.MatchedBy(func(updated *domain.Location) bool {
+		return updated.CommonLogo == "new-logo" &&
+			updated.CommonLargeLogo == "new-large" &&
+			updated.CommonMediumLogo == "new-medium" &&
+			updated.CommonSmallLogo == "new-small"
+	})).Return(nil).Once()
+	repo.On("SetCategories", mock.Anything, locationID, []uuid.UUID(nil)).Return(nil).Once()
+	repo.On("DeleteImage", mock.Anything, dropID).Return(nil).Once()
+	repo.On("CreateImage", mock.Anything, mock.MatchedBy(func(img *domain.LocationImage) bool {
+		return img.LocationID == locationID && img.Original == "new-image"
+	})).Return(nil).Once()
+
+	err := svc.UpdateWithMedia(ctx, loc, nil, service.LocationMediaReplacement{
+		CommonLogo: &service.LocationLogoUploads{
+			Original: service.MediaUpload{Filename: "logo.png", ContentType: "image/png", Size: 4, Reader: strings.NewReader("logo")},
+			Large:    service.MediaUpload{Filename: "large.png", ContentType: "image/png", Size: 4, Reader: strings.NewReader("larg")},
+			Medium:   service.MediaUpload{Filename: "medium.png", ContentType: "image/png", Size: 4, Reader: strings.NewReader("medi")},
+			Small:    service.MediaUpload{Filename: "small.png", ContentType: "image/png", Size: 4, Reader: strings.NewReader("smal")},
+		},
+		ReplaceImages: true,
+		KeepImageIDs:  []uuid.UUID{keepID},
+		Uploads: []service.MediaUpload{
+			{Filename: "image.png", ContentType: "image/png", Size: 5, Reader: strings.NewReader("image")},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, []service.MediaTarget{
+		{Entity: "locations", RecordID: locationID, Field: "common_logo"},
+		{Entity: "locations", RecordID: locationID, Field: "common_large_logo"},
+		{Entity: "locations", RecordID: locationID, Field: "common_medium_logo"},
+		{Entity: "locations", RecordID: locationID, Field: "common_small_logo"},
+		{Entity: "locations", RecordID: locationID, Field: "pictures"},
+	}, media.targets)
+	assert.ElementsMatch(t, []string{oldLogo, oldLarge, oldImage}, media.deleted)
 	repo.AssertExpectations(t)
 }
 

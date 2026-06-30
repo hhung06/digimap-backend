@@ -154,7 +154,7 @@ func (s *snapshotService) Publish(ctx context.Context, id uuid.UUID) (*domain.Sn
 	snap.State = domain.SnapshotStatePublic
 	snap.PublishAt = &now
 
-	go s.publishV2(context.Background(), snap)
+	go s.publishArtifacts(context.Background(), snap)
 
 	return snap, nil
 }
@@ -173,6 +173,9 @@ func (s *snapshotService) Revert(ctx context.Context, id uuid.UUID) (*domain.Sna
 	}
 	snap.State = domain.SnapshotStatePublic
 	snap.PublishAt = &now
+	// Re-push the four public split artifacts from the reverted snapshot's draft JSON.
+	// Matches Django's revert: upload_bundle_data_v2(state=public), no per-language regen.
+	go s.uploadBundleData(context.Background(), snap)
 	return snap, nil
 }
 
@@ -198,7 +201,7 @@ func (s *snapshotService) AutoPublish(ctx context.Context, venueID, _ uuid.UUID)
 	snap.State = domain.SnapshotStatePublic
 	snap.PublishAt = &now
 
-	go s.publishV2(context.Background(), snap)
+	go s.publishArtifacts(context.Background(), snap)
 
 	return snap, nil
 }
@@ -216,23 +219,24 @@ func (s *snapshotService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// publishV2 assembles per-language bundles from the DB, encrypts them, uploads to S3,
-// and invalidates CloudFront. Mirrors publish_venue_v2.py.
-// Runs in a goroutine; errors are logged, not returned.
-func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) {
+// publishArtifacts builds and uploads the full publish payload: four viewer split bundles
+// (base/overview/location_simple/metadata) plus per-language digiapp.{lang} and digimap.{lang}
+// overlays. Mirrors Django's upload_bundle_data_v2 + publish_venue_v2 + export_localized_data.
+// Called by Publish and AutoPublish. Runs in a goroutine; errors are logged, not returned.
+func (s *snapshotService) publishArtifacts(ctx context.Context, snap *domain.Snapshot) {
 	venue, err := s.venueRepo.FindByID(ctx, snap.VenueID)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: load venue %s: %v\n", snap.VenueID, err)
+		fmt.Printf("[snapshot] publishArtifacts: load venue %s: %v\n", snap.VenueID, err)
 		return
 	}
 
 	langs, err := s.languageRepo.ListEnabled(ctx, snap.VenueID)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: list languages venue=%s: %v\n", snap.VenueID, err)
+		fmt.Printf("[snapshot] publishArtifacts: list languages venue=%s: %v\n", snap.VenueID, err)
 		return
 	}
 	if len(langs) == 0 {
-		fmt.Printf("[snapshot] publishV2: no enabled languages for venue=%s, skipping\n", snap.VenueID)
+		fmt.Printf("[snapshot] publishArtifacts: no enabled languages for venue=%s, skipping\n", snap.VenueID)
 		return
 	}
 
@@ -241,25 +245,25 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 
 	locations, _, err := s.locationRepo.List(ctx, snap.VenueID, nil, nil, allPagination)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: list locations: %v\n", err)
+		fmt.Printf("[snapshot] publishArtifacts: list locations: %v\n", err)
 		return
 	}
 
 	locationCats, err := s.locationCategoryRepo.List(ctx, snap.VenueID)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: list location categories: %v\n", err)
+		fmt.Printf("[snapshot] publishArtifacts: list location categories: %v\n", err)
 		return
 	}
 
 	products, _, err := s.productRepo.List(ctx, snap.VenueID, allPagination)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: list products: %v\n", err)
+		fmt.Printf("[snapshot] publishArtifacts: list products: %v\n", err)
 		return
 	}
 
 	productCats, err := s.productRepo.ListCategories(ctx, snap.VenueID)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: list product categories: %v\n", err)
+		fmt.Printf("[snapshot] publishArtifacts: list product categories: %v\n", err)
 		return
 	}
 
@@ -267,7 +271,7 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 	draftKey := storage.SnapshotDraftKey(s.env, snap.VenueID, snap.ID)
 	rawMeta, err := s.storer.GetObject(ctx, draftKey)
 	if err != nil {
-		fmt.Printf("[snapshot] publishV2: fetch draft metadata key=%s: %v\n", draftKey, err)
+		fmt.Printf("[snapshot] publishArtifacts: fetch draft metadata key=%s: %v\n", draftKey, err)
 		rawMeta = []byte("{}")
 	}
 	var metadata map[string]any
@@ -275,48 +279,86 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 		metadata = map[string]any{}
 	}
 
-	// Inject the venue's active theme into map metadata so clients receive theme config.
-	// Mirrors Django's get_selected_theme_data() injected into overview["theme"].
+	// Resolve the active venue theme: prefer DB record; fall back to draft's top-level "theme".
+	// The resolved theme goes into the overview split bundle (the only viewer loader that reads it).
+	var themeData any
 	if venueTheme, err := s.themeRepo.FindVenueTheme(ctx, snap.VenueID); err == nil && venueTheme != nil {
-		var themeData any
-		if json.Unmarshal(venueTheme.Data, &themeData) == nil {
-			if overview, ok := metadata["overview"].(map[string]any); ok {
-				overview["theme"] = themeData
-			} else {
-				metadata["overview"] = map[string]any{"theme": themeData}
-			}
-		}
+		_ = json.Unmarshal(venueTheme.Data, &themeData)
+	}
+	if themeData == nil {
+		themeData = metadata["theme"]
 	}
 
 	encMeta := map[string]string{"encrypted": "AES", "compressed": "gzip"}
 
 	var invalidationPaths []string
+
+	// Build and upload the four viewer-fetched split bundles from the core-SDK draft.
+	// Encoding: gzip(BestCompression) → AES-CBC → base64, matching Django's upload_bundle_data_v2.
+	splits := bundle.AssembleSplitBundles(metadata, themeData)
+	type splitEntry struct {
+		key     string
+		payload map[string]any
+	}
+	for _, e := range []splitEntry{
+		{storage.BaseKey(s.env, snap.VenueID), splits.Base},
+		{storage.OverviewKey(s.env, snap.VenueID), splits.Overview},
+		{storage.LocationSimpleKey(s.env, snap.VenueID), splits.LocationSimple},
+		{storage.MetadataKey(s.env, snap.VenueID), splits.Metadata},
+	} {
+		cipher, err := crypto.EncryptBytes(venue.PublicKey, e.payload)
+		if err != nil {
+			fmt.Printf("[snapshot] publishArtifacts: encrypt split key=%s: %v\n", e.key, err)
+			continue
+		}
+		if err := s.assetStorer.PutEncrypted(ctx, e.key, []byte(cipher), encMeta); err != nil {
+			fmt.Printf("[snapshot] publishArtifacts: upload split key=%s: %v\n", e.key, err)
+			continue
+		}
+		invalidationPaths = append(invalidationPaths, "/"+e.key)
+	}
+
 	var failedLangs []string
 
 	for _, lang := range langs {
+		// Existing .digiapp.{lang} six-key bundle — kept for legacy consumers.
 		langBundle := bundle.AssembleLanguageBundle(
 			venue, lang.Code, locations, locationCats, products, productCats, metadata,
 		)
 
 		cipherText, err := crypto.EncryptBundle(venue.PublicKey, langBundle)
 		if err != nil {
-			fmt.Printf("[snapshot] publishV2: encrypt lang=%s: %v\n", lang.Code, err)
+			fmt.Printf("[snapshot] publishArtifacts: encrypt lang=%s: %v\n", lang.Code, err)
 			failedLangs = append(failedLangs, lang.Code)
 			continue
 		}
 
 		key := storage.DigimapV2Key(s.env, snap.VenueID, lang.Code)
 		if err := s.assetStorer.PutEncrypted(ctx, key, []byte(cipherText), encMeta); err != nil {
-			fmt.Printf("[snapshot] publishV2: upload lang=%s: %v\n", lang.Code, err)
+			fmt.Printf("[snapshot] publishArtifacts: upload lang=%s: %v\n", lang.Code, err)
 			failedLangs = append(failedLangs, lang.Code)
 			continue
 		}
-
 		invalidationPaths = append(invalidationPaths, "/"+key)
+
+		// Per-language .digimap.{lang} overlay — what the viewer fetches for non-English locales.
+		// Encoding: AES-CBC only (no gzip), matching Django's export_localized_data.py.
+		overlay := bundle.AssembleLocalizedOverlay(locations, locationCats)
+		overlayCipher, err := crypto.EncryptJSON(venue.PublicKey, overlay)
+		if err != nil {
+			fmt.Printf("[snapshot] publishArtifacts: encrypt overlay lang=%s: %v\n", lang.Code, err)
+		} else {
+			lkey := storage.LocalizedKey(s.env, snap.VenueID, lang.Code)
+			if err := s.assetStorer.PutObject(ctx, lkey, []byte(overlayCipher)); err != nil {
+				fmt.Printf("[snapshot] publishArtifacts: upload overlay lang=%s: %v\n", lang.Code, err)
+			} else {
+				invalidationPaths = append(invalidationPaths, "/"+lkey)
+			}
+		}
 	}
 
 	if len(failedLangs) > 0 {
-		fmt.Printf("[snapshot] publishV2: failed languages=%v venue=%s snapshot=%s\n", failedLangs, snap.VenueID, snap.ID)
+		fmt.Printf("[snapshot] publishArtifacts: failed languages=%v venue=%s snapshot=%s\n", failedLangs, snap.VenueID, snap.ID)
 	}
 
 	// Index exhibitors and products into OpenSearch (no-op if searcher is a log stub).
@@ -332,13 +374,76 @@ func (s *snapshotService) publishV2(ctx context.Context, snap *domain.Snapshot) 
 	// Batched CloudFront invalidation for all language bundles.
 	if len(invalidationPaths) > 0 {
 		if _, err := s.invalidator.Invalidate(ctx, invalidationPaths); err != nil {
-			fmt.Printf("[snapshot] publishV2: CF invalidation: %v\n", err)
+			fmt.Printf("[snapshot] publishArtifacts: CF invalidation: %v\n", err)
 		}
 	}
 
 	// Bump the force-sync version (also uploads latest-bundle JSON + CF invalidation).
 	if _, err := s.appVersions.Bump(ctx, snap.VenueID); err != nil {
-		fmt.Printf("[snapshot] publishV2: bump version venue=%s: %v\n", snap.VenueID, err)
+		fmt.Printf("[snapshot] publishArtifacts: bump version venue=%s: %v\n", snap.VenueID, err)
+	}
+}
+
+// uploadBundleData builds and uploads the four viewer split bundles (base/overview/
+// location_simple/metadata) for the given snapshot and invalidates CloudFront.
+// Mirrors Django's upload_bundle_data_v2. Called by Revert (splits-only, no per-language regen).
+// Runs in a goroutine; errors are logged, not returned.
+func (s *snapshotService) uploadBundleData(ctx context.Context, snap *domain.Snapshot) {
+	venue, err := s.venueRepo.FindByID(ctx, snap.VenueID)
+	if err != nil {
+		fmt.Printf("[snapshot] uploadBundleData: load venue %s: %v\n", snap.VenueID, err)
+		return
+	}
+
+	draftKey := storage.SnapshotDraftKey(s.env, snap.VenueID, snap.ID)
+	rawMeta, err := s.storer.GetObject(ctx, draftKey)
+	if err != nil {
+		fmt.Printf("[snapshot] uploadBundleData: fetch draft key=%s: %v\n", draftKey, err)
+		rawMeta = []byte("{}")
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(rawMeta, &metadata); err != nil {
+		metadata = map[string]any{}
+	}
+
+	var themeData any
+	if venueTheme, err := s.themeRepo.FindVenueTheme(ctx, snap.VenueID); err == nil && venueTheme != nil {
+		_ = json.Unmarshal(venueTheme.Data, &themeData)
+	}
+	if themeData == nil {
+		themeData = metadata["theme"]
+	}
+
+	encMeta := map[string]string{"encrypted": "AES", "compressed": "gzip"}
+	splits := bundle.AssembleSplitBundles(metadata, themeData)
+
+	type splitEntry struct {
+		key     string
+		payload map[string]any
+	}
+	var invalidationPaths []string
+	for _, e := range []splitEntry{
+		{storage.BaseKey(s.env, snap.VenueID), splits.Base},
+		{storage.OverviewKey(s.env, snap.VenueID), splits.Overview},
+		{storage.LocationSimpleKey(s.env, snap.VenueID), splits.LocationSimple},
+		{storage.MetadataKey(s.env, snap.VenueID), splits.Metadata},
+	} {
+		cipher, err := crypto.EncryptBytes(venue.PublicKey, e.payload)
+		if err != nil {
+			fmt.Printf("[snapshot] uploadBundleData: encrypt split key=%s: %v\n", e.key, err)
+			continue
+		}
+		if err := s.assetStorer.PutEncrypted(ctx, e.key, []byte(cipher), encMeta); err != nil {
+			fmt.Printf("[snapshot] uploadBundleData: upload split key=%s: %v\n", e.key, err)
+			continue
+		}
+		invalidationPaths = append(invalidationPaths, "/"+e.key)
+	}
+
+	if len(invalidationPaths) > 0 {
+		if _, err := s.invalidator.Invalidate(ctx, invalidationPaths); err != nil {
+			fmt.Printf("[snapshot] uploadBundleData: CF invalidation: %v\n", err)
+		}
 	}
 }
 

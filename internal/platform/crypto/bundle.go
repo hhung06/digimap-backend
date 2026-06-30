@@ -38,7 +38,8 @@ func EncryptBundle(publicKey string, v any) (string, error) {
 // Mirrors Django's encrypt_bytes path used by top-location and memo bundles:
 //   api/locations/views.py:410 → aes.encrypt_bytes(compress_json(data))
 //
-// Use this for top-location and memo bundles.
+// Use this for top-location and memo bundles, and for the four split viewer bundles
+// (base/overview/location_simple/metadata).
 func EncryptBytes(publicKey string, v any) (string, error) {
 	enc, err := NewAESEncryption(publicKey)
 	if err != nil {
@@ -51,4 +52,22 @@ func EncryptBytes(publicKey string, v any) (string, error) {
 	}
 
 	return enc.Encrypt(gzipped)
+}
+
+// EncryptJSON marshals v to JSON then AES-encrypts it directly — no gzip, no wrapper.
+// Mirrors Django's AESEncryption.encrypt(dict) used by export_localized_data.py for
+// the per-language .digimap.{lang} overlay. The viewer decodes overlays as
+// decrypt → JSON.parse (no gunzip), so this must NOT compress.
+func EncryptJSON(publicKey string, v any) (string, error) {
+	enc, err := NewAESEncryption(publicKey)
+	if err != nil {
+		return "", err
+	}
+
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return "", fmt.Errorf("marshal: %w", err)
+	}
+
+	return enc.Encrypt(raw)
 }

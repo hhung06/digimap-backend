@@ -120,7 +120,9 @@ type LocationService interface {
 	List(ctx context.Context, venueID uuid.UUID, typeFilter *int, categoryID *uuid.UUID, p domain.Pagination) ([]*domain.Location, int64, error)
 	SearchByName(ctx context.Context, venueID uuid.UUID, q string, limit int) ([]*domain.Location, error)
 	Create(ctx context.Context, l *domain.Location) error
+	CreateWithMedia(ctx context.Context, l *domain.Location, replacement LocationMediaReplacement) error
 	Update(ctx context.Context, l *domain.Location, categoryIDs []uuid.UUID) error
+	UpdateWithMedia(ctx context.Context, l *domain.Location, categoryIDs []uuid.UUID, replacement LocationMediaReplacement) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	Duplicate(ctx context.Context, id uuid.UUID) (*domain.Location, error)
 	SetTop(ctx context.Context, id uuid.UUID, isTop bool, sortIndex *int) error
@@ -131,6 +133,21 @@ type LocationService interface {
 	ListImages(ctx context.Context, locationID uuid.UUID) ([]*domain.LocationImage, error)
 	CreateImage(ctx context.Context, img *domain.LocationImage) error
 	DeleteImage(ctx context.Context, locationID, imageID uuid.UUID) error
+}
+
+type LocationLogoUploads struct {
+	Original MediaUpload
+	Large    MediaUpload
+	Medium   MediaUpload
+	Small    MediaUpload
+}
+
+type LocationMediaReplacement struct {
+	CommonLogo      *LocationLogoUploads
+	ClearCommonLogo bool
+	ReplaceImages   bool
+	KeepImageIDs    []uuid.UUID
+	Uploads         []MediaUpload
 }
 
 type locationService struct {
@@ -201,6 +218,19 @@ func (s *locationService) Create(ctx context.Context, l *domain.Location) error 
 	return nil
 }
 
+func (s *locationService) CreateWithMedia(ctx context.Context, l *domain.Location, replacement LocationMediaReplacement) error {
+	if err := s.Create(ctx, l); err != nil {
+		return err
+	}
+	categoryIDs := make([]uuid.UUID, 0, len(l.Categories))
+	for _, cat := range l.Categories {
+		if cat != nil {
+			categoryIDs = append(categoryIDs, cat.ID)
+		}
+	}
+	return s.UpdateWithMedia(ctx, l, categoryIDs, replacement)
+}
+
 func (s *locationService) Update(ctx context.Context, l *domain.Location, categoryIDs []uuid.UUID) error {
 	if err := s.repo.Update(ctx, l); err != nil {
 		return err
@@ -210,6 +240,182 @@ func (s *locationService) Update(ctx context.Context, l *domain.Location, catego
 
 func (s *locationService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *locationService) UpdateWithMedia(ctx context.Context, l *domain.Location, categoryIDs []uuid.UUID, replacement LocationMediaReplacement) error {
+	oldLogoKeys := locationLogoKeys(l)
+	newLogoKeys := map[MediaTarget]string{}
+	if replacement.CommonLogo != nil {
+		if s.mediaSvc == nil {
+			return &domain.AppError{Err: domain.ErrInternal, Message: "media service is not configured"}
+		}
+		logoKeys, err := s.uploadLocationLogo(ctx, l.ID, *replacement.CommonLogo)
+		if err != nil {
+			return err
+		}
+		newLogoKeys = logoKeys
+		l.CommonLogo = logoKeys[locationMediaTarget(l.ID, "common_logo")]
+		l.CommonLargeLogo = logoKeys[locationMediaTarget(l.ID, "common_large_logo")]
+		l.CommonMediumLogo = logoKeys[locationMediaTarget(l.ID, "common_medium_logo")]
+		l.CommonSmallLogo = logoKeys[locationMediaTarget(l.ID, "common_small_logo")]
+	} else if replacement.ClearCommonLogo {
+		l.CommonLogo = ""
+		l.CommonLargeLogo = ""
+		l.CommonMediumLogo = ""
+		l.CommonSmallLogo = ""
+	}
+
+	if err := s.repo.Update(ctx, l); err != nil {
+		deleteLocationMediaKeys(ctx, s.mediaSvc, newLogoKeys)
+		return err
+	}
+	if err := s.repo.SetCategories(ctx, l.ID, categoryIDs); err != nil {
+		deleteLocationMediaKeys(ctx, s.mediaSvc, newLogoKeys)
+		return err
+	}
+	if replacement.ReplaceImages {
+		if err := s.replaceLocationImages(ctx, l, replacement.KeepImageIDs, replacement.Uploads); err != nil {
+			return err
+		}
+	}
+
+	if replacement.CommonLogo != nil || replacement.ClearCommonLogo {
+		deleteLocationMediaKeys(ctx, s.mediaSvc, oldLogoKeys)
+	}
+	return nil
+}
+
+func locationMediaTarget(locationID uuid.UUID, field string) MediaTarget {
+	return MediaTarget{Entity: "locations", RecordID: locationID, Field: field}
+}
+
+func locationLogoKeys(l *domain.Location) map[MediaTarget]string {
+	if l == nil {
+		return nil
+	}
+	return map[MediaTarget]string{
+		locationMediaTarget(l.ID, "common_logo"):        l.CommonLogo,
+		locationMediaTarget(l.ID, "common_large_logo"):  l.CommonLargeLogo,
+		locationMediaTarget(l.ID, "common_medium_logo"): l.CommonMediumLogo,
+		locationMediaTarget(l.ID, "common_small_logo"):  l.CommonSmallLogo,
+	}
+}
+
+func (s *locationService) uploadLocationLogo(ctx context.Context, locationID uuid.UUID, uploads LocationLogoUploads) (map[MediaTarget]string, error) {
+	ordered := []struct {
+		field  string
+		upload MediaUpload
+	}{
+		{field: "common_logo", upload: uploads.Original},
+		{field: "common_large_logo", upload: uploads.Large},
+		{field: "common_medium_logo", upload: uploads.Medium},
+		{field: "common_small_logo", upload: uploads.Small},
+	}
+	keys := map[MediaTarget]string{}
+	for _, item := range ordered {
+		target := locationMediaTarget(locationID, item.field)
+		key, err := s.mediaSvc.Upload(ctx, target, item.upload)
+		if err != nil {
+			deleteLocationMediaKeys(ctx, s.mediaSvc, keys)
+			return nil, err
+		}
+		keys[target] = key
+	}
+	return keys, nil
+}
+
+func (s *locationService) replaceLocationImages(ctx context.Context, l *domain.Location, keepIDs []uuid.UUID, uploads []MediaUpload) error {
+	kept, dropped := partitionLocationImages(l.Images, keepIDs)
+	_ = kept
+	for _, img := range dropped {
+		if err := s.repo.DeleteImage(ctx, img.ID); err != nil {
+			return err
+		}
+	}
+	if len(uploads) == 0 {
+		deleteLocationImageMedia(ctx, s.mediaSvc, dropped)
+		return nil
+	}
+	if s.mediaSvc == nil {
+		return &domain.AppError{Err: domain.ErrInternal, Message: "media service is not configured"}
+	}
+	target := locationMediaTarget(l.ID, "pictures")
+	newKeys := []string{}
+	for _, upload := range uploads {
+		key, err := s.mediaSvc.Upload(ctx, target, upload)
+		if err != nil {
+			deleteLocationMediaKeyList(ctx, s.mediaSvc, target, newKeys)
+			return err
+		}
+		newKeys = append(newKeys, key)
+		if err := s.repo.CreateImage(ctx, &domain.LocationImage{LocationID: l.ID, Original: key}); err != nil {
+			deleteLocationMediaKeyList(ctx, s.mediaSvc, target, newKeys)
+			return err
+		}
+	}
+	deleteLocationImageMedia(ctx, s.mediaSvc, dropped)
+	return nil
+}
+
+func partitionLocationImages(images []*domain.LocationImage, keepIDs []uuid.UUID) ([]*domain.LocationImage, []*domain.LocationImage) {
+	keep := make(map[uuid.UUID]struct{}, len(keepIDs))
+	for _, id := range keepIDs {
+		keep[id] = struct{}{}
+	}
+	kept := []*domain.LocationImage{}
+	dropped := []*domain.LocationImage{}
+	for _, img := range images {
+		if img == nil {
+			continue
+		}
+		if _, ok := keep[img.ID]; ok {
+			kept = append(kept, img)
+			continue
+		}
+		dropped = append(dropped, img)
+	}
+	return kept, dropped
+}
+
+func deleteLocationMediaKeys(ctx context.Context, mediaSvc MediaService, keys map[MediaTarget]string) {
+	if mediaSvc == nil {
+		return
+	}
+	for target, key := range keys {
+		if key != "" {
+			_ = mediaSvc.DeleteOwned(ctx, target, key)
+		}
+	}
+}
+
+func deleteLocationMediaKeyList(ctx context.Context, mediaSvc MediaService, target MediaTarget, keys []string) {
+	if mediaSvc == nil {
+		return
+	}
+	for _, key := range keys {
+		if key != "" {
+			_ = mediaSvc.DeleteOwned(ctx, target, key)
+		}
+	}
+}
+
+func deleteLocationImageMedia(ctx context.Context, mediaSvc MediaService, images []*domain.LocationImage) {
+	keys := make([]string, 0, len(images))
+	for _, img := range images {
+		if img != nil && img.Original != "" {
+			keys = append(keys, img.Original)
+		}
+	}
+	deleteLocationMediaKeyList(ctx, mediaSvc, locationMediaTarget(uuidFromLocationImages(images), "pictures"), keys)
+}
+
+func uuidFromLocationImages(images []*domain.LocationImage) uuid.UUID {
+	for _, img := range images {
+		if img != nil {
+			return img.LocationID
+		}
+	}
+	return uuid.Nil
 }
 
 // Duplicate creates a copy of the location with the same venue/level assignment.

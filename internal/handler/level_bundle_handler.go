@@ -29,7 +29,7 @@ func newLevelBundleHandler(svc service.LevelBundleService) *levelBundleHandler {
 // @Failure     400        {object} dto.Response
 // @Failure     401        {object} dto.Response
 // @Failure     403        {object} dto.Response
-// @Router      /venues/{id}/snapshots/{snapshotID}/bundles [get]
+// @Router      /venues/{id}/snapshots/{snapshotID}/level-bundles [get]
 func (h *levelBundleHandler) List(c *gin.Context) {
 	snapshotID, err := uuid.Parse(c.Param("snapshotID"))
 	if err != nil {
@@ -61,7 +61,7 @@ func (h *levelBundleHandler) List(c *gin.Context) {
 // @Failure     400        {object} dto.Response
 // @Failure     401        {object} dto.Response
 // @Failure     403        {object} dto.Response
-// @Router      /venues/{id}/snapshots/{snapshotID}/bundles [post]
+// @Router      /venues/{id}/snapshots/{snapshotID}/level-bundles [post]
 func (h *levelBundleHandler) Create(c *gin.Context) {
 	venueID, err := parseVenueID(c)
 	if err != nil {
@@ -100,7 +100,7 @@ func (h *levelBundleHandler) Create(c *gin.Context) {
 // @Failure     401 {object} dto.Response
 // @Failure     403 {object} dto.Response
 // @Failure     404 {object} dto.Response
-// @Router      /venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}/content [get]
+// @Router      /venues/{id}/snapshots/{snapshotID}/level-bundles/{bundleID}/content [get]
 func (h *levelBundleHandler) GetContent(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("bundleID"))
 	if err != nil {
@@ -127,7 +127,7 @@ func (h *levelBundleHandler) GetContent(c *gin.Context) {
 // @Failure     400 {object} dto.Response
 // @Failure     401 {object} dto.Response
 // @Failure     403 {object} dto.Response
-// @Router      /venues/{id}/snapshots/{snapshotID}/bundles/{bundleID} [delete]
+// @Router      /venues/{id}/snapshots/{snapshotID}/level-bundles/{bundleID} [delete]
 func (h *levelBundleHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("bundleID"))
 	if err != nil {

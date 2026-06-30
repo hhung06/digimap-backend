@@ -142,10 +142,10 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.POST("/venues/:id/snapshots/:snapshotID/publish", snapshotH.Publish)
 		adminOnly.POST("/venues/:id/snapshots/:snapshotID/revert", snapshotH.Revert)
 
-		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles", bundleH.List)
-		adminOnly.POST("/venues/:id/snapshots/:snapshotID/bundles", bundleH.Create)
-		adminOnly.GET("/venues/:id/snapshots/:snapshotID/bundles/:bundleID/content", bundleH.GetContent)
-		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/bundles/:bundleID", bundleH.Delete)
+		adminOnly.GET("/venues/:id/snapshots/:snapshotID/level-bundles", bundleH.List)
+		adminOnly.POST("/venues/:id/snapshots/:snapshotID/level-bundles", bundleH.Create)
+		adminOnly.GET("/venues/:id/snapshots/:snapshotID/level-bundles/:bundleID/content", bundleH.GetContent)
+		adminOnly.DELETE("/venues/:id/snapshots/:snapshotID/level-bundles/:bundleID", bundleH.Delete)
 
 		assetH := newAssetHandler(deps.AssetService)
 		adminOnly.GET("/venues/:id/assets", assetH.List)

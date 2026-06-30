@@ -1,7 +1,14 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	"image/png"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -297,6 +304,10 @@ func (h *locationHandler) CreateLocation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, err.Error()))
 		return
 	}
+	if isMultipartRequest(c) {
+		h.createLocationMultipart(c, venueID)
+		return
+	}
 	var req dto.CreateLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
@@ -308,6 +319,58 @@ func (h *locationHandler) CreateLocation(c *gin.Context) {
 		return
 	}
 	// Reload to hydrate categories with names
+	if reloaded, err := h.locationSvc.Get(c.Request.Context(), l.ID); err == nil {
+		l = reloaded
+	}
+	c.PureJSON(http.StatusCreated, dto.OK(h.locationResponse(c.Request.Context(), l)))
+}
+
+func (h *locationHandler) createLocationMultipart(c *gin.Context, venueID uuid.UUID) {
+	var req dto.CreateLocationRequest
+	if err := bindMultipartData(c, &req, 1<<20); err != nil {
+		respondError(c, err)
+		return
+	}
+	commonLogoFile, hasCommonLogo, err := multipartFile(c, "common_logo")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	imageFiles, hasImages, err := multipartFiles(c, "images")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	var commonLogo *service.LocationLogoUploads
+	if hasCommonLogo {
+		uploads, err := locationLogoUploads(commonLogoFile)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		commonLogo = uploads
+	}
+	imageUploads, closers, err := locationMediaUploads(imageFiles)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	defer closeAll(closers)
+
+	l := locationFromCreateRequest(venueID, req)
+	if commonLogo != nil || hasImages {
+		if err := h.locationSvc.CreateWithMedia(c.Request.Context(), l, service.LocationMediaReplacement{
+			CommonLogo:    commonLogo,
+			ReplaceImages: hasImages,
+			Uploads:       imageUploads,
+		}); err != nil {
+			respondError(c, err)
+			return
+		}
+	} else if err := h.locationSvc.Create(c.Request.Context(), l); err != nil {
+		respondError(c, err)
+		return
+	}
 	if reloaded, err := h.locationSvc.Get(c.Request.Context(), l.ID); err == nil {
 		l = reloaded
 	}
@@ -335,6 +398,10 @@ func (h *locationHandler) UpdateLocation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid location id"))
 		return
 	}
+	if isMultipartRequest(c) {
+		h.updateLocationMultipart(c, id)
+		return
+	}
 	var req dto.UpdateLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
@@ -355,6 +422,166 @@ func (h *locationHandler) UpdateLocation(c *gin.Context) {
 		l = reloaded
 	}
 	c.PureJSON(http.StatusOK, dto.OK(h.locationResponse(c.Request.Context(), l)))
+}
+
+func (h *locationHandler) updateLocationMultipart(c *gin.Context, id uuid.UUID) {
+	var req dto.UpdateLocationRequest
+	if err := bindMultipartData(c, &req, 1<<20); err != nil {
+		respondError(c, err)
+		return
+	}
+	commonLogoFile, hasCommonLogo, err := multipartFile(c, "common_logo")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	imageFiles, hasImages, err := multipartFiles(c, "images")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	var commonLogo *service.LocationLogoUploads
+	if hasCommonLogo {
+		uploads, err := locationLogoUploads(commonLogoFile)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		commonLogo = uploads
+	}
+	imageUploads, closers, err := locationMediaUploads(imageFiles)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	defer closeAll(closers)
+
+	l, err := h.locationSvc.Get(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	req.ApplyTo(l)
+
+	replaceImages := hasImages || req.KeepImageIDs != nil
+	clearCommonLogo := req.CommonLogo != nil && *req.CommonLogo == ""
+	if commonLogo != nil || clearCommonLogo || replaceImages {
+		keepImageIDs := []uuid.UUID(nil)
+		if req.KeepImageIDs != nil {
+			keepImageIDs = *req.KeepImageIDs
+		}
+		if err := h.locationSvc.UpdateWithMedia(c.Request.Context(), l, req.CommonCategories, service.LocationMediaReplacement{
+			CommonLogo:      commonLogo,
+			ClearCommonLogo: clearCommonLogo,
+			ReplaceImages:   replaceImages,
+			KeepImageIDs:    keepImageIDs,
+			Uploads:         imageUploads,
+		}); err != nil {
+			respondError(c, err)
+			return
+		}
+	} else if err := h.locationSvc.Update(c.Request.Context(), l, req.CommonCategories); err != nil {
+		respondError(c, err)
+		return
+	}
+	if reloaded, err := h.locationSvc.Get(c.Request.Context(), id); err == nil {
+		l = reloaded
+	}
+	c.PureJSON(http.StatusOK, dto.OK(h.locationResponse(c.Request.Context(), l)))
+}
+
+func locationMediaUploads(files []*multipart.FileHeader) ([]service.MediaUpload, []io.Closer, error) {
+	uploads := make([]service.MediaUpload, 0, len(files))
+	closers := make([]io.Closer, 0, len(files))
+	for _, file := range files {
+		upload, closer, err := mediaUpload(file)
+		if err != nil {
+			closeAll(closers)
+			return nil, nil, err
+		}
+		uploads = append(uploads, upload)
+		closers = append(closers, closer)
+	}
+	return uploads, closers, nil
+}
+
+func locationLogoUploads(file *multipart.FileHeader) (*service.LocationLogoUploads, error) {
+	opened, err := file.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer opened.Close()
+	body, err := io.ReadAll(opened)
+	if err != nil {
+		return nil, err
+	}
+	contentType := file.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = http.DetectContentType(body)
+	}
+	img, _, err := image.Decode(bytes.NewReader(body))
+	if err != nil {
+		return nil, domain.NewValidation(map[string]string{"common_logo": "undecodable"})
+	}
+	large, err := resizedLocationLogoUpload(img, file.Filename, "common_large_logo", 1024, contentType)
+	if err != nil {
+		return nil, err
+	}
+	medium, err := resizedLocationLogoUpload(img, file.Filename, "common_medium_logo", 512, contentType)
+	if err != nil {
+		return nil, err
+	}
+	small, err := resizedLocationLogoUpload(img, file.Filename, "common_small_logo", 256, contentType)
+	if err != nil {
+		return nil, err
+	}
+	return &service.LocationLogoUploads{
+		Original: service.MediaUpload{Filename: file.Filename, ContentType: contentType, Size: file.Size, Reader: bytes.NewReader(body)},
+		Large:    large,
+		Medium:   medium,
+		Small:    small,
+	}, nil
+}
+
+func resizedLocationLogoUpload(img image.Image, originalName, prefix string, targetWidth int, contentType string) (service.MediaUpload, error) {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= 0 || height <= 0 {
+		return service.MediaUpload{}, domain.NewValidation(map[string]string{"common_logo": "invalid dimensions"})
+	}
+	targetHeight := targetWidth * height / width
+	if targetHeight <= 0 {
+		targetHeight = 1
+	}
+	resized := resizeNearest(img, targetWidth, targetHeight)
+	var buf bytes.Buffer
+	filename := prefix + "_" + originalName
+	if contentType == "image/jpeg" {
+		if err := jpeg.Encode(&buf, resized, &jpeg.Options{Quality: 90}); err != nil {
+			return service.MediaUpload{}, err
+		}
+	} else {
+		contentType = "image/png"
+		if err := png.Encode(&buf, resized); err != nil {
+			return service.MediaUpload{}, err
+		}
+	}
+	return service.MediaUpload{Filename: filename, ContentType: contentType, Size: int64(buf.Len()), Reader: bytes.NewReader(buf.Bytes())}, nil
+}
+
+func resizeNearest(src image.Image, width, height int) *image.RGBA {
+	dst := image.NewRGBA(image.Rect(0, 0, width, height))
+	sb := src.Bounds()
+	for y := 0; y < height; y++ {
+		sy := sb.Min.Y + y*sb.Dy()/height
+		for x := 0; x < width; x++ {
+			sx := sb.Min.X + x*sb.Dx()/width
+			dst.Set(x, y, src.At(sx, sy))
+		}
+	}
+	return dst
 }
 
 // @Summary     Delete location
