@@ -641,6 +641,14 @@ func (m *AssetRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.A
 	return nil, args.Error(1)
 }
 
+func (m *AssetRepository) FindByIDs(ctx context.Context, venueID uuid.UUID, ids []uuid.UUID) ([]*domain.Asset, error) {
+	args := m.Called(ctx, venueID, ids)
+	if a, ok := args.Get(0).([]*domain.Asset); ok {
+		return a, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *AssetRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination, assetType string) ([]*domain.Asset, int64, error) {
 	args := m.Called(ctx, venueID, p, assetType)
 	if a, ok := args.Get(0).([]*domain.Asset); ok {
@@ -1251,8 +1259,8 @@ func (m *SurveyRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.
 	return nil, args.Error(1)
 }
 
-func (m *SurveyRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error) {
-	args := m.Called(ctx, venueID, p)
+func (m *SurveyRepository) List(ctx context.Context, venueID uuid.UUID, filter domain.SurveyListFilter, p domain.Pagination) ([]*domain.Survey, int64, error) {
+	args := m.Called(ctx, venueID, filter, p)
 	if v, ok := args.Get(0).([]*domain.Survey); ok {
 		return v, args.Get(1).(int64), args.Error(2)
 	}

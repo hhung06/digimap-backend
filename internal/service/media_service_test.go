@@ -107,6 +107,27 @@ func TestMediaService_UploadSameFilenameTwiceProducesDifferentOwnedKeys(t *testi
 	assert.NotEqual(t, storer.puts[0].key, storer.puts[1].key)
 }
 
+func TestMediaService_UploadAllowsPDFDocument(t *testing.T) {
+	ctx := context.Background()
+	storer := &mediaStorerSpy{}
+	svc := service.NewMediaService(storer, "develop")
+	target := service.MediaTarget{Entity: "products", RecordID: uuid.New(), Field: "attachments"}
+	body := []byte("%PDF-1.4\ncontent")
+
+	key, err := svc.Upload(ctx, target, service.MediaUpload{
+		Filename:    "spec.pdf",
+		ContentType: "application/pdf",
+		Size:        int64(len(body)),
+		Reader:      bytes.NewReader(body),
+	})
+	require.NoError(t, err)
+
+	assert.True(t, storage.OwnsMediaKey("develop", target.Entity, target.RecordID, target.Field, key))
+	require.Len(t, storer.puts, 1)
+	assert.Equal(t, "application/pdf", storer.puts[0].contentType)
+	assert.Equal(t, body, storer.puts[0].body)
+}
+
 func TestMediaService_UploadSameFilenameForDifferentRecordsProducesDifferentOwnedKeys(t *testing.T) {
 	ctx := context.Background()
 	storer := &mediaStorerSpy{}

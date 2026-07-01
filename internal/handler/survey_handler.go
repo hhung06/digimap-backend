@@ -2,6 +2,8 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,6 +32,9 @@ func newSurveyHandler(svc service.SurveyService, enrichers *enricher.Registry) *
 // @Param       id        path     string true  "Venue ID"
 // @Param       page      query    int    false "Page number"
 // @Param       page_size query    int    false "Page size"
+// @Param       keyword      query    string false "Search keyword"
+// @Param       status       query    int    false "Survey status"
+// @Param       publish_type query    int    false "Survey publish type"
 // @Success     200       {object} dto.Response{data=[]interface{},metadata=dto.PaginationMeta}
 // @Failure     400       {object} dto.Response
 // @Failure     401       {object} dto.Response
@@ -41,12 +46,32 @@ func (h *surveyHandler) List(c *gin.Context) {
 		return
 	}
 	p := paginationFromQuery(c)
-	surveys, total, err := h.svc.List(c.Request.Context(), venueID, p)
+	filter := domain.SurveyListFilter{Keyword: strings.TrimSpace(c.Query("keyword"))}
+	if raw := strings.TrimSpace(c.Query("status")); raw != "" {
+		status, err := strconv.Atoi(raw)
+		if err != nil {
+			respondError(c, domain.NewValidation(map[string]string{"status": "must be an integer"}))
+			return
+		}
+		filter.Status = &status
+	}
+	if raw := strings.TrimSpace(c.Query("publish_type")); raw != "" {
+		publishType, err := strconv.Atoi(raw)
+		if err != nil {
+			respondError(c, domain.NewValidation(map[string]string{"publish_type": "must be an integer"}))
+			return
+		}
+		filter.PublishType = &publishType
+	}
+	surveys, total, err := h.svc.List(c.Request.Context(), venueID, filter, p)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	extras, _ := h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceSurvey)
+	var extras map[string]any
+	if h.enrichers != nil {
+		extras, _ = h.enrichers.EnrichForVenue(c.Request.Context(), venueID, enricher.ResourceSurvey)
+	}
 	items := make([]any, len(surveys))
 	for i, s := range surveys {
 		items[i] = enricher.MergeInto(dto.SurveyToResponse(s), extras)

@@ -96,12 +96,17 @@ func (r *productRepo) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 
 func (r *productRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Product, error) {
 	const q = `
-		SELECT id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
-		       origin_country, expiration, description, custom, localization, source,
-		       created_at, updated_at, deleted_at
-		FROM products WHERE id = $1 AND deleted_at IS NULL`
+		SELECT p.id, p.venue_id, p.location_id, p.main_category_id, p.image, p.name, p.external_id, p.size, p.price,
+		       p.origin_country, p.expiration, p.description, p.custom, p.localization, p.source,
+		       p.created_at, p.updated_at, p.deleted_at,
+		       l.common_name,
+		       pc.id, pc.venue_id, pc.external_id, pc.name, pc.source, pc.localization, pc.created_at, pc.updated_at, pc.deleted_at
+		FROM products p
+		LEFT JOIN locations l ON l.id = p.location_id AND l.deleted_at IS NULL
+		LEFT JOIN product_categories pc ON pc.id = p.main_category_id AND pc.deleted_at IS NULL
+		WHERE p.id = $1 AND p.deleted_at IS NULL`
 
-	p, err := scanProduct(r.pool.QueryRow(ctx, q, id))
+	p, err := scanProductWithRelations(r.pool.QueryRow(ctx, q, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.NewNotFound("product not found")
 	}
@@ -124,10 +129,16 @@ func (r *productRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Produ
 func (r *productRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Product, int64, error) {
 	const countQ = `SELECT COUNT(*) FROM products WHERE venue_id = $1 AND deleted_at IS NULL`
 	const q = `
-		SELECT id, venue_id, location_id, main_category_id, image, name, external_id, size, price,
-		       origin_country, expiration, description, custom, localization, source,
-		       created_at, updated_at, deleted_at
-		FROM products WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		SELECT p.id, p.venue_id, p.location_id, p.main_category_id, p.image, p.name, p.external_id, p.size, p.price,
+		       p.origin_country, p.expiration, p.description, p.custom, p.localization, p.source,
+		       p.created_at, p.updated_at, p.deleted_at,
+		       l.common_name,
+		       pc.id, pc.venue_id, pc.external_id, pc.name, pc.source, pc.localization, pc.created_at, pc.updated_at, pc.deleted_at
+		FROM products p
+		LEFT JOIN locations l ON l.id = p.location_id AND l.deleted_at IS NULL
+		LEFT JOIN product_categories pc ON pc.id = p.main_category_id AND pc.deleted_at IS NULL
+		WHERE p.venue_id = $1 AND p.deleted_at IS NULL
+		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`
 
 	var total int64
 	if err := r.pool.QueryRow(ctx, countQ, venueID).Scan(&total); err != nil {
@@ -142,10 +153,15 @@ func (r *productRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagi
 
 	var products []*domain.Product
 	for rows.Next() {
-		prod, err := scanProduct(rows)
+		prod, err := scanProductWithRelations(rows)
 		if err != nil {
 			return nil, 0, err
 		}
+		attachments, err := r.ListAttachments(ctx, prod.ID)
+		if err != nil {
+			return nil, 0, err
+		}
+		prod.Attachments = attachments
 		products = append(products, prod)
 	}
 	return products, total, rows.Err()
@@ -349,6 +365,46 @@ func scanProduct(row pgx.Row) (*domain.Product, error) {
 	p.Custom = json.RawMessage(custom)
 	p.Localization = json.RawMessage(localization)
 	p.DeletedAt = deletedAt
+	return &p, nil
+}
+
+func scanProductWithRelations(row pgx.Row) (*domain.Product, error) {
+	var p domain.Product
+	var custom, localization []byte
+	var deletedAt *time.Time
+	var categoryID, categoryVenueID *uuid.UUID
+	var categoryExternalID, categoryName, categorySource *string
+	var categoryLocalization []byte
+	var categoryCreatedAt, categoryUpdatedAt, categoryDeletedAt *time.Time
+
+	err := row.Scan(
+		&p.ID, &p.VenueID, &p.LocationID, &p.MainCategoryID,
+		&p.Image, &p.Name, &p.ExternalID, &p.Size, &p.Price,
+		&p.Country, &p.Expiration, &p.Description, &custom, &localization, &p.Source,
+		&p.CreatedAt, &p.UpdatedAt, &deletedAt,
+		&p.LocationName,
+		&categoryID, &categoryVenueID, &categoryExternalID, &categoryName, &categorySource, &categoryLocalization,
+		&categoryCreatedAt, &categoryUpdatedAt, &categoryDeletedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	p.Custom = json.RawMessage(custom)
+	p.Localization = json.RawMessage(localization)
+	p.DeletedAt = deletedAt
+	if categoryID != nil && categoryVenueID != nil && categoryName != nil && categorySource != nil && categoryCreatedAt != nil && categoryUpdatedAt != nil {
+		p.MainCategory = &domain.ProductCategory{
+			ID:           *categoryID,
+			VenueID:      *categoryVenueID,
+			ExternalID:   categoryExternalID,
+			Name:         *categoryName,
+			Source:       *categorySource,
+			Localization: json.RawMessage(categoryLocalization),
+			CreatedAt:    *categoryCreatedAt,
+			UpdatedAt:    *categoryUpdatedAt,
+			DeletedAt:    categoryDeletedAt,
+		}
+	}
 	return &p, nil
 }
 

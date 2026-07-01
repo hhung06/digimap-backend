@@ -470,3 +470,40 @@ func orEmptySlice(s []map[string]any) []map[string]any {
 
 // Ensure unused uuid import is used.
 var _ = uuid.Nil
+
+// AssembleLocalizedOverlay produces the per-language overlay the viewer fetches for non-English
+// locales: {locations:[{id,...localized}], categories:[{id,...localized}]}.
+// The viewer merges each entry onto the corresponding base record by id via Object.assign.
+func AssembleLocalizedOverlay(
+	locations []*domain.Location,
+	cats []*domain.LocationCategory,
+) map[string]any {
+	locs := make([]map[string]any, 0, len(locations))
+	for _, l := range locations {
+		var loc map[string]any
+		if err := json.Unmarshal(l.Localization, &loc); err == nil && loc != nil {
+			entry := map[string]any{"id": l.ID.String()}
+			for k, v := range loc {
+				entry[k] = v
+			}
+			locs = append(locs, entry)
+		}
+	}
+
+	catList := make([]map[string]any, 0, len(cats))
+	for _, c := range cats {
+		var loc map[string]any
+		if err := json.Unmarshal(c.Localization, &loc); err == nil && loc != nil {
+			entry := map[string]any{"id": c.ID.String()}
+			for k, v := range loc {
+				entry[k] = v
+			}
+			catList = append(catList, entry)
+		}
+	}
+
+	return map[string]any{
+		"locations":  locs,
+		"categories": catList,
+	}
+}

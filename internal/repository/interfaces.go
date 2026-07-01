@@ -158,7 +158,7 @@ type NotificationRepository interface {
 type SurveyRepository interface {
 	// Surveys
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Survey, error)
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error)
+	List(ctx context.Context, venueID uuid.UUID, filter domain.SurveyListFilter, p domain.Pagination) ([]*domain.Survey, int64, error)
 	ListDueActivation(ctx context.Context, now time.Time) ([]*domain.Survey, error)
 	ListDueClosure(ctx context.Context, now time.Time) ([]*domain.Survey, error)
 	Create(ctx context.Context, s *domain.Survey) error
@@ -367,6 +367,7 @@ type LevelBundleRepository interface {
 // AssetRepository handles asset metadata persistence.
 type AssetRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domain.Asset, error)
+	FindByIDs(ctx context.Context, venueID uuid.UUID, ids []uuid.UUID) ([]*domain.Asset, error)
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination, assetType string) ([]*domain.Asset, int64, error)
 	ListAll(ctx context.Context, assetType string) ([]*domain.Asset, error)
 	// ListLibrary returns assets uploaded via the library (key prefix {env}/library/),
@@ -376,7 +377,6 @@ type AssetRepository interface {
 	Update(ctx context.Context, a *domain.Asset) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
-
 
 // LevelTypeRepository handles level type CRUD.
 type LevelTypeRepository interface {

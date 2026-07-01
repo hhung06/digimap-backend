@@ -24,6 +24,8 @@ type Product struct {
 	VenueID        uuid.UUID
 	LocationID     *uuid.UUID
 	MainCategoryID *uuid.UUID
+	MainCategory   *ProductCategory
+	LocationName   *string
 	ExternalID     *string
 	Image          *string
 	Name           *string

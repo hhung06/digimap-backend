@@ -248,7 +248,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.DELETE("/:id/locations/memos/:memoID", memoH.Delete)
 
 		// Product sub-resources
-		prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
+		prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry, deps.MediaService)
 
 		venues.GET("/:id/product-categories", prodH.ListCategories)
 		venues.POST("/:id/product-categories", prodH.CreateCategory)
@@ -408,7 +408,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	}
 
 	// ── Storage (pre-signed uploads) ──────────────────────────────────────────
-	prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry)
+	prodH := newProductHandler(deps.ProductService, deps.StorageService, deps.EnricherRegistry, deps.MediaService)
 	adminJWT.POST("/storage/presign-upload", prodH.PresignUpload)
 
 	// ── Media uploads (server-side, validated, key→_url convention) ───────────

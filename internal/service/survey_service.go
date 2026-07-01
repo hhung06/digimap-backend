@@ -14,7 +14,7 @@ import (
 
 // SurveyService manages surveys, questions, options, and responses.
 type SurveyService interface {
-	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error)
+	List(ctx context.Context, venueID uuid.UUID, filter domain.SurveyListFilter, p domain.Pagination) ([]*domain.Survey, int64, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.Survey, error)
 	Create(ctx context.Context, s *domain.Survey) error
 	Update(ctx context.Context, s *domain.Survey) error
@@ -57,8 +57,8 @@ func NewSurveyService(repo repository.SurveyRepository, notifRepo repository.Not
 	return &surveyService{repo: repo, notifRepo: notifRepo, notifications: notifications}
 }
 
-func (s *surveyService) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error) {
-	return s.repo.List(ctx, venueID, p)
+func (s *surveyService) List(ctx context.Context, venueID uuid.UUID, filter domain.SurveyListFilter, p domain.Pagination) ([]*domain.Survey, int64, error) {
+	return s.repo.List(ctx, venueID, filter, p)
 }
 
 func (s *surveyService) Get(ctx context.Context, id uuid.UUID) (*domain.Survey, error) {

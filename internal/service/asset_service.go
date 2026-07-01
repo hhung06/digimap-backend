@@ -64,9 +64,12 @@ type AssetService interface {
 	ListAll(ctx context.Context, assetType string) ([]*domain.Asset, error)
 	ListLibrary(ctx context.Context, status, assetType string) ([]*domain.Asset, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.Asset, error)
+	// GetByIDs returns assets by their UUIDs, scoped to the given venue.
+	GetByIDs(ctx context.Context, venueID uuid.UUID, ids []uuid.UUID) ([]*domain.Asset, error)
 	Create(ctx context.Context, in CreateAssetInput) (*domain.Asset, error)
 	// Upload2D decodes a base64 data-URL, uploads it to S3, and registers the asset record.
-	// id is the client-assigned UUID string; dataURL is "data:<mime>;base64,<data>".
+	// id is the client-assigned identifier; non-UUID strings (e.g. SHA-1 hashes) are mapped
+	// to a deterministic UUID v5 so the same file always resolves to the same record.
 	Upload2D(ctx context.Context, venueID uuid.UUID, id, dataURL string) (*domain.Asset, error)
 	Update(ctx context.Context, id uuid.UUID, name string) (*domain.Asset, error)
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -78,10 +81,10 @@ type AssetService interface {
 }
 
 type assetService struct {
-	repo         repository.AssetRepository
-	storer       storage.Storer
-	env          string
-	cfDomain     string // AWS_CF_ASSETS_DOMAIN, e.g. "assets.example.com"
+	repo     repository.AssetRepository
+	storer   storage.Storer
+	env      string
+	cfDomain string // AWS_CF_ASSETS_DOMAIN, e.g. "assets.example.com"
 }
 
 func NewAssetService(repo repository.AssetRepository, storer storage.Storer, env, cfDomain string) AssetService {
@@ -111,6 +114,10 @@ func (s *assetService) Get(ctx context.Context, id uuid.UUID) (*domain.Asset, er
 	return s.repo.FindByID(ctx, id)
 }
 
+func (s *assetService) GetByIDs(ctx context.Context, venueID uuid.UUID, ids []uuid.UUID) ([]*domain.Asset, error) {
+	return s.repo.FindByIDs(ctx, venueID, ids)
+}
+
 func (s *assetService) Create(ctx context.Context, in CreateAssetInput) (*domain.Asset, error) {
 	a := &domain.Asset{
 		VenueID:     in.VenueID,
@@ -135,13 +142,17 @@ var allowed2DMimeTypes = map[string]string{
 	"image/jpeg": "jpg",
 	"image/webp": "webp",
 	"image/gif":  "gif",
+	"image/avif": "avif",
+	"image/heic": "heic",
+	"image/heif": "heif",
 }
 
 func (s *assetService) Upload2D(ctx context.Context, venueID uuid.UUID, id, dataURL string) (*domain.Asset, error) {
 	assetID, err := uuid.Parse(id)
 	if err != nil {
-		// Client sent a non-UUID identifier — generate one server-side.
-		assetID = uuid.New()
+		// Client sent a non-UUID identifier (e.g. SHA-1 hex hash from the editor).
+		// Derive a deterministic UUID v5 so the same file always maps to the same record.
+		assetID = uuid.NewSHA1(uuid.NameSpaceOID, []byte(id))
 	}
 
 	// If the asset already exists, verify it belongs to this venue (prevent cross-venue overwrite).
@@ -168,7 +179,21 @@ func (s *assetService) Upload2D(ctx context.Context, venueID uuid.UUID, id, data
 	mediaType, _, _ := mime.ParseMediaType(detected)
 	ext, ok := allowed2DMimeTypes[mediaType]
 	if !ok {
-		return nil, domain.NewValidation(map[string]string{"file": "unsupported file type; allowed: png, jpeg, webp, gif"})
+		// AVIF, HEIC, and HEIF use the ISOBMFF container; Go's detector returns "video/mp4" for them.
+		// Fall back to the claimed MIME type from the data-URL header for these formats.
+		if mediaType == "video/mp4" || mediaType == "application/octet-stream" {
+			if semi := strings.Index(dataURL, ";"); semi > 5 {
+				claimedType := dataURL[5:semi] // "data:<type>;base64,..." → type
+				if claimedExt, allowed := allowed2DMimeTypes[claimedType]; allowed {
+					mediaType = claimedType
+					ext = claimedExt
+					ok = true
+				}
+			}
+		}
+	}
+	if !ok {
+		return nil, domain.NewValidation(map[string]string{"file": "unsupported file type; allowed: png, jpeg, webp, gif, avif"})
 	}
 
 	key := storage.Asset2DKey(s.env, assetID, ext)

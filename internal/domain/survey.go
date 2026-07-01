@@ -45,6 +45,12 @@ type Survey struct {
 	UpdatedAt      time.Time
 }
 
+type SurveyListFilter struct {
+	Status      *int
+	PublishType *int
+	Keyword     string
+}
+
 // Question is a single question within a Survey.
 type Question struct {
 	ID             uuid.UUID

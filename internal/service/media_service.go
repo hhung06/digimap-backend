@@ -10,6 +10,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -136,9 +137,6 @@ func validateMediaUpload(upload MediaUpload) ([]byte, string, string, error) {
 		return nil, "", "", domain.NewValidation(map[string]string{"content_type": "invalid"})
 	}
 	declaredContentType = strings.ToLower(declaredContentType)
-	if _, ok := mediaExtensionByContentType(declaredContentType); !ok {
-		return nil, "", "", domain.NewValidation(map[string]string{"content_type": "unsupported image type"})
-	}
 
 	body, err := io.ReadAll(io.LimitReader(upload.Reader, maxMediaUploadBytes+1))
 	if err != nil {
@@ -152,6 +150,12 @@ func validateMediaUpload(upload MediaUpload) ([]byte, string, string, error) {
 	}
 
 	detectedContentType := http.DetectContentType(body)
+	if ext, ok := documentExtensionByContentType(declaredContentType, upload.Filename, detectedContentType); ok {
+		return body, declaredContentType, ext, nil
+	}
+	if _, ok := mediaExtensionByContentType(declaredContentType); !ok {
+		return nil, "", "", domain.NewValidation(map[string]string{"content_type": "unsupported media type"})
+	}
 	if detectedContentType != declaredContentType {
 		return nil, "", "", domain.NewValidation(map[string]string{"content_type": "does not match file content"})
 	}
@@ -170,6 +174,21 @@ func validateMediaUpload(upload MediaUpload) ([]byte, string, string, error) {
 		return nil, "", "", domain.NewValidation(map[string]string{"image": "undecodable"})
 	}
 	return body, detectedContentType, ext, nil
+}
+
+func documentExtensionByContentType(contentType, filename, detectedContentType string) (string, bool) {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch contentType {
+	case "application/pdf":
+		if ext == ".pdf" && strings.HasPrefix(detectedContentType, "application/pdf") {
+			return "pdf", true
+		}
+	case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		if ext == ".docx" && (detectedContentType == "application/zip" || detectedContentType == "application/octet-stream") {
+			return "docx", true
+		}
+	}
+	return "", false
 }
 
 func validMediaDimensions(cfg image.Config) bool {

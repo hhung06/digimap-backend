@@ -279,32 +279,39 @@ func (s *snapshotService) publishArtifacts(ctx context.Context, snap *domain.Sna
 		metadata = map[string]any{}
 	}
 
-	// Resolve the active venue theme: prefer DB record; fall back to draft's top-level "theme".
-	// The resolved theme goes into the overview split bundle (the only viewer loader that reads it).
-	var themeData any
+	// Extract the four viewer-bundle fields the client pre-split before sending.
+	// The FE sends { base, overview, location_simple, metadata } as the draft bundle;
+	// the server reads them directly rather than splitting the merged SDK object.
+	base := asMap(metadata["base"])
+	over := asMap(metadata["overview"])
+	locSim := asMap(metadata["location_simple"])
+	meta := asMap(metadata["metadata"])
+
+	// Resolve the active venue theme: prefer DB record; fall back to the client-sent
+	// overview.theme (which lives inside the pre-split bundle, not at the top level).
 	if venueTheme, err := s.themeRepo.FindVenueTheme(ctx, snap.VenueID); err == nil && venueTheme != nil {
-		_ = json.Unmarshal(venueTheme.Data, &themeData)
+		var themeData any
+		if json.Unmarshal(venueTheme.Data, &themeData) == nil && themeData != nil {
+			over["theme"] = themeData
+		}
 	}
-	if themeData == nil {
-		themeData = metadata["theme"]
-	}
+	// else: leave over["theme"] as the client sent it (matches Django views.py:1213-1215).
 
 	encMeta := map[string]string{"encrypted": "AES", "compressed": "gzip"}
 
 	var invalidationPaths []string
 
-	// Build and upload the four viewer-fetched split bundles from the core-SDK draft.
+	// Upload the four viewer-fetched split bundles.
 	// Encoding: gzip(BestCompression) → AES-CBC → base64, matching Django's upload_bundle_data_v2.
-	splits := bundle.AssembleSplitBundles(metadata, themeData)
 	type splitEntry struct {
 		key     string
 		payload map[string]any
 	}
 	for _, e := range []splitEntry{
-		{storage.BaseKey(s.env, snap.VenueID), splits.Base},
-		{storage.OverviewKey(s.env, snap.VenueID), splits.Overview},
-		{storage.LocationSimpleKey(s.env, snap.VenueID), splits.LocationSimple},
-		{storage.MetadataKey(s.env, snap.VenueID), splits.Metadata},
+		{storage.BaseKey(s.env, snap.VenueID), base},
+		{storage.OverviewKey(s.env, snap.VenueID), over},
+		{storage.LocationSimpleKey(s.env, snap.VenueID), locSim},
+		{storage.MetadataKey(s.env, snap.VenueID), meta},
 	} {
 		cipher, err := crypto.EncryptBytes(venue.PublicKey, e.payload)
 		if err != nil {
@@ -322,8 +329,9 @@ func (s *snapshotService) publishArtifacts(ctx context.Context, snap *domain.Sna
 
 	for _, lang := range langs {
 		// Existing .digiapp.{lang} six-key bundle — kept for legacy consumers.
+		// Pass meta (the metadata sub-bundle) as the base; it holds locations, categories, etc.
 		langBundle := bundle.AssembleLanguageBundle(
-			venue, lang.Code, locations, locationCats, products, productCats, metadata,
+			venue, lang.Code, locations, locationCats, products, productCats, meta,
 		)
 
 		cipherText, err := crypto.EncryptBundle(venue.PublicKey, langBundle)
@@ -406,16 +414,19 @@ func (s *snapshotService) uploadBundleData(ctx context.Context, snap *domain.Sna
 		metadata = map[string]any{}
 	}
 
-	var themeData any
+	base := asMap(metadata["base"])
+	over := asMap(metadata["overview"])
+	locSim := asMap(metadata["location_simple"])
+	meta := asMap(metadata["metadata"])
+
 	if venueTheme, err := s.themeRepo.FindVenueTheme(ctx, snap.VenueID); err == nil && venueTheme != nil {
-		_ = json.Unmarshal(venueTheme.Data, &themeData)
-	}
-	if themeData == nil {
-		themeData = metadata["theme"]
+		var themeData any
+		if json.Unmarshal(venueTheme.Data, &themeData) == nil && themeData != nil {
+			over["theme"] = themeData
+		}
 	}
 
 	encMeta := map[string]string{"encrypted": "AES", "compressed": "gzip"}
-	splits := bundle.AssembleSplitBundles(metadata, themeData)
 
 	type splitEntry struct {
 		key     string
@@ -423,10 +434,10 @@ func (s *snapshotService) uploadBundleData(ctx context.Context, snap *domain.Sna
 	}
 	var invalidationPaths []string
 	for _, e := range []splitEntry{
-		{storage.BaseKey(s.env, snap.VenueID), splits.Base},
-		{storage.OverviewKey(s.env, snap.VenueID), splits.Overview},
-		{storage.LocationSimpleKey(s.env, snap.VenueID), splits.LocationSimple},
-		{storage.MetadataKey(s.env, snap.VenueID), splits.Metadata},
+		{storage.BaseKey(s.env, snap.VenueID), base},
+		{storage.OverviewKey(s.env, snap.VenueID), over},
+		{storage.LocationSimpleKey(s.env, snap.VenueID), locSim},
+		{storage.MetadataKey(s.env, snap.VenueID), meta},
 	} {
 		cipher, err := crypto.EncryptBytes(venue.PublicKey, e.payload)
 		if err != nil {
@@ -474,4 +485,13 @@ func (s *snapshotService) uploadCustomThemes(ctx context.Context, venueID uuid.U
 		paths = append(paths, "/"+key)
 	}
 	return paths
+}
+
+// asMap safely casts v to map[string]any. Returns an empty map if v is nil or not the right type.
+// Used to extract pre-split viewer bundles from the client-sent draft JSON.
+func asMap(v any) map[string]any {
+	if m, ok := v.(map[string]any); ok {
+		return m
+	}
+	return map[string]any{}
 }

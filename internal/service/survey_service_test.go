@@ -109,11 +109,12 @@ func TestSurveyService_List_Success(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	p := domain.Pagination{Page: 1, PageSize: 20}
+	filter := domain.SurveyListFilter{Keyword: "TEST", Status: intPtr(domain.SurveyStatusActive), PublishType: intPtr(domain.SurveyPublishPromo)}
 	expected := []*domain.Survey{{Title: strPtr("Survey A")}}
 
-	repo.On("List", ctx, venueID, p).Return(expected, int64(1), nil)
+	repo.On("List", ctx, venueID, filter, p).Return(expected, int64(1), nil)
 
-	got, total, err := svc.List(ctx, venueID, p)
+	got, total, err := svc.List(ctx, venueID, filter, p)
 	require.NoError(t, err)
 	assert.Len(t, got, 1)
 	assert.Equal(t, int64(1), total)
@@ -474,8 +475,8 @@ func TestSurveyService_Create_ActiveCMSCreatesImmediateNotification(t *testing.T
 	venueID := uuid.New()
 	userID := uuid.New()
 	s := &domain.Survey{
-		Title: strPtr("Customer Feedback"),
-		Content: strPtr("Please answer"),
+		Title:          strPtr("Customer Feedback"),
+		Content:        strPtr("Please answer"),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
 		Status:         domain.SurveyStatusActive,
@@ -512,8 +513,8 @@ func TestSurveyService_Create_ActiveCMSRejectsUnsupportedSegmentFilters(t *testi
 	venueID := uuid.New()
 	userID := uuid.New()
 	s := &domain.Survey{
-		Title: strPtr("Customer Feedback"),
-		Content: strPtr("Please answer"),
+		Title:          strPtr("Customer Feedback"),
+		Content:        strPtr("Please answer"),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
 		Status:         domain.SurveyStatusActive,
@@ -544,8 +545,8 @@ func TestSurveyService_Create_ActiveCMSCreatesScheduledNotification(t *testing.T
 	userID := uuid.New()
 	startAt := time.Now().Add(time.Hour)
 	s := &domain.Survey{
-		Title: strPtr("Customer Feedback"),
-		Content: strPtr("Please answer"),
+		Title:          strPtr("Customer Feedback"),
+		Content:        strPtr("Please answer"),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
 		Status:         domain.SurveyStatusActive,
@@ -592,8 +593,8 @@ func TestSurveyService_Update_TransitionToActiveCreatesNotification(t *testing.T
 		ID:             surveyID,
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
-		Title: strPtr("Activated survey"),
-		Content: strPtr("Now live"),
+		Title:          strPtr("Activated survey"),
+		Content:        strPtr("Now live"),
 		Status:         domain.SurveyStatusActive,
 		Source:         domain.SurveySourceCMS,
 		StartDate:      ptrTime(time.Now().Add(-time.Minute)),
@@ -628,8 +629,8 @@ func TestSurveyService_ProcessScheduledTransitions_ActivatesAndCloses(t *testing
 		ID:             uuid.New(),
 		VenueID:        &venueID,
 		CreatedBy:      &userID,
-		Title: strPtr("Activate me"),
-		Content: strPtr("Now"),
+		Title:          strPtr("Activate me"),
+		Content:        strPtr("Now"),
 		Status:         domain.SurveyStatusInactive,
 		Source:         domain.SurveySourceCMS,
 		StartDate:      &now,
@@ -688,5 +689,9 @@ func TestSurveyService_Create_DefaultsInvariant(t *testing.T) {
 }
 
 func ptrTime(v time.Time) *time.Time {
+	return &v
+}
+
+func intPtr(v int) *int {
 	return &v
 }

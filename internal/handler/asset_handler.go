@@ -23,6 +23,36 @@ func (h *assetHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
 		return
 	}
+
+	// When the editor requests specific assets by fileId, return only those.
+	// Non-UUID identifiers (e.g. SHA-1 hashes) are mapped to the same deterministic
+	// UUID v5 used during upload so they resolve to the correct record.
+	rawFileIDs := c.QueryArray("file_ids[]")
+	if len(rawFileIDs) == 0 {
+		rawFileIDs = c.QueryArray("file_ids")
+	}
+	if len(rawFileIDs) > 0 {
+		ids := make([]uuid.UUID, 0, len(rawFileIDs))
+		for _, raw := range rawFileIDs {
+			id, parseErr := uuid.Parse(raw)
+			if parseErr != nil {
+				id = uuid.NewSHA1(uuid.NameSpaceOID, []byte(raw))
+			}
+			ids = append(ids, id)
+		}
+		assets, err := h.svc.GetByIDs(c.Request.Context(), venueID, ids)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		items := make([]dto.AssetResponse, len(assets))
+		for i, a := range assets {
+			items[i] = dto.AssetToResponse(a, h.svc.AssetURL(a.Thumbnail), h.svc.AssetURL(a.Material))
+		}
+		c.JSON(http.StatusOK, dto.OK(items))
+		return
+	}
+
 	p := paginationFromQuery(c)
 	assetType := c.Query("asset_type")
 	assets, total, err := h.svc.List(c.Request.Context(), venueID, p, assetType)

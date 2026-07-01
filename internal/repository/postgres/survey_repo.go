@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,16 +44,34 @@ func (r *surveyRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Survey
 	return s, nil
 }
 
-func (r *surveyRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Survey, int64, error) {
+func (r *surveyRepo) List(ctx context.Context, venueID uuid.UUID, filter domain.SurveyListFilter, p domain.Pagination) ([]*domain.Survey, int64, error) {
+	where := []string{"venue_id = @venue_id", "deleted_at IS NULL"}
+	args := pgx.NamedArgs{"venue_id": venueID}
+	if filter.Status != nil {
+		where = append(where, "status = @status")
+		args["status"] = *filter.Status
+	}
+	if filter.PublishType != nil {
+		where = append(where, "publish_type = @publish_type")
+		args["publish_type"] = *filter.PublishType
+	}
+	if keyword := strings.TrimSpace(filter.Keyword); keyword != "" {
+		where = append(where, "(title ILIKE @keyword OR content ILIKE @keyword)")
+		args["keyword"] = "%" + keyword + "%"
+	}
+	whereSQL := strings.Join(where, " AND ")
+
 	var total int64
 	if err := r.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM surveys WHERE venue_id = $1 AND deleted_at IS NULL`, venueID,
+		`SELECT COUNT(*) FROM surveys WHERE `+whereSQL, args,
 	).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	q := `SELECT ` + surveySelectCols + ` FROM surveys WHERE venue_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
-	rows, err := r.pool.Query(ctx, q, venueID, p.PageSize, p.Offset())
+	args["limit"] = p.PageSize
+	args["offset"] = p.Offset()
+	q := `SELECT ` + surveySelectCols + ` FROM surveys WHERE ` + whereSQL + ` ORDER BY created_at DESC LIMIT @limit OFFSET @offset`
+	rows, err := r.pool.Query(ctx, q, args)
 	if err != nil {
 		return nil, 0, err
 	}

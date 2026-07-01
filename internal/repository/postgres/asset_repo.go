@@ -32,6 +32,29 @@ func (r *assetRepo) FindByID(ctx context.Context, id uuid.UUID) (*domain.Asset, 
 	return a, err
 }
 
+func (r *assetRepo) FindByIDs(ctx context.Context, venueID uuid.UUID, ids []uuid.UUID) ([]*domain.Asset, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+assetSelectCols+` FROM assets WHERE venue_id = $1 AND id = ANY($2) AND deleted_at IS NULL`,
+		venueID, ids,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var assets []*domain.Asset
+	for rows.Next() {
+		a, err := scanAsset(rows)
+		if err != nil {
+			return nil, err
+		}
+		assets = append(assets, a)
+	}
+	return assets, rows.Err()
+}
+
 func (r *assetRepo) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination, assetType string) ([]*domain.Asset, int64, error) {
 	var total int64
 	var countErr error
