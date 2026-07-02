@@ -1193,6 +1193,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/venues/{venueId}/search-options": {
+            "get": {
+                "description": "Return venue-scoped exhibitor/location or product search options without requiring authentication.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "public"
+                ],
+                "summary": "Public search options",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "venueId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "products",
+                            "exhibitors",
+                            "locations"
+                        ],
+                        "type": "string",
+                        "description": "Option origin",
+                        "name": "origin",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "en",
+                        "description": "Language code",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/storage/presign-upload": {
             "post": {
                 "security": [
@@ -7589,6 +7654,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/venues/{id}/notifications/push-type": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List segment push types for the selected venue",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "List notification push types",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Venue ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/venues/{id}/notifications/{notifID}": {
             "get": {
                 "security": [
@@ -9051,7 +9162,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/venues/{id}/snapshots/{snapshotID}/bundles": {
+        "/venues/{id}/snapshots/{snapshotID}/level-bundles": {
             "get": {
                 "security": [
                     {
@@ -9206,7 +9317,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}": {
+        "/venues/{id}/snapshots/{snapshotID}/level-bundles/{bundleID}": {
             "delete": {
                 "security": [
                     {
@@ -9269,7 +9380,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}/content": {
+        "/venues/{id}/snapshots/{snapshotID}/level-bundles/{bundleID}/content": {
             "get": {
                 "security": [
                     {
@@ -9525,6 +9636,24 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Page size",
                         "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Survey status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Survey publish type",
+                        "name": "publish_type",
                         "in": "query"
                     }
                 ],
@@ -11307,6 +11436,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ArticleLocation": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ArticleRequest": {
             "type": "object",
             "required": [
@@ -11347,6 +11487,12 @@ const docTemplate = `{
                     "format": "date",
                     "example": "2026-06-01"
                 },
+                "related_products": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "status": {
                     "type": "string"
                 },
@@ -11382,6 +11528,9 @@ const docTemplate = `{
                 "localization": {
                     "type": "object"
                 },
+                "location": {
+                    "$ref": "#/definitions/dto.ArticleLocation"
+                },
                 "location_id": {
                     "type": "string"
                 },
@@ -11403,6 +11552,12 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date",
                     "example": "2026-06-01"
+                },
+                "related_products": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "status": {
                     "type": "string"
@@ -12020,6 +12175,12 @@ const docTemplate = `{
                 "is_searchable": {
                     "type": "boolean"
                 },
+                "keep_image_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "level_id": {
                     "type": "string"
                 },
@@ -12112,6 +12273,12 @@ const docTemplate = `{
         "dto.CreateProductRequest": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ProductAttachmentRequest"
+                    }
+                },
                 "category_ids": {
                     "type": "array",
                     "items": {
@@ -12132,6 +12299,12 @@ const docTemplate = `{
                 },
                 "image": {
                     "type": "string"
+                },
+                "keep_attachment_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "localization": {
                     "type": "object"
@@ -13495,6 +13668,9 @@ const docTemplate = `{
                 "file": {
                     "type": "string"
                 },
+                "file_type": {
+                    "type": "string"
+                },
                 "source_url": {
                     "type": "string"
                 },
@@ -13513,6 +13689,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "file_type": {
+                    "type": "string"
+                },
+                "file_url": {
                     "type": "string"
                 },
                 "id": {
@@ -13581,6 +13760,9 @@ const docTemplate = `{
         "dto.ProductResponse": {
             "type": "object",
             "properties": {
+                "attachment_image": {
+                    "$ref": "#/definitions/dto.ProductAttachmentResponse"
+                },
                 "attachments": {
                     "type": "array",
                     "items": {
@@ -13602,6 +13784,12 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "document_attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ProductAttachmentResponse"
+                    }
+                },
                 "expiration": {
                     "type": "string"
                 },
@@ -13614,13 +13802,28 @@ const docTemplate = `{
                 "image": {
                     "type": "string"
                 },
+                "image_attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ProductAttachmentResponse"
+                    }
+                },
                 "localization": {
                     "type": "object"
                 },
                 "location_id": {
                     "type": "string"
                 },
+                "location_name": {
+                    "type": "string"
+                },
+                "main_category": {
+                    "$ref": "#/definitions/dto.ProductCategoryResponse"
+                },
                 "main_category_id": {
+                    "type": "string"
+                },
+                "main_category_name": {
                     "type": "string"
                 },
                 "name": {
@@ -14076,6 +14279,12 @@ const docTemplate = `{
                     "format": "date",
                     "example": "2026-06-01"
                 },
+                "related_products": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "remove_images": {
                     "type": "boolean"
                 },
@@ -14310,6 +14519,12 @@ const docTemplate = `{
                 "is_top_location": {
                     "type": "boolean"
                 },
+                "keep_image_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "level_id": {
                     "type": "string"
                 },
@@ -14398,6 +14613,12 @@ const docTemplate = `{
         "dto.UpdateProductRequest": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ProductAttachmentRequest"
+                    }
+                },
                 "category_ids": {
                     "type": "array",
                     "items": {
@@ -14418,6 +14639,12 @@ const docTemplate = `{
                 },
                 "image": {
                     "type": "string"
+                },
+                "keep_attachment_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "localization": {
                     "type": "object"

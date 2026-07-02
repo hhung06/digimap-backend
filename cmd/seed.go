@@ -629,16 +629,6 @@ func runSeed(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Printf("theme:           %s\n", themeID)
 
-	// ── Product plaza ─────────────────────────────────────────────────────────
-	var plazaID string
-	if err = tx.QueryRow(ctx, `
-		INSERT INTO product_plazas (venue_id, name, description, location_id)
-		VALUES ($1, 'East Wing Food Court', 'Curated selection of premium food and beverage products.', $2)
-		RETURNING id`, venueID, loc1ID).Scan(&plazaID); err != nil {
-		return fmt.Errorf("insert product_plaza: %w", err)
-	}
-	fmt.Printf("product_plaza:   %s\n", plazaID)
-
 	// ── Snapshot + level bundle ───────────────────────────────────────────────
 	var snapshotID string
 	if err = tx.QueryRow(ctx, `

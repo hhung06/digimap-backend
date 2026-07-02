@@ -59,6 +59,48 @@ func TestArticleResponsePeriodFieldsEmitDateOnly(t *testing.T) {
 	assert.NotContains(t, string(body), "T23:59")
 }
 
+func TestArticleResponseIncludesNestedLocation(t *testing.T) {
+	locationID := uuid.New()
+	resp := dto.ArticleToResponse(&domain.Article{
+		ID:         uuid.New(),
+		LocationID: &locationID,
+		Location: &domain.ArticleLocation{
+			ID:   locationID,
+			Name: "Premium Lounge",
+		},
+		Title: "News",
+	})
+
+	body, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	assert.Contains(t, string(body), `"location_id":"`+locationID.String()+`"`)
+	assert.Contains(t, string(body), `"location":{"id":"`+locationID.String()+`","name":"Premium Lounge"}`)
+}
+
+func TestArticleRequestAndResponseIncludeRelatedProducts(t *testing.T) {
+	firstProductID := uuid.New()
+	secondProductID := uuid.New()
+	var req dto.ArticleRequest
+
+	err := json.Unmarshal([]byte(`{
+		"title":"News",
+		"related_products":["`+firstProductID.String()+`","`+secondProductID.String()+`"]
+	}`), &req)
+	require.NoError(t, err)
+	assert.Equal(t, []uuid.UUID{firstProductID, secondProductID}, req.RelatedProducts)
+
+	resp := dto.ArticleToResponse(&domain.Article{
+		ID:              uuid.New(),
+		Title:           "News",
+		RelatedProducts: []uuid.UUID{firstProductID, secondProductID},
+	})
+	body, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	assert.Contains(t, string(body), `"related_products":["`+firstProductID.String()+`","`+secondProductID.String()+`"]`)
+}
+
 func TestArticleImageResponseIncludesStoredKeyAndNullableURL(t *testing.T) {
 	resp := dto.ArticleImageToResponse(&domain.ArticleImage{
 		ID:        uuid.New(),

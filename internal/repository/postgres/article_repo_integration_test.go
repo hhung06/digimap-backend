@@ -64,8 +64,16 @@ func setupArticleTestDB(t *testing.T) *pgxpool.Pool {
 			published_period_start DATE,
 			published_period_end DATE,
 			localization JSONB,
+			related_products JSONB NOT NULL DEFAULT '[]',
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			deleted_at TIMESTAMPTZ
+		);
+
+		CREATE TABLE locations (
+			id UUID PRIMARY KEY,
+			venue_id UUID,
+			common_name TEXT NOT NULL DEFAULT '',
 			deleted_at TIMESTAMPTZ
 		);
 
@@ -95,6 +103,76 @@ func TestArticleRepositoryUpdateWithImagesPreservesImagesWhenReplaceFalse(t *tes
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"old-a", "old-b"}, activeArticleImageKeys(t, ctx, pool, a.ID))
+}
+
+func TestArticleRepositoryListLoadsImagesForResponseURLs(t *testing.T) {
+	pool := setupArticleTestDB(t)
+	repo := postgresrepo.NewArticleRepository(pool)
+	ctx := context.Background()
+	venueID := uuid.New()
+	a := &domain.Article{VenueID: &venueID, Title: "Listed", Placement: "article", Status: "draft"}
+	require.NoError(t, repo.Create(ctx, a))
+	require.NoError(t, repo.CreateImage(ctx, &domain.ArticleImage{ArticleID: a.ID, Image: "article-cover", SortOrder: 0}))
+
+	got, total, err := repo.List(ctx, venueID, domain.Pagination{Page: 1, PageSize: 20})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, total)
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Images, 1)
+	assert.Equal(t, "article-cover", got[0].Images[0].Image)
+}
+
+func TestArticleRepositoryListLoadsLocationForResponseName(t *testing.T) {
+	pool := setupArticleTestDB(t)
+	repo := postgresrepo.NewArticleRepository(pool)
+	ctx := context.Background()
+	venueID := uuid.New()
+	locationID := uuid.New()
+	_, err := pool.Exec(ctx,
+		`INSERT INTO locations (id, venue_id, common_name) VALUES ($1, $2, $3)`,
+		locationID, venueID, "Premium Lounge",
+	)
+	require.NoError(t, err)
+	a := &domain.Article{
+		VenueID:    &venueID,
+		LocationID: &locationID,
+		Title:      "Listed",
+		Placement:  "article",
+		Status:     "draft",
+	}
+	require.NoError(t, repo.Create(ctx, a))
+
+	got, total, err := repo.List(ctx, venueID, domain.Pagination{Page: 1, PageSize: 20})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, total)
+	require.Len(t, got, 1)
+	require.NotNil(t, got[0].Location)
+	assert.Equal(t, locationID, got[0].Location.ID)
+	assert.Equal(t, "Premium Lounge", got[0].Location.Name)
+}
+
+func TestArticleRepositoryPersistsRelatedProducts(t *testing.T) {
+	pool := setupArticleTestDB(t)
+	repo := postgresrepo.NewArticleRepository(pool)
+	ctx := context.Background()
+	venueID := uuid.New()
+	firstProductID := uuid.New()
+	secondProductID := uuid.New()
+	a := &domain.Article{
+		VenueID:         &venueID,
+		Title:           "Listed",
+		Placement:       "article",
+		Status:          "draft",
+		RelatedProducts: []uuid.UUID{firstProductID, secondProductID},
+	}
+	require.NoError(t, repo.Create(ctx, a))
+
+	got, err := repo.FindByID(ctx, a.ID)
+
+	require.NoError(t, err)
+	assert.Equal(t, []uuid.UUID{firstProductID, secondProductID}, got.RelatedProducts)
 }
 
 func TestArticleRepositoryUpdateWithImagesReplacesActiveImagesInKeyOrder(t *testing.T) {

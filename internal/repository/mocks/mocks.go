@@ -773,8 +773,6 @@ func (m *ThemeRepository) IsUsedByVenues(ctx context.Context, id uuid.UUID) (boo
 	return args.Bool(0), args.Error(1)
 }
 
-// ── ProductPlazaRepository ────────────────────────────────────────────────────
-
 // ── LocationRepository ────────────────────────────────────────────────────────
 
 type LocationRepository struct{ mock.Mock }
@@ -916,38 +914,6 @@ func (m *LocationCategoryRepository) Update(ctx context.Context, c *domain.Locat
 }
 
 func (m *LocationCategoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return m.Called(ctx, id).Error(0)
-}
-
-// ── ProductPlazaRepository ────────────────────────────────────────────────────
-
-type ProductPlazaRepository struct{ mock.Mock }
-
-func (m *ProductPlazaRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error) {
-	args := m.Called(ctx, id)
-	if p, ok := args.Get(0).(*domain.ProductPlaza); ok {
-		return p, args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
-func (m *ProductPlazaRepository) List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error) {
-	args := m.Called(ctx, venueID, page, pageSize)
-	if p, ok := args.Get(0).([]*domain.ProductPlaza); ok {
-		return p, args.Get(1).(int64), args.Error(2)
-	}
-	return nil, args.Get(1).(int64), args.Error(2)
-}
-
-func (m *ProductPlazaRepository) Create(ctx context.Context, p *domain.ProductPlaza) error {
-	return m.Called(ctx, p).Error(0)
-}
-
-func (m *ProductPlazaRepository) Update(ctx context.Context, p *domain.ProductPlaza) error {
-	return m.Called(ctx, p).Error(0)
-}
-
-func (m *ProductPlazaRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }
 

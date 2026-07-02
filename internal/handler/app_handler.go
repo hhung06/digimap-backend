@@ -21,7 +21,6 @@ type appHandler struct {
 	locations          service.LocationService
 	events             service.EventService
 	products           service.ProductService
-	productPlazas      service.ProductPlazaService
 	articles           service.ArticleService
 	notifications      service.NotificationService
 	coupons            service.CouponService
@@ -39,7 +38,6 @@ func newAppHandler(
 	locations service.LocationService,
 	events service.EventService,
 	products service.ProductService,
-	productPlazas service.ProductPlazaService,
 	articles service.ArticleService,
 	notifications service.NotificationService,
 	coupons service.CouponService,
@@ -56,7 +54,6 @@ func newAppHandler(
 		locations:          locations,
 		events:             events,
 		products:           products,
-		productPlazas:      productPlazas,
 		articles:           articles,
 		notifications:      notifications,
 		coupons:            coupons,
@@ -225,36 +222,6 @@ func (h *appHandler) ListProductCategories(c *gin.Context) {
 		items[i] = dto.ProductCategoryToResponse(cat)
 	}
 	c.JSON(http.StatusOK, dto.OK(items))
-}
-
-
-func (h *appHandler) ListProductPlazas(c *gin.Context) {
-	venueID := middleware.GetVenueID(c)
-	plazas, _, err := h.productPlazas.List(c.Request.Context(), venueID, 1, 1000)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	lang := middleware.GetLang(c)
-	items := make([]dto.ProductPlazaResponse, len(plazas))
-	for i, p := range plazas {
-		items[i] = localizedProductPlazaResponse(p, lang)
-	}
-	c.JSON(http.StatusOK, dto.OK(items))
-}
-
-func (h *appHandler) GetProductPlaza(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("plazaID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid plaza id"))
-		return
-	}
-	plaza, err := h.productPlazas.Get(c.Request.Context(), id)
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, dto.OK(localizedProductPlazaResponse(plaza, middleware.GetLang(c))))
 }
 
 func (h *appHandler) ListArticles(c *gin.Context) {
@@ -581,17 +548,6 @@ func (h *appHandler) LatestBundle(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(gin.H{"version": av.Version.String()}))
-}
-
-// localizedProductPlazaResponse resolves name/description from the localization blob
-// for public app reads. Falls back to the primary-language column values.
-func localizedProductPlazaResponse(p *domain.ProductPlaza, lang string) dto.ProductPlazaResponse {
-	blob := localization.DecodeBlob(p.Localization)
-	resp := dto.ProductPlazaToResponse(p)
-	resp.Name = localization.Field(blob, "name", lang, p.Name)
-	resp.Description = localization.Field(blob, "description", lang, p.Description)
-	resp.Localization = nil // omit raw blob from public response
-	return resp
 }
 
 // localizedArticleResponse resolves title/content/label from the localization blob

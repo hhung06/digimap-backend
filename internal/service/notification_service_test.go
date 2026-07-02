@@ -157,8 +157,8 @@ func TestNotificationService_Create_RejectsUnsupportedSegmentFilters(t *testing.
 	ctx := context.Background()
 	venueID := uuid.New()
 	n := &domain.Notification{
-		Title:       strPtr("Promo"),
-		Content:       strPtr("Deal"),
+		Title:          strPtr("Promo"),
+		Content:        strPtr("Deal"),
 		VenueID:        &venueID,
 		Kind:           domain.NotifKindNormal,
 		SendType:       domain.NotifTypeDraft,
@@ -245,7 +245,7 @@ func TestNotificationService_Get_Success(t *testing.T) {
 
 	ctx := context.Background()
 	id := uuid.New()
-	expected := &domain.Notification{ID: id, Title:       strPtr("Flash Sale")}
+	expected := &domain.Notification{ID: id, Title: strPtr("Flash Sale")}
 
 	repo.On("FindByID", ctx, id).Return(expected, nil)
 
@@ -279,7 +279,7 @@ func TestNotificationService_List_Success(t *testing.T) {
 	ctx := context.Background()
 	venueID := uuid.New()
 	p := domain.Pagination{Page: 1, PageSize: 20}
-	expected := []*domain.Notification{{Title:       strPtr("Alert")}}
+	expected := []*domain.Notification{{Title: strPtr("Alert")}}
 
 	repo.On("List", ctx, venueID, p).Return(expected, int64(1), nil)
 
@@ -288,6 +288,41 @@ func TestNotificationService_List_Success(t *testing.T) {
 	assert.Len(t, got, 1)
 	assert.Equal(t, int64(1), total)
 	repo.AssertExpectations(t)
+}
+
+func TestNotificationService_ListPushTypes_ComposesFoodexOptions(t *testing.T) {
+	t.Setenv("BFACE_BASIC_AUTHENTICATION", "")
+	t.Setenv("FOODEX_X_API_KEY", "")
+
+	repo := &mocks.NotificationRepository{}
+	venueRepo := &mocks.VenueRepository{}
+	svc := service.NewNotificationService(repo, nil, venueRepo)
+
+	ctx := context.Background()
+	venueID := uuid.New()
+	venueRepo.On("FindByID", ctx, venueID).Return(&domain.Venue{
+		ID:         venueID,
+		ExternalID: "foodex_2026",
+	}, nil)
+
+	pushTypes, err := svc.ListPushTypes(ctx, venueID)
+	require.NoError(t, err)
+
+	var industryOptions []map[string]any
+	var seminarOptions []map[string]any
+	for _, pushType := range pushTypes {
+		switch pushType["key"] {
+		case "topic_visitor_industry":
+			industryOptions, _ = pushType["options"].([]map[string]any)
+		case "seminar_registered":
+			seminarOptions, _ = pushType["options"].([]map[string]any)
+		}
+	}
+
+	require.NotEmpty(t, industryOptions)
+	assert.Equal(t, "商社・卸 ➞ 卸・問屋", industryOptions[0]["label"])
+	assert.Empty(t, seminarOptions)
+	venueRepo.AssertExpectations(t)
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -390,8 +425,8 @@ func TestNotificationService_Send_BySegmentFiltersTopics_Success(t *testing.T) {
 	id := uuid.New()
 	n := &domain.Notification{
 		ID:             id,
-		Title:       strPtr("Survey"),
-		Content:       strPtr("Please answer"),
+		Title:          strPtr("Survey"),
+		Content:        strPtr("Please answer"),
 		SendStatus:     domain.NotifSendPending,
 		SegmentFilters: []byte(`[{"key":"visitors","type":"text","value":"vip"},{"key":"all_users","type":null}]`),
 	}

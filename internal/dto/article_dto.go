@@ -14,6 +14,7 @@ type ArticleResponse struct {
 	VenueID              *uuid.UUID             `json:"venue_id,omitempty"`
 	ExternalID           *string                `json:"external_id,omitempty"`
 	LocationID           *uuid.UUID             `json:"location_id,omitempty"`
+	Location             *ArticleLocation       `json:"location,omitempty"`
 	Placement            string                 `json:"placement"`
 	Navigate             *string                `json:"navigate,omitempty"`
 	Title                string                 `json:"title"`
@@ -24,9 +25,15 @@ type ArticleResponse struct {
 	PublishedPeriodStart *Date                  `json:"published_period_start,omitempty" swaggertype:"string" format:"date" example:"2026-06-01"`
 	PublishedPeriodEnd   *Date                  `json:"published_period_end,omitempty" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage        `json:"localization,omitempty" swaggertype:"object"`
+	RelatedProducts      []uuid.UUID            `json:"related_products,omitempty"`
 	Images               []ArticleImageResponse `json:"images,omitempty"`
 	CreatedAt            time.Time              `json:"created_at"`
 	UpdatedAt            time.Time              `json:"updated_at"`
+}
+
+type ArticleLocation struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 type ArticleImageResponse struct {
@@ -52,6 +59,7 @@ type ArticleRequest struct {
 	PublishedPeriodStart *Date           `json:"published_period_start" swaggertype:"string" format:"date" example:"2026-06-01"`
 	PublishedPeriodEnd   *Date           `json:"published_period_end" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage `json:"localization" swaggertype:"object"`
+	RelatedProducts      []uuid.UUID     `json:"related_products"`
 }
 
 type UpdateArticleRequest struct {
@@ -67,6 +75,7 @@ type UpdateArticleRequest struct {
 	PublishedPeriodStart *Date           `json:"published_period_start" swaggertype:"string" format:"date" example:"2026-06-01"`
 	PublishedPeriodEnd   *Date           `json:"published_period_end" swaggertype:"string" format:"date" example:"2026-06-30"`
 	Localization         json.RawMessage `json:"localization" swaggertype:"object"`
+	RelatedProducts      *[]uuid.UUID    `json:"related_products"`
 	RemoveImages         *bool           `json:"remove_images"`
 	KeepImageIDs         *[]uuid.UUID    `json:"keep_image_ids"`
 }
@@ -110,6 +119,9 @@ func (r UpdateArticleRequest) ApplyTo(a *domain.Article) {
 	if r.Localization != nil {
 		a.Localization = r.Localization
 	}
+	if r.RelatedProducts != nil {
+		a.RelatedProducts = *r.RelatedProducts
+	}
 }
 
 type ArticleImageRequest struct {
@@ -126,7 +138,11 @@ func ArticleToResponse(a *domain.Article) ArticleResponse {
 		PublishedPeriodStart: articleDate(a.PublishedPeriodStart),
 		PublishedPeriodEnd:   articleDate(a.PublishedPeriodEnd),
 		Localization:         a.Localization,
+		RelatedProducts:      a.RelatedProducts,
 		CreatedAt:            a.CreatedAt, UpdatedAt: a.UpdatedAt,
+	}
+	if a.Location != nil {
+		resp.Location = &ArticleLocation{ID: a.Location.ID, Name: a.Location.Name}
 	}
 	for _, img := range a.Images {
 		resp.Images = append(resp.Images, ArticleImageToResponse(img))

@@ -20,7 +20,7 @@ import (
 
 func newTestPublicHandler(venueRepo *mocks.VenueRepository) *publicHandler {
 	venueSvc := service.NewVenueService(venueRepo, nil, nil)
-	return newPublicHandler(venueSvc, nil, nil, nil, nil)
+	return newPublicHandler(venueSvc, nil, nil, nil)
 }
 
 type visitorSurveyServiceStub struct {
@@ -99,7 +99,7 @@ func TestPublicHandler_SubmitVisitorSurvey_RequiresPublicKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	stub := &visitorSurveyServiceStub{err: domain.NewValidation(map[string]string{"public_key": "is required"})}
-	h := newPublicHandler(nil, nil, nil, nil, stub)
+	h := newPublicHandler(nil, nil, nil, stub)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPost, "/public/v1/visitor-surveys", bytes.NewBufferString(`{"visitor_type":1}`))
@@ -115,7 +115,7 @@ func TestPublicHandler_SubmitVisitorSurvey_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	stub := &visitorSurveyServiceStub{user: &domain.AppUser{ID: uuid.New()}}
-	h := newPublicHandler(nil, nil, nil, nil, stub)
+	h := newPublicHandler(nil, nil, nil, stub)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPost, "/public/v1/visitor-surveys", bytes.NewBufferString(`{"public_key":"pub","full_name":"John Doe","email":"john@example.com","phone_number":"+123","visitor_type":2,"business_name":"Acme","interests":[1,2,1],"other_interests":"other","is_consented":true}`))

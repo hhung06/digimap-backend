@@ -401,15 +401,6 @@ type ThemeRepository interface {
 	IsUsedByVenues(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
-// ProductPlazaRepository handles product plaza CRUD.
-type ProductPlazaRepository interface {
-	FindByID(ctx context.Context, id uuid.UUID) (*domain.ProductPlaza, error)
-	List(ctx context.Context, venueID uuid.UUID, page, pageSize int) ([]*domain.ProductPlaza, int64, error)
-	Create(ctx context.Context, p *domain.ProductPlaza) error
-	Update(ctx context.Context, p *domain.ProductPlaza) error
-	Delete(ctx context.Context, id uuid.UUID) error
-}
-
 // AppUserRepository handles visitor/app user persistence.
 type AppUserRepository interface {
 	FindByToken(ctx context.Context, venueID uuid.UUID, token string) (*domain.AppUser, error)

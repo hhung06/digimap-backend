@@ -26,6 +26,10 @@ func (s *notificationServiceSpy) List(context.Context, uuid.UUID, domain.Paginat
 	return nil, 0, nil
 }
 
+func (s *notificationServiceSpy) ListPushTypes(context.Context, uuid.UUID) ([]map[string]any, error) {
+	return nil, nil
+}
+
 func (s *notificationServiceSpy) Get(context.Context, uuid.UUID) (*domain.Notification, error) {
 	return nil, nil
 }

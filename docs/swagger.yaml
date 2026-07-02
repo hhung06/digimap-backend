@@ -146,6 +146,13 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.ArticleLocation:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   dto.ArticleRequest:
     properties:
       content:
@@ -172,6 +179,10 @@ definitions:
         example: "2026-06-01"
         format: date
         type: string
+      related_products:
+        items:
+          type: string
+        type: array
       status:
         type: string
       title:
@@ -197,6 +208,8 @@ definitions:
         type: string
       localization:
         type: object
+      location:
+        $ref: '#/definitions/dto.ArticleLocation'
       location_id:
         type: string
       navigate:
@@ -213,6 +226,10 @@ definitions:
         example: "2026-06-01"
         format: date
         type: string
+      related_products:
+        items:
+          type: string
+        type: array
       status:
         type: string
       title:
@@ -619,6 +636,10 @@ definitions:
         type: string
       is_searchable:
         type: boolean
+      keep_image_ids:
+        items:
+          type: string
+        type: array
       level_id:
         type: string
       localization:
@@ -682,6 +703,10 @@ definitions:
     type: object
   dto.CreateProductRequest:
     properties:
+      attachments:
+        items:
+          $ref: '#/definitions/dto.ProductAttachmentRequest'
+        type: array
       category_ids:
         items:
           type: string
@@ -696,6 +721,10 @@ definitions:
         type: string
       image:
         type: string
+      keep_attachment_ids:
+        items:
+          type: string
+        type: array
       localization:
         type: object
       location_id:
@@ -1593,6 +1622,8 @@ definitions:
     properties:
       file:
         type: string
+      file_type:
+        type: string
       source_url:
         type: string
       title:
@@ -1605,6 +1636,8 @@ definitions:
       file:
         type: string
       file_type:
+        type: string
+      file_url:
         type: string
       id:
         type: string
@@ -1649,6 +1682,8 @@ definitions:
     type: object
   dto.ProductResponse:
     properties:
+      attachment_image:
+        $ref: '#/definitions/dto.ProductAttachmentResponse'
       attachments:
         items:
           $ref: '#/definitions/dto.ProductAttachmentResponse'
@@ -1663,6 +1698,10 @@ definitions:
         type: object
       description:
         type: string
+      document_attachments:
+        items:
+          $ref: '#/definitions/dto.ProductAttachmentResponse'
+        type: array
       expiration:
         type: string
       external_id:
@@ -1671,11 +1710,21 @@ definitions:
         type: string
       image:
         type: string
+      image_attachments:
+        items:
+          $ref: '#/definitions/dto.ProductAttachmentResponse'
+        type: array
       localization:
         type: object
       location_id:
         type: string
+      location_name:
+        type: string
+      main_category:
+        $ref: '#/definitions/dto.ProductCategoryResponse'
       main_category_id:
+        type: string
+      main_category_name:
         type: string
       name:
         type: string
@@ -1977,6 +2026,10 @@ definitions:
         example: "2026-06-01"
         format: date
         type: string
+      related_products:
+        items:
+          type: string
+        type: array
       remove_images:
         type: boolean
       status:
@@ -2132,6 +2185,10 @@ definitions:
         type: boolean
       is_top_location:
         type: boolean
+      keep_image_ids:
+        items:
+          type: string
+        type: array
       level_id:
         type: string
       localization:
@@ -2190,6 +2247,10 @@ definitions:
     type: object
   dto.UpdateProductRequest:
     properties:
+      attachments:
+        items:
+          $ref: '#/definitions/dto.ProductAttachmentRequest'
+        type: array
       category_ids:
         items:
           type: string
@@ -2204,6 +2265,10 @@ definitions:
         type: string
       image:
         type: string
+      keep_attachment_ids:
+        items:
+          type: string
+        type: array
       localization:
         type: object
       location_id:
@@ -3196,6 +3261,51 @@ paths:
       summary: Track search
       tags:
       - analytics
+  /public/venues/{venueId}/search-options:
+    get:
+      description: Return venue-scoped exhibitor/location or product search options
+        without requiring authentication.
+      parameters:
+      - description: Venue ID
+        in: path
+        name: venueId
+        required: true
+        type: string
+      - description: Option origin
+        enum:
+        - products
+        - exhibitors
+        - locations
+        in: query
+        name: origin
+        type: string
+      - default: en
+        description: Language code
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: Public search options
+      tags:
+      - public
   /storage/presign-upload:
     post:
       consumes:
@@ -7299,6 +7409,35 @@ paths:
       summary: Send notification
       tags:
       - notifications
+  /venues/{id}/notifications/push-type:
+    get:
+      description: List segment push types for the selected venue
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: List notification push types
+      tags:
+      - notifications
   /venues/{id}/product-categories:
     get:
       description: List all product categories for a venue
@@ -7956,7 +8095,7 @@ paths:
       summary: Get snapshot
       tags:
       - snapshots
-  /venues/{id}/snapshots/{snapshotID}/bundles:
+  /venues/{id}/snapshots/{snapshotID}/level-bundles:
     get:
       description: List level bundles for a snapshot (system admin only)
       parameters:
@@ -8051,7 +8190,7 @@ paths:
       summary: Create level bundle
       tags:
       - snapshots
-  /venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}:
+  /venues/{id}/snapshots/{snapshotID}/level-bundles/{bundleID}:
     delete:
       description: Delete a level bundle (system admin only)
       parameters:
@@ -8092,7 +8231,7 @@ paths:
       summary: Delete level bundle
       tags:
       - snapshots
-  /venues/{id}/snapshots/{snapshotID}/bundles/{bundleID}/content:
+  /venues/{id}/snapshots/{snapshotID}/level-bundles/{bundleID}/content:
     get:
       description: |-
         Return the raw stored bundle blob for a level bundle (system admin only).
@@ -8331,6 +8470,18 @@ paths:
       - description: Page size
         in: query
         name: page_size
+        type: integer
+      - description: Search keyword
+        in: query
+        name: keyword
+        type: string
+      - description: Survey status
+        in: query
+        name: status
+        type: integer
+      - description: Survey publish type
+        in: query
+        name: publish_type
         type: integer
       produces:
       - application/json

@@ -21,10 +21,11 @@ func TestLevelTypeService_Create(t *testing.T) {
 
 	repo.On("Create", ctx, mock.AnythingOfType("*domain.LevelType")).Return(nil)
 
-	result, err := svc.Create(ctx, "Floor", "floor-icon")
+	result, err := svc.Create(ctx, "Floor", "floor-icon", 1)
 
 	require.NoError(t, err)
 	assert.Equal(t, "Floor", result.Name)
+	assert.Equal(t, 1, result.Value)
 	repo.AssertExpectations(t)
 }
 

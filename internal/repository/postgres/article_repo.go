@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,7 +21,9 @@ const articleSelectCols = `
     a.id, a.venue_id, a.external_id, a.location_id,
     a.placement, a.navigate, a.title, a.label, a.content,
     a.status, a.published_at, a.published_period_start, a.published_period_end,
-    a.localization, a.created_at, a.updated_at`
+    a.localization, a.related_products, a.created_at, a.updated_at`
+
+const articleLocationSelectCols = `, l.id, l.common_name`
 
 func (r *articleRepository) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Article, int, error) {
 	var total int
@@ -30,7 +33,10 @@ func (r *articleRepository) List(ctx context.Context, venueID uuid.UUID, p domai
 		return nil, 0, err
 	}
 	rows, err := r.pool.Query(ctx,
-		`SELECT `+articleSelectCols+` FROM articles a WHERE a.venue_id=$1 AND a.deleted_at IS NULL
+		`SELECT `+articleSelectCols+articleLocationSelectCols+`
+         FROM articles a
+         LEFT JOIN locations l ON l.id = a.location_id AND l.deleted_at IS NULL
+         WHERE a.venue_id=$1 AND a.deleted_at IS NULL
          ORDER BY a.created_at DESC LIMIT $2 OFFSET $3`,
 		venueID, p.PageSize, p.Offset())
 	if err != nil {
@@ -39,19 +45,28 @@ func (r *articleRepository) List(ctx context.Context, venueID uuid.UUID, p domai
 	defer rows.Close()
 	var out []*domain.Article
 	for rows.Next() {
-		a, err := scanArticle(rows)
+		a, err := scanArticleWithLocation(rows)
 		if err != nil {
 			return nil, 0, err
 		}
 		out = append(out, a)
 	}
-	return out, total, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	if err := r.loadImages(ctx, out); err != nil {
+		return nil, 0, err
+	}
+	return out, total, nil
 }
 
 func (r *articleRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.Article, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT `+articleSelectCols+` FROM articles a WHERE a.id=$1 AND a.deleted_at IS NULL`, id)
-	a, err := scanArticle(row)
+		`SELECT `+articleSelectCols+articleLocationSelectCols+`
+         FROM articles a
+         LEFT JOIN locations l ON l.id = a.location_id AND l.deleted_at IS NULL
+         WHERE a.id=$1 AND a.deleted_at IS NULL`, id)
+	a, err := scanArticleWithLocation(row)
 	if err != nil {
 		return nil, err
 	}
@@ -68,12 +83,13 @@ func (r *articleRepository) Create(ctx context.Context, a *domain.Article) error
 	return r.pool.QueryRow(ctx,
 		`INSERT INTO articles
          (id,venue_id,external_id,location_id,placement,navigate,title,label,content,
-          status,published_at,published_period_start,published_period_end,localization)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          status,published_at,published_period_start,published_period_end,localization,related_products)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          RETURNING created_at,updated_at`,
 		a.ID, a.VenueID, a.ExternalID, a.LocationID, a.Placement, a.Navigate,
 		a.Title, a.Label, a.Content, a.Status,
 		a.PublishedAt, a.PublishedPeriodStart, a.PublishedPeriodEnd, a.Localization,
+		articleRelatedProductsJSON(a.RelatedProducts),
 	).Scan(&a.CreatedAt, &a.UpdatedAt)
 }
 
@@ -139,11 +155,13 @@ func updateArticleScalar(ctx context.Context, q pgx.Tx, a *domain.Article) error
 	return q.QueryRow(ctx,
 		`UPDATE articles SET
          external_id=$2,location_id=$3,placement=$4,navigate=$5,title=$6,label=$7,content=$8,
-         status=$9,published_at=$10,published_period_start=$11,published_period_end=$12,localization=$13
+         status=$9,published_at=$10,published_period_start=$11,published_period_end=$12,localization=$13,
+         related_products=$14
          WHERE id=$1 AND deleted_at IS NULL RETURNING updated_at`,
 		a.ID, a.ExternalID, a.LocationID, a.Placement, a.Navigate,
 		a.Title, a.Label, a.Content, a.Status,
 		a.PublishedAt, a.PublishedPeriodStart, a.PublishedPeriodEnd, a.Localization,
+		articleRelatedProductsJSON(a.RelatedProducts),
 	).Scan(&a.UpdatedAt)
 }
 
@@ -187,15 +205,75 @@ func (r *articleRepository) listImages(ctx context.Context, articleID uuid.UUID)
 	return out, rows.Err()
 }
 
+func (r *articleRepository) loadImages(ctx context.Context, articles []*domain.Article) error {
+	for _, a := range articles {
+		images, err := r.listImages(ctx, a.ID)
+		if err != nil {
+			return err
+		}
+		a.Images = images
+	}
+	return nil
+}
+
 func scanArticle(row scanner) (*domain.Article, error) {
 	var a domain.Article
+	var relatedProducts json.RawMessage
 	if err := row.Scan(
 		&a.ID, &a.VenueID, &a.ExternalID, &a.LocationID,
 		&a.Placement, &a.Navigate, &a.Title, &a.Label, &a.Content,
 		&a.Status, &a.PublishedAt, &a.PublishedPeriodStart, &a.PublishedPeriodEnd,
-		&a.Localization, &a.CreatedAt, &a.UpdatedAt,
+		&a.Localization, &relatedProducts, &a.CreatedAt, &a.UpdatedAt,
 	); err != nil {
 		return nil, err
 	}
+	a.RelatedProducts = parseArticleRelatedProducts(relatedProducts)
 	return &a, nil
+}
+
+func scanArticleWithLocation(row scanner) (*domain.Article, error) {
+	var a domain.Article
+	var relatedProducts json.RawMessage
+	var locationID *uuid.UUID
+	var locationName *string
+	if err := row.Scan(
+		&a.ID, &a.VenueID, &a.ExternalID, &a.LocationID,
+		&a.Placement, &a.Navigate, &a.Title, &a.Label, &a.Content,
+		&a.Status, &a.PublishedAt, &a.PublishedPeriodStart, &a.PublishedPeriodEnd,
+		&a.Localization, &relatedProducts, &a.CreatedAt, &a.UpdatedAt,
+		&locationID, &locationName,
+	); err != nil {
+		return nil, err
+	}
+	a.RelatedProducts = parseArticleRelatedProducts(relatedProducts)
+	if locationID != nil {
+		name := ""
+		if locationName != nil {
+			name = *locationName
+		}
+		a.Location = &domain.ArticleLocation{ID: *locationID, Name: name}
+	}
+	return &a, nil
+}
+
+func articleRelatedProductsJSON(ids []uuid.UUID) []byte {
+	if len(ids) == 0 {
+		return []byte("[]")
+	}
+	data, err := json.Marshal(ids)
+	if err != nil {
+		return []byte("[]")
+	}
+	return data
+}
+
+func parseArticleRelatedProducts(data json.RawMessage) []uuid.UUID {
+	if len(data) == 0 {
+		return nil
+	}
+	var ids []uuid.UUID
+	if err := json.Unmarshal(data, &ids); err != nil {
+		return nil
+	}
+	return ids
 }

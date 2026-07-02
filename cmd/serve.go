@@ -89,7 +89,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 	assetRepo := postgresrepo.NewAssetRepository(pool)
 	levelTypeRepo := postgresrepo.NewLevelTypeRepository(pool)
 	themeRepo := postgresrepo.NewThemeRepository(pool)
-	productPlazaRepo := postgresrepo.NewProductPlazaRepository(pool)
 	appUserRepo := postgresrepo.NewAppUserRepository(pool)
 	languageRepo := postgresrepo.NewLanguageRepository(pool)
 	appVersionRepo := postgresrepo.NewAppVersionRepository(pool)
@@ -181,7 +180,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	storageSvc := service.NewStorageService(assetStorer)
 	eventSvc := service.NewEventService(eventRepo)
 	userSvc := service.NewUserService(userRepo, mailer)
-	notificationSvc := service.NewNotificationService(notificationRepo, pusher)
+	notificationSvc := service.NewNotificationService(notificationRepo, pusher, venueRepo)
 	surveySvc := service.NewSurveyService(surveyRepo, notificationRepo, notificationSvc)
 	beaconSvc := service.NewBeaconService(beaconRepo)
 	connectionSvc := service.NewConnectionService(connectionRepo)
@@ -195,9 +194,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 	assetSvc := service.NewAssetService(assetRepo, assetStorer, cfg.App.Environment, cfg.AWS.CFAssetsDomain)
 	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
 	themeSvc := service.NewThemeService(themeRepo, venueRepo, assetStorer, invalidator, cfg.App.Environment)
-	productPlazaSvc := service.NewProductPlazaService(productPlazaRepo)
 	languageSvc := service.NewLanguageService(languageRepo)
 	memoSvc := service.NewMemoService(locationRepo, venueRepo, assetStorer, invalidator, appVersionSvc, cfg.App.Environment)
+	searchOptionsSvc := service.NewSearchOptionsService(venueRepo, locationRepo, locationCategoryRepo, productRepo)
 
 	enricherRegistry := enricher.NewRegistry(venueRepo)
 	tenants.RegisterAll(enricherRegistry)
@@ -231,10 +230,10 @@ func runServe(_ *cobra.Command, _ []string) error {
 		AssetService:            assetSvc,
 		LevelTypeService:        levelTypeSvc,
 		ThemeService:            themeSvc,
-		ProductPlazaService:     productPlazaSvc,
 		LanguageService:         languageSvc,
 		AppVersionService:       appVersionSvc,
 		MemoService:             memoSvc,
+		SearchOptionsService:    searchOptionsSvc,
 		EnricherRegistry:        enricherRegistry,
 		UserRepo:                userRepo,
 		VenueRepo:               venueRepo,

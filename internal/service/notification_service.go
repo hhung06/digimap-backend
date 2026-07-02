@@ -17,6 +17,7 @@ import (
 // NotificationService manages notification CRUD and FCM dispatch.
 type NotificationService interface {
 	List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Notification, int64, error)
+	ListPushTypes(ctx context.Context, venueID uuid.UUID) ([]map[string]any, error)
 	Get(ctx context.Context, id uuid.UUID) (*domain.Notification, error)
 	Create(ctx context.Context, n *domain.Notification) error
 	Update(ctx context.Context, n *domain.Notification) error
@@ -26,13 +27,18 @@ type NotificationService interface {
 }
 
 type notificationService struct {
-	repo   repository.NotificationRepository
-	pusher firebase.Pusher
+	repo      repository.NotificationRepository
+	venueRepo repository.VenueRepository
+	pusher    firebase.Pusher
 }
 
 // NewNotificationService creates a NotificationService.
-func NewNotificationService(repo repository.NotificationRepository, pusher firebase.Pusher) NotificationService {
-	return &notificationService{repo: repo, pusher: pusher}
+func NewNotificationService(repo repository.NotificationRepository, pusher firebase.Pusher, venueRepo ...repository.VenueRepository) NotificationService {
+	var vr repository.VenueRepository
+	if len(venueRepo) > 0 {
+		vr = venueRepo[0]
+	}
+	return &notificationService{repo: repo, venueRepo: vr, pusher: pusher}
 }
 
 func (s *notificationService) List(ctx context.Context, venueID uuid.UUID, p domain.Pagination) ([]*domain.Notification, int64, error) {

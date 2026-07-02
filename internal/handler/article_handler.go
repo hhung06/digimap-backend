@@ -350,6 +350,7 @@ func articleFromRequest(venueID uuid.UUID, req dto.ArticleRequest) *domain.Artic
 		PublishedPeriodStart: dto.DateToTimePtr(req.PublishedPeriodStart),
 		PublishedPeriodEnd:   dto.DateToTimePtr(req.PublishedPeriodEnd),
 		Localization:         req.Localization,
+		RelatedProducts:      req.RelatedProducts,
 	}
 }
 

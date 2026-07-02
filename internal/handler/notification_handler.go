@@ -14,12 +14,36 @@ import (
 )
 
 type notificationHandler struct {
-	svc      service.NotificationService
+	svc       service.NotificationService
 	enrichers *enricher.Registry
 }
 
 func newNotificationHandler(svc service.NotificationService, enrichers *enricher.Registry) *notificationHandler {
 	return &notificationHandler{svc: svc, enrichers: enrichers}
+}
+
+// @Summary     List notification push types
+// @Description List segment push types for the selected venue
+// @Tags        notifications
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id path string true "Venue ID"
+// @Success     200   {object} dto.Response
+// @Failure     400   {object} dto.Response
+// @Failure     401   {object} dto.Response
+// @Router      /venues/{id}/notifications/push-type [get]
+func (h *notificationHandler) PushTypes(c *gin.Context) {
+	venueID, err := parseVenueID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid venue id"))
+		return
+	}
+	pushTypes, err := h.svc.ListPushTypes(c.Request.Context(), venueID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.OK(pushTypes))
 }
 
 // @Summary     List notifications

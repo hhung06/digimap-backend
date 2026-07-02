@@ -24,6 +24,7 @@ import (
 
 type articleServiceStub struct {
 	article        *domain.Article
+	articles       []*domain.Article
 	createCalled   bool
 	updateCalled   bool
 	mediaChange    service.ArticleMediaReplacement
@@ -31,7 +32,7 @@ type articleServiceStub struct {
 }
 
 func (s *articleServiceStub) List(context.Context, uuid.UUID, domain.Pagination) ([]*domain.Article, int, error) {
-	return nil, 0, nil
+	return s.articles, len(s.articles), nil
 }
 
 func (s *articleServiceStub) Get(_ context.Context, id uuid.UUID) (*domain.Article, error) {
@@ -137,6 +138,53 @@ func TestArticleHandlerJSONUpdatePreservesImagesAndReturnsImageURL(t *testing.T)
 	first := images[0].(map[string]any)
 	assert.Equal(t, oldKey, first["image"])
 	assert.Equal(t, oldURL, first["image_url"])
+}
+
+func TestArticleHandlerListReturnsImageURL(t *testing.T) {
+	venueID := uuid.New()
+	articleID := uuid.New()
+	locationID := uuid.New()
+	firstProductID := uuid.New()
+	secondProductID := uuid.New()
+	key := "develop/media/articles/" + articleID.String() + "/images/cover.png"
+	imageURL := "https://cdn.example.com/cover.png"
+	svc := &articleServiceStub{articles: []*domain.Article{{
+		ID:         articleID,
+		VenueID:    &venueID,
+		LocationID: &locationID,
+		Location:   &domain.ArticleLocation{ID: locationID, Name: "Premium Lounge"},
+		RelatedProducts: []uuid.UUID{
+			firstProductID,
+			secondProductID,
+		},
+		Title:  "Listed",
+		Images: []*domain.ArticleImage{{ArticleID: articleID, Image: key}},
+	}}}
+	h := newArticleHandler(svc, articleMediaURLStub{urls: map[string]*string{key: &imageURL}})
+	rec := httptest.NewRecorder()
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(rec)
+	c.Params = gin.Params{{Key: "id", Value: venueID.String()}}
+	c.Request = httptest.NewRequest(http.MethodGet, "/venues/"+venueID.String()+"/articles", nil)
+
+	h.List(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body dto.Response
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	items := body.Data.([]any)
+	require.Len(t, items, 1)
+	firstArticle := items[0].(map[string]any)
+	location := firstArticle["location"].(map[string]any)
+	assert.Equal(t, locationID.String(), location["id"])
+	assert.Equal(t, "Premium Lounge", location["name"])
+	relatedProducts := firstArticle["related_products"].([]any)
+	assert.Equal(t, []any{firstProductID.String(), secondProductID.String()}, relatedProducts)
+	images := firstArticle["images"].([]any)
+	require.Len(t, images, 1)
+	firstImage := images[0].(map[string]any)
+	assert.Equal(t, key, firstImage["image"])
+	assert.Equal(t, imageURL, firstImage["image_url"])
 }
 
 func TestArticleHandlerGetDoesNotHTMLEscapePresignedImageURL(t *testing.T) {

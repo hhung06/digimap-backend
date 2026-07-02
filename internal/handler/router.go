@@ -51,10 +51,10 @@ type Dependencies struct {
 	AssetService            service.AssetService
 	LevelTypeService        service.LevelTypeService
 	ThemeService            service.ThemeService
-	ProductPlazaService     service.ProductPlazaService
 	LanguageService         service.LanguageService
 	AppVersionService       *service.AppVersionService
 	MemoService             service.MemoService
+	SearchOptionsService    service.SearchOptionsService
 	EnricherRegistry        *enricher.Registry
 	UserRepo                repository.UserRepository
 	VenueRepo               repository.VenueRepository
@@ -179,18 +179,13 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		adminOnly.DELETE("/venues/:id/themes/:themeID", themeH.Delete)
 		adminOnly.PATCH("/venues/:id/theme", themeH.SetTheme)
 
-		plazaH := newProductPlazaHandler(deps.ProductPlazaService)
-		adminOnly.GET("/venues/:id/product-plazas", plazaH.List)
-		adminOnly.POST("/venues/:id/product-plazas", plazaH.Create)
-		adminOnly.PUT("/venues/:id/product-plazas/:plazaID", plazaH.Update)
-		adminOnly.DELETE("/venues/:id/product-plazas/:plazaID", plazaH.Delete)
-
 		geoLocH := newLocationHandler(deps.LocationCategoryService, deps.LocationService, deps.EnricherRegistry, deps.MediaService)
 		adminOnly.GET("/geo-search", geoLocH.GeoSearch)
 	}
 
 	// ── Venue routes (JWT required; RBAC applied per action) ──────────────────
 	venueH := newVenueHandler(deps.VenueService)
+	notifH := newNotificationHandler(deps.NotificationService, deps.EnricherRegistry)
 	venues := adminJWT.Group("/venues")
 	{
 		venues.GET("", venueH.List)
@@ -289,8 +284,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		venues.POST("/:id/invitations/:invitationID/cancel", userH.CancelInvitation)
 
 		// Notification sub-resources
-		notifH := newNotificationHandler(deps.NotificationService, deps.EnricherRegistry)
-
+		venues.GET("/:id/notifications/push-type", notifH.PushTypes)
 		venues.GET("/:id/notifications", notifH.List)
 		venues.POST("/:id/notifications", notifH.Create)
 		venues.GET("/:id/notifications/:notifID", notifH.Get)
@@ -444,7 +438,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		deps.LocationService,
 		deps.EventService,
 		deps.ProductService,
-		deps.ProductPlazaService,
 		deps.ArticleService,
 		deps.NotificationService,
 		deps.CouponService,
@@ -468,8 +461,6 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 		appKey.GET("/products", appH.ListProducts)
 		appKey.GET("/products/:productID", appH.GetProduct)
 		appKey.GET("/product-categories", appH.ListProductCategories)
-		appKey.GET("/product-plazas", appH.ListProductPlazas)
-		appKey.GET("/product-plazas/:plazaID", appH.GetProductPlaza)
 		appKey.GET("/articles", appH.ListArticles)
 		appKey.GET("/articles/:articleID", appH.GetArticle)
 		appKey.GET("/featured-zones", appH.ListFeaturedZones)
@@ -490,7 +481,8 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 
 	// ── Public API (no auth) ──────────────────────────────────────────────────
 	visitorSurveySvc := service.NewVisitorSurveySubmissionService(deps.VenueRepo, deps.AppUserRepo, deps.VisitorPhoneEncryptor)
-	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.ProductPlazaService, deps.AppUserRepo, visitorSurveySvc)
+	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.AppUserRepo, visitorSurveySvc, deps.SearchOptionsService)
+	public.GET("/venues/:venueId/search-options", publicH.SearchOptions)
 	publicAPI := r.Group("/public/v1")
 	{
 		publicAPI.GET("/venues/:id/information", publicH.VenueInformation)

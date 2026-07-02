@@ -22,7 +22,7 @@ func TestAssetService_Create(t *testing.T) {
 	venueID := uuid.New()
 	userID := uuid.New()
 	req := service.CreateAssetInput{
-		VenueID:     venueID,
+		VenueID:     &venueID,
 		Name:        "logo.png",
 		Key:         "venue/logo.png",
 		ContentType: "image/png",
@@ -37,7 +37,8 @@ func TestAssetService_Create(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "logo.png", result.Name)
-	assert.Equal(t, venueID, result.VenueID)
+	require.NotNil(t, result.VenueID)
+	assert.Equal(t, venueID, *result.VenueID)
 	repo.AssertExpectations(t)
 }
 

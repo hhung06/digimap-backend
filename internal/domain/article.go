@@ -12,6 +12,7 @@ type Article struct {
 	VenueID              *uuid.UUID
 	ExternalID           *string
 	LocationID           *uuid.UUID
+	Location             *ArticleLocation
 	Placement            string
 	Navigate             *string
 	Title                string
@@ -22,9 +23,15 @@ type Article struct {
 	PublishedPeriodStart *time.Time
 	PublishedPeriodEnd   *time.Time
 	Localization         json.RawMessage
+	RelatedProducts      []uuid.UUID
 	Images               []*ArticleImage
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+}
+
+type ArticleLocation struct {
+	ID   uuid.UUID
+	Name string
 }
 
 type ArticleImage struct {
