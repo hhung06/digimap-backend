@@ -154,53 +154,6 @@ func LocationCategoryToSummaryResponse(c *domain.LocationCategory) LocationCateg
 	}
 }
 
-// ── Amenity ───────────────────────────────────────────────────────────────────
-
-type AmenityResponse struct {
-	ID                    uuid.UUID       `json:"id"`
-	CommonName            string          `json:"common_name"`
-	CommonShortName       string          `json:"common_short_name,omitempty"`
-	CommonDescription     string          `json:"common_description,omitempty"`
-	CommonColor           string          `json:"common_color,omitempty"`
-	CommonLocationType    int             `json:"common_location_type"`
-	CommonLatitude        float64         `json:"common_latitude"`
-	CommonLongitude       float64         `json:"common_longitude"`
-	CommonAddress         string          `json:"common_address,omitempty"`
-	CommonLogo            string          `json:"common_logo,omitempty"`
-	CommonSocialWebsite   string          `json:"common_social_website,omitempty"`
-	CommonSocialTwitter   string          `json:"common_social_twitter,omitempty"`
-	CommonSocialTiktok    string          `json:"common_social_tiktok,omitempty"`
-	CommonSocialFacebook  string          `json:"common_social_facebook,omitempty"`
-	CommonSocialInstagram string          `json:"common_social_instagram,omitempty"`
-	CommonContactEmail    string          `json:"common_contact_email,omitempty"`
-	CommonContactPhone    string          `json:"common_contact_phone,omitempty"`
-	PlaceWorkHours        json.RawMessage `json:"place_work_hours,omitempty" swaggertype:"object"`
-	Localization          json.RawMessage `json:"localization,omitempty" swaggertype:"object"`
-	CreatedAt             time.Time       `json:"created_at"`
-	UpdatedAt             time.Time       `json:"updated_at"`
-}
-
-type AmenityRequest struct {
-	CommonName            string          `json:"common_name" binding:"required"`
-	CommonShortName       string          `json:"common_short_name"`
-	CommonDescription     string          `json:"common_description"`
-	CommonColor           string          `json:"common_color"`
-	CommonLocationType    int             `json:"common_location_type"`
-	CommonLatitude        float64         `json:"common_latitude"`
-	CommonLongitude       float64         `json:"common_longitude"`
-	CommonAddress         string          `json:"common_address"`
-	CommonLogo            string          `json:"common_logo"`
-	CommonSocialWebsite   string          `json:"common_social_website"`
-	CommonSocialTwitter   string          `json:"common_social_twitter"`
-	CommonSocialTiktok    string          `json:"common_social_tiktok"`
-	CommonSocialFacebook  string          `json:"common_social_facebook"`
-	CommonSocialInstagram string          `json:"common_social_instagram"`
-	CommonContactEmail    string          `json:"common_contact_email"`
-	CommonContactPhone    string          `json:"common_contact_phone"`
-	PlaceWorkHours        json.RawMessage `json:"place_work_hours" swaggertype:"object"`
-	Localization          json.RawMessage `json:"localization" swaggertype:"object"`
-}
-
 // ── Location ──────────────────────────────────────────────────────────────────
 
 type LocationResponse struct {

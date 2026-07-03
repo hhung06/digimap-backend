@@ -314,6 +314,129 @@ func (r *surveyRepo) ListResponses(ctx context.Context, surveyID uuid.UUID, p do
 	return responses, total, rows.Err()
 }
 
+func (r *surveyRepo) ListResponsesWithAnswers(ctx context.Context, surveyID uuid.UUID, externalID *string) ([]*domain.SurveyResponse, error) {
+	where := []string{"survey_id = @survey_id", "deleted_at IS NULL"}
+	args := pgx.NamedArgs{"survey_id": surveyID}
+	if externalID != nil {
+		where = append(where, "external_id = @external_id")
+		args["external_id"] = *externalID
+	}
+	q := `SELECT id, survey_id, external_id, submitted_at, created_at FROM survey_responses
+		WHERE ` + strings.Join(where, " AND ") + ` ORDER BY submitted_at ASC`
+	rows, err := r.pool.Query(ctx, q, args)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var responses []*domain.SurveyResponse
+	byID := make(map[uuid.UUID]*domain.SurveyResponse)
+	for rows.Next() {
+		var sr domain.SurveyResponse
+		if err := rows.Scan(&sr.ID, &sr.SurveyID, &sr.ExternalID, &sr.SubmittedAt, &sr.CreatedAt); err != nil {
+			return nil, err
+		}
+		responses = append(responses, &sr)
+		byID[sr.ID] = &sr
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(responses) == 0 {
+		return responses, nil
+	}
+
+	const aq = `SELECT a.id, a.response_id, a.question_id, a.option_id, a.answer_text, a.created_at
+		FROM survey_answers a
+		JOIN survey_responses sr ON sr.id = a.response_id
+		JOIN questions q ON q.id = a.question_id
+		WHERE sr.survey_id = @survey_id AND sr.deleted_at IS NULL AND a.deleted_at IS NULL
+		ORDER BY q.question_number ASC, a.created_at ASC`
+	aRows, err := r.pool.Query(ctx, aq, pgx.NamedArgs{"survey_id": surveyID})
+	if err != nil {
+		return nil, err
+	}
+	defer aRows.Close()
+	for aRows.Next() {
+		var a domain.SurveyAnswer
+		if err := aRows.Scan(&a.ID, &a.ResponseID, &a.QuestionID, &a.OptionID, &a.AnswerText, &a.CreatedAt); err != nil {
+			return nil, err
+		}
+		if resp, ok := byID[a.ResponseID]; ok {
+			resp.Answers = append(resp.Answers, &a)
+		}
+	}
+	return responses, aRows.Err()
+}
+
+func (r *surveyRepo) ListParticipants(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.AppUser, int64, error) {
+	args := pgx.NamedArgs{"survey_id": surveyID}
+	const from = ` FROM app_users u
+		WHERE u.deleted_at IS NULL AND u.external_id IN (
+			SELECT DISTINCT external_id FROM survey_responses
+			WHERE survey_id = @survey_id AND external_id IS NOT NULL AND deleted_at IS NULL
+		)`
+
+	var total int64
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*)`+from, args).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args["limit"] = p.PageSize
+	args["offset"] = p.Offset()
+	q := appUserParticipantCols + from + ` ORDER BY u.created_at ASC LIMIT @limit OFFSET @offset`
+	rows, err := r.pool.Query(ctx, q, args)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var users []*domain.AppUser
+	for rows.Next() {
+		u, err := scanParticipant(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		users = append(users, u)
+	}
+	return users, total, rows.Err()
+}
+
+func (r *surveyRepo) FindAppUsersByExternalIDs(ctx context.Context, externalIDs []string) ([]*domain.AppUser, error) {
+	if len(externalIDs) == 0 {
+		return nil, nil
+	}
+	q := appUserParticipantCols + ` FROM app_users u WHERE u.external_id = ANY($1) AND u.deleted_at IS NULL`
+	rows, err := r.pool.Query(ctx, q, externalIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*domain.AppUser
+	for rows.Next() {
+		u, err := scanParticipant(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+const appUserParticipantCols = `SELECT u.id, COALESCE(u.external_id, ''),
+	COALESCE(u.first_name, ''), COALESCE(u.last_name, ''),
+	COALESCE(u.first_name_en, ''), COALESCE(u.last_name_en, ''), COALESCE(u.email, '')`
+
+func scanParticipant(row scanner) (*domain.AppUser, error) {
+	var u domain.AppUser
+	err := row.Scan(&u.ID, &u.ExternalID, &u.FirstName, &u.LastName, &u.FirstNameEn, &u.LastNameEn, &u.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 func (r *surveyRepo) CreateResponse(ctx context.Context, resp *domain.SurveyResponse) error {
 	if resp.ID == uuid.Nil {
 		resp.ID = newID()

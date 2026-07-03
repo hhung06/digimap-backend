@@ -268,7 +268,7 @@ func (h *venueHandler) RegenerateKey(c *gin.Context) {
 func venueFromCreateRequest(req dto.CreateVenueRequest) *domain.Venue {
 	return &domain.Venue{
 		CustomerID: req.CustomerID, Name: req.Name,
-		ExternalID: req.ExternalID, Type: req.Type,
+		ExternalID: req.ExternalID, Type: int(req.Type),
 		Address: req.Address, City: req.City, State: req.State,
 		Country: req.Country, Postal: req.Postal,
 		Lat: req.Lat, Lng: req.Lng, Timezone: req.Timezone,

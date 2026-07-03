@@ -94,3 +94,32 @@ type SurveyAnswer struct {
 	AnswerText *string
 	CreatedAt  time.Time
 }
+
+// SurveyStats aggregates response counts for a survey.
+type SurveyStats struct {
+	Survey         *Survey
+	TotalResponses int64
+	Questions      []*QuestionStats
+}
+
+// QuestionStats aggregates answers for one question. Options is populated for
+// choice-type questions; Texts holds free-text answers for paragraph questions.
+type QuestionStats struct {
+	Question     *Question
+	TotalPeople  int
+	TotalChoices int
+	Options      []*OptionStats
+	Texts        []string
+}
+
+// OptionStats counts selections of one option. A nil OptionID with OtherTexts
+// set represents the synthetic "Other" entry of an is_other question.
+type OptionStats struct {
+	OptionID            *uuid.UUID
+	Text                string
+	Count               int
+	PercentageByPeople  float64
+	PercentageByChoices float64
+	OtherTexts          []string
+	IsOther             bool
+}

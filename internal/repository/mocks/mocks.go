@@ -1317,8 +1317,32 @@ func (m *SurveyRepository) ListResponses(ctx context.Context, surveyID uuid.UUID
 	return nil, 0, args.Error(2)
 }
 
+func (m *SurveyRepository) ListResponsesWithAnswers(ctx context.Context, surveyID uuid.UUID, externalID *string) ([]*domain.SurveyResponse, error) {
+	args := m.Called(ctx, surveyID, externalID)
+	if v, ok := args.Get(0).([]*domain.SurveyResponse); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func (m *SurveyRepository) CreateResponse(ctx context.Context, r *domain.SurveyResponse) error {
 	return m.Called(ctx, r).Error(0)
+}
+
+func (m *SurveyRepository) ListParticipants(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.AppUser, int64, error) {
+	args := m.Called(ctx, surveyID, p)
+	if v, ok := args.Get(0).([]*domain.AppUser); ok {
+		return v, args.Get(1).(int64), args.Error(2)
+	}
+	return nil, 0, args.Error(2)
+}
+
+func (m *SurveyRepository) FindAppUsersByExternalIDs(ctx context.Context, externalIDs []string) ([]*domain.AppUser, error) {
+	args := m.Called(ctx, externalIDs)
+	if v, ok := args.Get(0).([]*domain.AppUser); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 // ── EventRepository ───────────────────────────────────────────────────────────

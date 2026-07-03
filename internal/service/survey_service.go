@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +21,8 @@ type SurveyService interface {
 	Create(ctx context.Context, s *domain.Survey) error
 	Update(ctx context.Context, s *domain.Survey) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	Duplicate(ctx context.Context, id uuid.UUID) (*domain.Survey, error)
+	Stats(ctx context.Context, id uuid.UUID) (*domain.SurveyStats, error)
 
 	// Questions
 	CreateQuestion(ctx context.Context, q *domain.Question) error
@@ -36,6 +40,10 @@ type SurveyService interface {
 
 	// Responses
 	ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error)
+	ListParticipants(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.AppUser, int64, error)
+	// ExportResponses builds CSV rows (header first) for all responses,
+	// optionally filtered by participant external_id.
+	ExportResponses(ctx context.Context, surveyID uuid.UUID, externalID string) ([][]string, error)
 	SubmitPublicResponse(ctx context.Context, r *domain.SurveyResponse) error
 	SubmitAppResponse(ctx context.Context, venueID uuid.UUID, r *domain.SurveyResponse) error
 	SubmitVenueResponse(ctx context.Context, venueID uuid.UUID, r *domain.SurveyResponse) error
@@ -91,6 +99,256 @@ func (s *surveyService) Update(ctx context.Context, survey *domain.Survey) error
 
 func (s *surveyService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
+}
+
+// Duplicate deep-copies a survey with its questions and options (not
+// responses). All fields are copied verbatim except the title, which gets a
+// " (Copy)" suffix. No activation notification is created — mirrors Django's
+// surveys duplicate action.
+func (s *surveyService) Duplicate(ctx context.Context, id uuid.UUID) (*domain.Survey, error) {
+	original, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	copied := *original
+	copied.ID = uuid.Nil
+	copied.Questions = nil
+	title := ""
+	if original.Title != nil {
+		title = *original.Title
+	}
+	title = strings.TrimSpace(title + " (Copy)")
+	copied.Title = &title
+	if err := s.repo.Create(ctx, &copied); err != nil {
+		return nil, err
+	}
+
+	for _, q := range original.Questions {
+		newQ := &domain.Question{
+			SurveyID:       copied.ID,
+			QuestionNumber: q.QuestionNumber,
+			QuestionType:   q.QuestionType,
+			QuestionText:   q.QuestionText,
+			IsRequired:     q.IsRequired,
+			IsOther:        q.IsOther,
+		}
+		if err := s.repo.CreateQuestion(ctx, newQ); err != nil {
+			return nil, err
+		}
+		for _, o := range q.Options {
+			newO := &domain.Option{
+				QuestionID:   newQ.ID,
+				OptionNumber: o.OptionNumber,
+				OptionText:   o.OptionText,
+			}
+			if err := s.repo.CreateOption(ctx, newO); err != nil {
+				return nil, err
+			}
+			newQ.Options = append(newQ.Options, newO)
+		}
+		copied.Questions = append(copied.Questions, newQ)
+	}
+	return &copied, nil
+}
+
+// Stats aggregates all answers per question: option selection counts with
+// percentages by people/choices, "Other" free texts, and paragraph texts.
+func (s *surveyService) Stats(ctx context.Context, id uuid.UUID) (*domain.SurveyStats, error) {
+	survey, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	responses, err := s.repo.ListResponsesWithAnswers(ctx, id, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	answersByQuestion := make(map[uuid.UUID][]*domain.SurveyAnswer)
+	for _, r := range responses {
+		for _, a := range r.Answers {
+			answersByQuestion[a.QuestionID] = append(answersByQuestion[a.QuestionID], a)
+		}
+	}
+
+	stats := &domain.SurveyStats{Survey: survey, TotalResponses: int64(len(responses))}
+	for _, q := range survey.Questions {
+		answers := answersByQuestion[q.ID]
+		people := make(map[uuid.UUID]struct{})
+		totalChoices := 0
+		for _, a := range answers {
+			people[a.ResponseID] = struct{}{}
+			if a.OptionID != nil {
+				totalChoices++
+			}
+		}
+		qs := &domain.QuestionStats{Question: q, TotalPeople: len(people), TotalChoices: totalChoices}
+
+		switch q.QuestionType {
+		case "single_choice", "multiple_choice", "rating":
+			optionCounts := make(map[uuid.UUID]int)
+			var otherTexts []string
+			for _, a := range answers {
+				switch {
+				case a.OptionID != nil:
+					optionCounts[*a.OptionID]++
+				case q.IsOther && a.AnswerText != nil && *a.AnswerText != "":
+					otherTexts = append(otherTexts, *a.AnswerText)
+				}
+			}
+			for _, opt := range q.Options {
+				optID := opt.ID
+				qs.Options = append(qs.Options, &domain.OptionStats{
+					OptionID:            &optID,
+					Text:                opt.OptionText,
+					Count:               optionCounts[opt.ID],
+					PercentageByPeople:  percentage(optionCounts[opt.ID], qs.TotalPeople),
+					PercentageByChoices: percentage(optionCounts[opt.ID], qs.TotalChoices),
+				})
+			}
+			if q.IsOther {
+				qs.Options = append(qs.Options, &domain.OptionStats{
+					Text:                "Other",
+					Count:               len(otherTexts),
+					PercentageByPeople:  percentage(len(otherTexts), qs.TotalPeople),
+					PercentageByChoices: percentage(len(otherTexts), qs.TotalChoices),
+					OtherTexts:          otherTexts,
+					IsOther:             true,
+				})
+			}
+		default: // paragraph and free-text types
+			qs.Texts = []string{}
+			for _, a := range answers {
+				if a.AnswerText != nil && *a.AnswerText != "" {
+					qs.Texts = append(qs.Texts, *a.AnswerText)
+				}
+			}
+		}
+		stats.Questions = append(stats.Questions, qs)
+	}
+	return stats, nil
+}
+
+func percentage(count, total int) float64 {
+	if total == 0 {
+		return 0
+	}
+	return math.Round(float64(count)*100*100/float64(total)) / 100
+}
+
+func (s *surveyService) ListParticipants(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.AppUser, int64, error) {
+	if _, err := s.repo.FindByID(ctx, surveyID); err != nil {
+		return nil, 0, err
+	}
+	return s.repo.ListParticipants(ctx, surveyID, p)
+}
+
+// ExportResponses builds the CSV rows for a survey export. Layout mirrors the
+// Django export: header "No, User External ID, User Name (JP), User Name (EN),
+// Submitted At, Q{n}: {text}…", one row per response ordered by submitted_at,
+// choice answers joined by "; " with other-texts prefixed "[Other] ".
+func (s *surveyService) ExportResponses(ctx context.Context, surveyID uuid.UUID, externalID string) ([][]string, error) {
+	survey, err := s.repo.FindByID(ctx, surveyID)
+	if err != nil {
+		return nil, err
+	}
+	var extFilter *string
+	if trimmed := strings.TrimSpace(externalID); trimmed != "" {
+		extFilter = &trimmed
+	}
+	responses, err := s.repo.ListResponsesWithAnswers(ctx, surveyID, extFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	externalIDs := make([]string, 0, len(responses))
+	seen := make(map[string]struct{})
+	for _, r := range responses {
+		if r.ExternalID != nil && *r.ExternalID != "" {
+			if _, ok := seen[*r.ExternalID]; !ok {
+				seen[*r.ExternalID] = struct{}{}
+				externalIDs = append(externalIDs, *r.ExternalID)
+			}
+		}
+	}
+	users, err := s.repo.FindAppUsersByExternalIDs(ctx, externalIDs)
+	if err != nil {
+		return nil, err
+	}
+	userByExternalID := make(map[string]*domain.AppUser, len(users))
+	for _, u := range users {
+		userByExternalID[u.ExternalID] = u
+	}
+
+	optionTextByID := make(map[uuid.UUID]string)
+	questionByID := make(map[uuid.UUID]*domain.Question, len(survey.Questions))
+	for _, q := range survey.Questions {
+		questionByID[q.ID] = q
+		for _, o := range q.Options {
+			optionTextByID[o.ID] = o.OptionText
+		}
+	}
+
+	header := []string{"No", "User External ID", "User Name (JP)", "User Name (EN)", "Submitted At"}
+	for _, q := range survey.Questions {
+		header = append(header, "Q"+strconv.Itoa(q.QuestionNumber)+": "+q.QuestionText)
+	}
+	rows := [][]string{header}
+
+	for i, r := range responses {
+		extID, nameJP, nameEN := "", "", ""
+		if r.ExternalID != nil {
+			extID = *r.ExternalID
+			if u, ok := userByExternalID[extID]; ok {
+				nameJP = strings.TrimSpace(u.LastName + " " + u.FirstName)
+				nameEN = strings.TrimSpace(u.FirstNameEn + " " + u.LastNameEn)
+			}
+		}
+		row := []string{
+			strconv.Itoa(i + 1), extID, nameJP, nameEN,
+			r.SubmittedAt.Format("2006-01-02 15:04:05"),
+		}
+		answersByQuestion := make(map[uuid.UUID][]*domain.SurveyAnswer)
+		for _, a := range r.Answers {
+			answersByQuestion[a.QuestionID] = append(answersByQuestion[a.QuestionID], a)
+		}
+		for _, q := range survey.Questions {
+			row = append(row, exportAnswerCell(q, answersByQuestion[q.ID], optionTextByID))
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+func exportAnswerCell(q *domain.Question, answers []*domain.SurveyAnswer, optionTextByID map[uuid.UUID]string) string {
+	if len(answers) == 0 {
+		return ""
+	}
+	switch q.QuestionType {
+	case "single_choice", "multiple_choice", "rating":
+		var parts []string
+		for _, a := range answers {
+			if a.OptionID != nil {
+				parts = append(parts, optionTextByID[*a.OptionID])
+			}
+		}
+		for _, a := range answers {
+			if a.OptionID == nil && q.IsOther && a.AnswerText != nil && *a.AnswerText != "" {
+				parts = append(parts, "[Other] "+*a.AnswerText)
+			}
+		}
+		return strings.Join(parts, "; ")
+	case "paragraph":
+		var parts []string
+		for _, a := range answers {
+			if a.AnswerText != nil && *a.AnswerText != "" {
+				parts = append(parts, *a.AnswerText)
+			}
+		}
+		return strings.Join(parts, "; ")
+	default:
+		return ""
+	}
 }
 
 func (s *surveyService) CreateQuestion(ctx context.Context, q *domain.Question) error {

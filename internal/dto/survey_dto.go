@@ -160,6 +160,47 @@ type SurveyAnswerRequest struct {
 	AnswerText string     `json:"answer_text"`
 }
 
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+type SurveyStatsResponse struct {
+	ID             uuid.UUID               `json:"id"`
+	Title          *string                 `json:"title,omitempty"`
+	TotalQuestions int                     `json:"total_questions"`
+	TotalResponses int64                   `json:"total_responses"`
+	Questions      []QuestionStatsResponse `json:"questions"`
+	CreatedAt      time.Time               `json:"created_at"`
+}
+
+type QuestionStatsResponse struct {
+	ID           uuid.UUID `json:"id"`
+	Text         string    `json:"text"`
+	Type         string    `json:"type"`
+	TotalPeople  int       `json:"total_people"`
+	TotalChoices int       `json:"total_choices"`
+	// Options holds []OptionStatsResponse for choice questions or []string
+	// (the free-text answers) for paragraph questions.
+	Options any `json:"options" swaggertype:"array,object"`
+}
+
+type OptionStatsResponse struct {
+	ID                  *uuid.UUID `json:"id"`
+	Text                string     `json:"text"`
+	Count               int        `json:"count"`
+	PercentageByPeople  float64    `json:"percentage_by_people"`
+	PercentageByChoices float64    `json:"percentage_by_choices"`
+	OtherTexts          []string   `json:"other_texts,omitempty"`
+}
+
+// ── Participants ──────────────────────────────────────────────────────────────
+
+type SurveyParticipantResponse struct {
+	ID         uuid.UUID `json:"id"`
+	ExternalID string    `json:"external_id"`
+	FullnameEn string    `json:"fullname_en"`
+	FullnameJp string    `json:"fullname_jp"`
+	Email      string    `json:"email"`
+}
+
 // ── mappers ───────────────────────────────────────────────────────────────────
 
 func SurveyToResponse(s *domain.Survey) SurveyResponse {
@@ -192,6 +233,54 @@ func questionToResponse(q *domain.Question) QuestionResponse {
 		})
 	}
 	return r
+}
+
+func SurveyStatsToResponse(st *domain.SurveyStats) SurveyStatsResponse {
+	r := SurveyStatsResponse{
+		ID:             st.Survey.ID,
+		Title:          st.Survey.Title,
+		TotalQuestions: len(st.Survey.Questions),
+		TotalResponses: st.TotalResponses,
+		Questions:      []QuestionStatsResponse{},
+		CreatedAt:      st.Survey.CreatedAt,
+	}
+	for _, qs := range st.Questions {
+		qr := QuestionStatsResponse{
+			ID:           qs.Question.ID,
+			Text:         qs.Question.QuestionText,
+			Type:         qs.Question.QuestionType,
+			TotalPeople:  qs.TotalPeople,
+			TotalChoices: qs.TotalChoices,
+		}
+		if qs.Texts != nil {
+			qr.Options = qs.Texts
+		} else {
+			opts := make([]OptionStatsResponse, 0, len(qs.Options))
+			for _, o := range qs.Options {
+				opts = append(opts, OptionStatsResponse{
+					ID:                  o.OptionID,
+					Text:                o.Text,
+					Count:               o.Count,
+					PercentageByPeople:  o.PercentageByPeople,
+					PercentageByChoices: o.PercentageByChoices,
+					OtherTexts:          o.OtherTexts,
+				})
+			}
+			qr.Options = opts
+		}
+		r.Questions = append(r.Questions, qr)
+	}
+	return r
+}
+
+func SurveyParticipantToResponse(u *domain.AppUser) SurveyParticipantResponse {
+	return SurveyParticipantResponse{
+		ID:         u.ID,
+		ExternalID: u.ExternalID,
+		FullnameEn: u.FirstNameEn + u.LastNameEn,
+		FullnameJp: u.FirstName + u.LastName,
+		Email:      u.Email,
+	}
 }
 
 func SurveyResponseToResponse(sr *domain.SurveyResponse) SurveyResponseResponse {

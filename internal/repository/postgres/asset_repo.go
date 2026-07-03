@@ -189,12 +189,13 @@ func (r *assetRepo) Create(ctx context.Context, a *domain.Asset) error {
 func (r *assetRepo) Update(ctx context.Context, a *domain.Asset) error {
 	const q = `
 		UPDATE assets
-		SET name = $2, url = $3, asset_type = $4, description = $5, file_type = $6,
-		    thumbnail = $7, material = $8, width = $9, height = $10, status = $11
+		SET name = $2, key = $3, content_type = $4, size_bytes = $5, url = $6, asset_type = $7,
+		    description = $8, file_type = $9, thumbnail = $10, material = $11, width = $12,
+		    height = $13, status = $14
 		WHERE id = $1 AND deleted_at IS NULL
 		RETURNING updated_at`
 	err := r.pool.QueryRow(ctx, q,
-		a.ID, a.Name, a.URL, a.AssetType, a.Description, a.FileType,
+		a.ID, a.Name, a.Key, a.ContentType, a.SizeBytes, a.URL, a.AssetType, a.Description, a.FileType,
 		nullStr(a.Thumbnail), nullStr(a.Material), a.Width, a.Height, a.Status,
 	).Scan(&a.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {

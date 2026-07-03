@@ -152,7 +152,7 @@ type CreateVenueRequest struct {
 	Name           string          `json:"name"            binding:"required"`
 	Slug           string          `json:"slug"`
 	ExternalID     string          `json:"external_id"`
-	Type           int             `json:"type"`
+	Type           FlexInt         `json:"type" swaggertype:"integer"`
 	Address        string          `json:"address"`
 	City           string          `json:"city"`
 	State          string          `json:"state"`
@@ -162,7 +162,6 @@ type CreateVenueRequest struct {
 	Lng            float64         `json:"lng"`
 	Timezone       string          `json:"timezone"`
 	Telephone      string          `json:"telephone"`
-	WorkHours      string          `json:"work_hours"`
 	Description    string          `json:"description"`
 	Translations   json.RawMessage `json:"translations" swaggertype:"object"`
 	Localization   json.RawMessage `json:"localization" swaggertype:"object"`
@@ -183,7 +182,7 @@ type CreateVenueRequest struct {
 type UpdateVenueRequest struct {
 	Name           *string         `json:"name"`
 	ExternalID     *string         `json:"external_id"`
-	Type           *int            `json:"type"`
+	Type           *FlexInt        `json:"type" swaggertype:"integer"`
 	Address        *string         `json:"address"`
 	City           *string         `json:"city"`
 	State          *string         `json:"state"`
@@ -220,7 +219,7 @@ func (r UpdateVenueRequest) ApplyTo(v *domain.Venue) {
 		v.ExternalID = *r.ExternalID
 	}
 	if r.Type != nil {
-		v.Type = *r.Type
+		v.Type = int(*r.Type)
 	}
 	if r.Address != nil {
 		v.Address = *r.Address

@@ -709,7 +709,6 @@ func resetSeed(ctx context.Context, pool *pgxpool.Pool) error {
 		`DELETE FROM venue_user_roles WHERE venue_id=$1`,
 		`DELETE FROM venue_invitations WHERE venue_id=$1`,
 		`DELETE FROM location_categories WHERE venue_id=$1`,
-		`DELETE FROM venue_amenities WHERE venue_id=$1`,
 		`DELETE FROM map_groups WHERE venue_id=$1`,
 	} {
 		if _, err := pool.Exec(ctx, stmt, venueID); err != nil {

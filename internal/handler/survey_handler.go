@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/csv"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -212,6 +214,128 @@ func (h *surveyHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// @Summary     Duplicate survey
+// @Description Deep-copy a survey with its questions and options (responses are not copied)
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string true "Venue ID"
+// @Param       surveyID path     string true "Survey ID"
+// @Success     201      {object} dto.Response{data=dto.SurveyResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     404      {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/duplicate [post]
+func (h *surveyHandler) Duplicate(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("surveyID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
+		return
+	}
+	s, err := h.svc.Duplicate(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, dto.OK(dto.SurveyToResponse(s)))
+}
+
+// @Summary     Survey statistics
+// @Description Aggregated answer statistics per question (option counts, percentages, free texts)
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id       path     string true "Venue ID"
+// @Param       surveyID path     string true "Survey ID"
+// @Success     200      {object} dto.Response{data=dto.SurveyStatsResponse}
+// @Failure     400      {object} dto.Response
+// @Failure     401      {object} dto.Response
+// @Failure     404      {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/stats [get]
+func (h *surveyHandler) Stats(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("surveyID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
+		return
+	}
+	stats, err := h.svc.Stats(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.OK(dto.SurveyStatsToResponse(stats)))
+}
+
+// @Summary     List survey participants
+// @Description App users that submitted at least one response to the survey
+// @Tags        surveys
+// @Produce     json
+// @Security    BearerAuth
+// @Param       id        path     string true  "Venue ID"
+// @Param       surveyID  path     string true  "Survey ID"
+// @Param       page      query    int    false "Page number"
+// @Param       page_size query    int    false "Page size"
+// @Success     200       {object} dto.Response{data=[]dto.SurveyParticipantResponse,metadata=dto.PaginationMeta}
+// @Failure     400       {object} dto.Response
+// @Failure     401       {object} dto.Response
+// @Failure     404       {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/participants [get]
+func (h *surveyHandler) ListParticipants(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("surveyID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
+		return
+	}
+	p := paginationFromQuery(c)
+	users, total, err := h.svc.ListParticipants(c.Request.Context(), id, p)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	items := make([]dto.SurveyParticipantResponse, len(users))
+	for i, u := range users {
+		items[i] = dto.SurveyParticipantToResponse(u)
+	}
+	c.JSON(http.StatusOK, dto.Paginated(items, total, p.Page, p.PageSize))
+}
+
+// @Summary     Export survey responses as CSV
+// @Description Download all responses as a UTF-8 (BOM) CSV file
+// @Tags        surveys
+// @Produce     text/csv
+// @Security    BearerAuth
+// @Param       id          path   string true  "Venue ID"
+// @Param       surveyID    path   string true  "Survey ID"
+// @Param       external_id query  string false "Filter responses by participant external ID"
+// @Success     200 {string} string "CSV file"
+// @Failure     400 {object} dto.Response
+// @Failure     401 {object} dto.Response
+// @Failure     404 {object} dto.Response
+// @Router      /venues/{id}/surveys/{surveyID}/export-csv [get]
+func (h *surveyHandler) ExportCSV(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("surveyID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.Fail(dto.CodeValidationError, "invalid survey id"))
+		return
+	}
+	rows, err := h.svc.ExportResponses(c.Request.Context(), id, c.Query("external_id"))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	filename := "survey_" + id.String() + "_" + time.Now().Format("20060102_150405") + ".csv"
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	// UTF-8 BOM so Excel opens Japanese content correctly.
+	if _, err := c.Writer.Write([]byte("\xEF\xBB\xBF")); err != nil {
+		return
+	}
+	w := csv.NewWriter(c.Writer)
+	w.UseCRLF = true
+	_ = w.WriteAll(rows) // WriteAll flushes internally
 }
 
 // ── Questions ─────────────────────────────────────────────────────────────────

@@ -117,28 +117,3 @@ func ConnectionLevelToResponse(cl *domain.ConnectionLevel) ConnectionLevelRespon
 		Active: cl.Active, CreatedAt: cl.CreatedAt, UpdatedAt: cl.UpdatedAt,
 	}
 }
-
-// ── QRCode ────────────────────────────────────────────────────────────────────
-
-type QRCodeResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	VenueID     *uuid.UUID `json:"venue_id,omitempty"`
-	LevelID     *uuid.UUID `json:"level_id,omitempty"`
-	LocationID  *uuid.UUID `json:"location_id,omitempty"`
-	Lat         *float64   `json:"lat,omitempty"`
-	Lng         *float64   `json:"lng,omitempty"`
-	Angle       *float64   `json:"angle,omitempty"`
-	Link        string     `json:"link,omitempty"`
-	Base64Image string     `json:"base64_image,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
-}
-
-type QRCodeRequest struct {
-	LevelID    *uuid.UUID `json:"level_id"`
-	LocationID *uuid.UUID `json:"location_id"`
-	Lat        *float64   `json:"lat"`
-	Lng        *float64   `json:"lng"`
-	Angle      *float64   `json:"angle"`
-	Link       string     `json:"link"`
-}

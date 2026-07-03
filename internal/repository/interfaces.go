@@ -182,7 +182,15 @@ type SurveyRepository interface {
 
 	// Responses
 	ListResponses(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.SurveyResponse, int64, error)
+	// ListResponsesWithAnswers returns every response (optionally filtered by
+	// participant external_id) ordered by submitted_at ascending, with answers
+	// loaded in question_number order.
+	ListResponsesWithAnswers(ctx context.Context, surveyID uuid.UUID, externalID *string) ([]*domain.SurveyResponse, error)
 	CreateResponse(ctx context.Context, r *domain.SurveyResponse) error
+
+	// Participants (app users that submitted at least one response)
+	ListParticipants(ctx context.Context, surveyID uuid.UUID, p domain.Pagination) ([]*domain.AppUser, int64, error)
+	FindAppUsersByExternalIDs(ctx context.Context, externalIDs []string) ([]*domain.AppUser, error)
 }
 
 // BeaconRepository handles beacon CRUD.

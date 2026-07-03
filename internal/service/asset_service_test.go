@@ -10,13 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/cdn"
 	"github.com/hhung06/digimap-backend/internal/repository/mocks"
 	"github.com/hhung06/digimap-backend/internal/service"
 )
 
 func TestAssetService_Create(t *testing.T) {
 	repo := &mocks.AssetRepository{}
-	svc := service.NewAssetService(repo, nil, "local", "")
+	svc := service.NewAssetService(repo, nil, cdn.NewLogInvalidator(), "local", "")
 	ctx := context.Background()
 
 	venueID := uuid.New()
@@ -44,7 +45,7 @@ func TestAssetService_Create(t *testing.T) {
 
 func TestAssetService_Delete_NotFound(t *testing.T) {
 	repo := &mocks.AssetRepository{}
-	svc := service.NewAssetService(repo, nil, "local", "")
+	svc := service.NewAssetService(repo, nil, cdn.NewLogInvalidator(), "local", "")
 	ctx := context.Background()
 
 	id := uuid.New()

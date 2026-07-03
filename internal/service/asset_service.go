@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hhung06/digimap-backend/internal/domain"
+	"github.com/hhung06/digimap-backend/internal/platform/cdn"
 	"github.com/hhung06/digimap-backend/internal/platform/storage"
 	"github.com/hhung06/digimap-backend/internal/repository"
 )
@@ -81,14 +82,20 @@ type AssetService interface {
 }
 
 type assetService struct {
-	repo     repository.AssetRepository
-	storer   storage.Storer
-	env      string
-	cfDomain string // AWS_CF_ASSETS_DOMAIN, e.g. "assets.example.com"
+	repo        repository.AssetRepository
+	storer      storage.Storer
+	invalidator cdn.Invalidator
+	env         string
+	cfDomain    string // AWS_CF_ASSETS_DOMAIN, e.g. "assets.example.com"
 }
 
-func NewAssetService(repo repository.AssetRepository, storer storage.Storer, env, cfDomain string) AssetService {
-	return &assetService{repo: repo, storer: storer, env: env, cfDomain: cfDomain}
+func NewAssetService(
+	repo repository.AssetRepository,
+	storer storage.Storer,
+	invalidator cdn.Invalidator,
+	env, cfDomain string,
+) AssetService {
+	return &assetService{repo: repo, storer: storer, invalidator: invalidator, env: env, cfDomain: cfDomain}
 }
 
 func (s *assetService) AssetURL(key string) string {
@@ -156,7 +163,8 @@ func (s *assetService) Upload2D(ctx context.Context, venueID uuid.UUID, id, data
 	}
 
 	// If the asset already exists, verify it belongs to this venue (prevent cross-venue overwrite).
-	if existing, err := s.repo.FindByID(ctx, assetID); err == nil {
+	existing, existingErr := s.repo.FindByID(ctx, assetID)
+	if existingErr == nil {
 		if existing.VenueID == nil || *existing.VenueID != venueID {
 			return nil, domain.NewValidation(map[string]string{"id": "asset belongs to a different venue"})
 		}
@@ -196,9 +204,20 @@ func (s *assetService) Upload2D(ctx context.Context, venueID uuid.UUID, id, data
 		return nil, domain.NewValidation(map[string]string{"file": "unsupported file type; allowed: png, jpeg, webp, gif, avif"})
 	}
 
+	// The key embeds the detected extension, so re-uploading different content under the
+	// same id (e.g. replacing a JPEG floor plan with a PNG) can produce a DIFFERENT key
+	// than the one already stored — writing the old key never gets overwritten. Always
+	// write to the freshly detected key, then persist it below.
 	key := storage.Asset2DKey(s.env, assetID, ext)
 	if err := s.storer.PutMedia(ctx, key, mediaType, int64(len(raw)), bytes.NewReader(raw)); err != nil {
 		return nil, fmt.Errorf("upload 2D asset: %w", err)
+	}
+
+	// CloudFront caches by URL/key; invalidate unconditionally on every upload so a
+	// same-key overwrite (same format re-uploaded) is picked up immediately, mirroring
+	// Django's invalidate_cloudfront call (indoormap-backend/api/assets/views.py:213).
+	if _, err := s.invalidator.Invalidate(ctx, []string{"/" + key}); err != nil {
+		fmt.Printf("asset cf invalidation failed key=%s: %v\n", key, err)
 	}
 
 	a := &domain.Asset{
@@ -211,12 +230,17 @@ func (s *assetService) Upload2D(ctx context.Context, venueID uuid.UUID, id, data
 		URL:         s.AssetURL(key),
 		AssetType:   domain.AssetType2D,
 	}
-	// Upsert: a duplicate-key error means the asset was already created (e.g. retry); safe to ignore.
-	if createErr := s.repo.Create(ctx, a); createErr != nil {
-		// Re-fetch the existing record so timestamps are accurate.
-		if existing, fetchErr := s.repo.FindByID(ctx, assetID); fetchErr == nil {
-			return existing, nil
+	if existingErr == nil {
+		if updateErr := s.repo.Update(ctx, a); updateErr != nil {
+			return nil, fmt.Errorf("update 2D asset: %w", updateErr)
 		}
+		// The new content resolved to a different key (format changed) — drop the orphaned
+		// old object so it doesn't linger in storage, matching UpdateLibrary's cleanup pattern.
+		if existing.Key != "" && existing.Key != key {
+			_ = s.storer.DeleteObject(ctx, existing.Key)
+		}
+	} else if createErr := s.repo.Create(ctx, a); createErr != nil {
+		return nil, fmt.Errorf("create 2D asset: %w", createErr)
 	}
 	return a, nil
 }

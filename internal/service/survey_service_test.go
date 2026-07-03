@@ -695,3 +695,202 @@ func ptrTime(v time.Time) *time.Time {
 func intPtr(v int) *int {
 	return &v
 }
+
+// ── Duplicate ─────────────────────────────────────────────────────────────────
+
+func TestSurveyService_Duplicate_DeepCopiesQuestionsAndOptions(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	questionID := uuid.New()
+	original := &domain.Survey{
+		ID: surveyID, Title: strPtr("Feedback"), Status: domain.SurveyStatusActive,
+		Source: domain.SurveySourceCMS, PublishType: domain.SurveyPublishInApp,
+		Questions: []*domain.Question{{
+			ID: questionID, SurveyID: surveyID, QuestionNumber: 1,
+			QuestionType: "single_choice", QuestionText: "Rate us", IsOther: true,
+			Options: []*domain.Option{
+				{ID: uuid.New(), QuestionID: questionID, OptionNumber: 1, OptionText: "Good"},
+				{ID: uuid.New(), QuestionID: questionID, OptionNumber: 2, OptionText: "Bad"},
+			},
+		}},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(original, nil)
+	repo.On("Create", ctx, mock.AnythingOfType("*domain.Survey")).Return(nil).Run(func(args mock.Arguments) {
+		args.Get(1).(*domain.Survey).ID = uuid.New()
+	})
+	repo.On("CreateQuestion", ctx, mock.AnythingOfType("*domain.Question")).Return(nil).Run(func(args mock.Arguments) {
+		args.Get(1).(*domain.Question).ID = uuid.New()
+	})
+	repo.On("CreateOption", ctx, mock.AnythingOfType("*domain.Option")).Return(nil).Times(2)
+
+	copied, err := svc.Duplicate(ctx, surveyID)
+	require.NoError(t, err)
+	assert.Equal(t, "Feedback (Copy)", *copied.Title)
+	assert.NotEqual(t, surveyID, copied.ID)
+	assert.Equal(t, domain.SurveyStatusActive, copied.Status, "status copied verbatim, not reset")
+	require.Len(t, copied.Questions, 1)
+	assert.NotEqual(t, questionID, copied.Questions[0].ID)
+	assert.Equal(t, "Rate us", copied.Questions[0].QuestionText)
+	assert.Len(t, copied.Questions[0].Options, 2)
+	repo.AssertExpectations(t)
+	// No notification repo wired: Duplicate must not attempt to notify even
+	// though the copied survey is Active.
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+func TestSurveyService_Stats_AggregatesChoicesAndParagraphs(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	choiceQ := uuid.New()
+	paraQ := uuid.New()
+	optA := uuid.New()
+	optB := uuid.New()
+	survey := &domain.Survey{
+		ID: surveyID, Title: strPtr("Feedback"),
+		Questions: []*domain.Question{
+			{ID: choiceQ, QuestionNumber: 1, QuestionType: "multiple_choice", IsOther: true,
+				Options: []*domain.Option{
+					{ID: optA, OptionNumber: 1, OptionText: "A"},
+					{ID: optB, OptionNumber: 2, OptionText: "B"},
+				}},
+			{ID: paraQ, QuestionNumber: 2, QuestionType: "paragraph"},
+		},
+	}
+	resp1 := uuid.New()
+	resp2 := uuid.New()
+	responses := []*domain.SurveyResponse{
+		{ID: resp1, SurveyID: surveyID, Answers: []*domain.SurveyAnswer{
+			{ResponseID: resp1, QuestionID: choiceQ, OptionID: &optA},
+			{ResponseID: resp1, QuestionID: choiceQ, OptionID: &optB},
+			{ResponseID: resp1, QuestionID: paraQ, AnswerText: strPtr("great")},
+		}},
+		{ID: resp2, SurveyID: surveyID, Answers: []*domain.SurveyAnswer{
+			{ResponseID: resp2, QuestionID: choiceQ, OptionID: &optA},
+			{ResponseID: resp2, QuestionID: choiceQ, AnswerText: strPtr("something else")},
+		}},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+	repo.On("ListResponsesWithAnswers", ctx, surveyID, (*string)(nil)).Return(responses, nil)
+
+	stats, err := svc.Stats(ctx, surveyID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), stats.TotalResponses)
+	require.Len(t, stats.Questions, 2)
+
+	choice := stats.Questions[0]
+	assert.Equal(t, 2, choice.TotalPeople)
+	assert.Equal(t, 3, choice.TotalChoices)
+	require.Len(t, choice.Options, 3)                             // A, B, Other
+	assert.Equal(t, 2, choice.Options[0].Count)                   // A
+	assert.Equal(t, 100.0, choice.Options[0].PercentageByPeople)  // 2/2 people
+	assert.Equal(t, 66.67, choice.Options[0].PercentageByChoices) // 2/3 choices
+	assert.Equal(t, 1, choice.Options[1].Count)                   // B
+	assert.True(t, choice.Options[2].IsOther)
+	assert.Equal(t, []string{"something else"}, choice.Options[2].OtherTexts)
+
+	para := stats.Questions[1]
+	assert.Equal(t, 1, para.TotalPeople)
+	assert.Equal(t, 0, para.TotalChoices)
+	assert.Equal(t, []string{"great"}, para.Texts)
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_Stats_EmptySurvey(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	optA := uuid.New()
+	survey := &domain.Survey{
+		ID: surveyID,
+		Questions: []*domain.Question{
+			{ID: uuid.New(), QuestionNumber: 1, QuestionType: "single_choice",
+				Options: []*domain.Option{{ID: optA, OptionText: "A"}}},
+		},
+	}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+	repo.On("ListResponsesWithAnswers", ctx, surveyID, (*string)(nil)).Return([]*domain.SurveyResponse{}, nil)
+
+	stats, err := svc.Stats(ctx, surveyID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), stats.TotalResponses)
+	require.Len(t, stats.Questions, 1)
+	assert.Equal(t, 0, stats.Questions[0].Options[0].Count)
+	assert.Equal(t, 0.0, stats.Questions[0].Options[0].PercentageByPeople, "empty denominators must not divide by zero")
+}
+
+// ── ExportResponses ───────────────────────────────────────────────────────────
+
+func TestSurveyService_ExportResponses_BuildsCSVRows(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	choiceQ := uuid.New()
+	paraQ := uuid.New()
+	optA := uuid.New()
+	survey := &domain.Survey{
+		ID: surveyID,
+		Questions: []*domain.Question{
+			{ID: choiceQ, QuestionNumber: 1, QuestionType: "multiple_choice", QuestionText: "Pick", IsOther: true,
+				Options: []*domain.Option{{ID: optA, OptionNumber: 1, OptionText: "A"}}},
+			{ID: paraQ, QuestionNumber: 2, QuestionType: "paragraph", QuestionText: "Comment"},
+		},
+	}
+	submitted := time.Date(2026, 7, 1, 9, 30, 0, 0, time.UTC)
+	responses := []*domain.SurveyResponse{
+		{ID: uuid.New(), SurveyID: surveyID, ExternalID: strPtr("EXT-1"), SubmittedAt: submitted,
+			Answers: []*domain.SurveyAnswer{
+				{QuestionID: choiceQ, OptionID: &optA},
+				{QuestionID: choiceQ, AnswerText: strPtr("custom")},
+				{QuestionID: paraQ, AnswerText: strPtr("nice")},
+			}},
+		{ID: uuid.New(), SurveyID: surveyID, SubmittedAt: submitted}, // anonymous, no answers
+	}
+	users := []*domain.AppUser{{
+		ID: uuid.New(), ExternalID: "EXT-1",
+		FirstName: "太郎", LastName: "山田", FirstNameEn: "Taro", LastNameEn: "Yamada",
+	}}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+	repo.On("ListResponsesWithAnswers", ctx, surveyID, (*string)(nil)).Return(responses, nil)
+	repo.On("FindAppUsersByExternalIDs", ctx, []string{"EXT-1"}).Return(users, nil)
+
+	rows, err := svc.ExportResponses(ctx, surveyID, "")
+	require.NoError(t, err)
+	require.Len(t, rows, 3)
+	assert.Equal(t, []string{"No", "User External ID", "User Name (JP)", "User Name (EN)", "Submitted At", "Q1: Pick", "Q2: Comment"}, rows[0])
+	assert.Equal(t, []string{"1", "EXT-1", "山田 太郎", "Taro Yamada", "2026-07-01 09:30:00", "A; [Other] custom", "nice"}, rows[1])
+	assert.Equal(t, []string{"2", "", "", "", "2026-07-01 09:30:00", "", ""}, rows[2])
+	repo.AssertExpectations(t)
+}
+
+func TestSurveyService_ExportResponses_FiltersByExternalID(t *testing.T) {
+	repo := &mocks.SurveyRepository{}
+	svc := newTestSurveyService(repo)
+
+	ctx := context.Background()
+	surveyID := uuid.New()
+	survey := &domain.Survey{ID: surveyID}
+
+	repo.On("FindByID", ctx, surveyID).Return(survey, nil)
+	repo.On("ListResponsesWithAnswers", ctx, surveyID, strPtr("EXT-9")).Return([]*domain.SurveyResponse{}, nil)
+	repo.On("FindAppUsersByExternalIDs", ctx, []string{}).Return(nil, nil)
+
+	rows, err := svc.ExportResponses(ctx, surveyID, " EXT-9 ")
+	require.NoError(t, err)
+	require.Len(t, rows, 1, "header only when no responses")
+	repo.AssertExpectations(t)
+}

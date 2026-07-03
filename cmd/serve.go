@@ -191,7 +191,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	tagSvc := service.NewTagService(tagRepo)
 	analyticsSvc := service.NewAnalyticsService(eventLogRepo, searchQueryRepo, venueRepo, redisClient)
 	levelBundleSvc := service.NewLevelBundleService(levelBundleRepo, snapshotRepo, syncStorer, cfg.App.Environment)
-	assetSvc := service.NewAssetService(assetRepo, assetStorer, cfg.App.Environment, cfg.AWS.CFAssetsDomain)
+	assetSvc := service.NewAssetService(assetRepo, assetStorer, invalidator, cfg.App.Environment, cfg.AWS.CFAssetsDomain)
 	levelTypeSvc := service.NewLevelTypeService(levelTypeRepo)
 	themeSvc := service.NewThemeService(themeRepo, venueRepo, assetStorer, invalidator, cfg.App.Environment)
 	languageSvc := service.NewLanguageService(languageRepo)

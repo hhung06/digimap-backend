@@ -830,8 +830,6 @@ definitions:
         type: object
       type:
         type: integer
-      work_hours:
-        type: string
     required:
     - customer_id
     - name
@@ -1786,6 +1784,26 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.QuestionStatsResponse:
+    properties:
+      id:
+        type: string
+      options:
+        description: |-
+          Options holds []OptionStatsResponse for choice questions or []string
+          (the free-text answers) for paragraph questions.
+        items:
+          type: object
+        type: array
+      text:
+        type: string
+      total_choices:
+        type: integer
+      total_people:
+        type: integer
+      type:
+        type: string
+    type: object
   dto.RefreshTokenRequest:
     properties:
       refresh_token:
@@ -1878,6 +1896,19 @@ definitions:
       question_id:
         type: string
     type: object
+  dto.SurveyParticipantResponse:
+    properties:
+      email:
+        type: string
+      external_id:
+        type: string
+      fullname_en:
+        type: string
+      fullname_jp:
+        type: string
+      id:
+        type: string
+    type: object
   dto.SurveyResponse:
     properties:
       app:
@@ -1931,6 +1962,23 @@ definitions:
         type: string
       survey_id:
         type: string
+    type: object
+  dto.SurveyStatsResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/dto.QuestionStatsResponse'
+        type: array
+      title:
+        type: string
+      total_questions:
+        type: integer
+      total_responses:
+        type: integer
     type: object
   dto.TagRequest:
     properties:
@@ -8684,6 +8732,147 @@ paths:
       summary: Update survey
       tags:
       - surveys
+  /venues/{id}/surveys/{surveyID}/duplicate:
+    post:
+      description: Deep-copy a survey with its questions and options (responses are
+        not copied)
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Survey ID
+        in: path
+        name: surveyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SurveyResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Duplicate survey
+      tags:
+      - surveys
+  /venues/{id}/surveys/{surveyID}/export-csv:
+    get:
+      description: Download all responses as a UTF-8 (BOM) CSV file
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Survey ID
+        in: path
+        name: surveyID
+        required: true
+        type: string
+      - description: Filter responses by participant external ID
+        in: query
+        name: external_id
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Export survey responses as CSV
+      tags:
+      - surveys
+  /venues/{id}/surveys/{surveyID}/participants:
+    get:
+      description: App users that submitted at least one response to the survey
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Survey ID
+        in: path
+        name: surveyID
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.SurveyParticipantResponse'
+                  type: array
+                metadata:
+                  $ref: '#/definitions/dto.PaginationMeta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: List survey participants
+      tags:
+      - surveys
   /venues/{id}/surveys/{surveyID}/questions:
     post:
       consumes:
@@ -9081,6 +9270,50 @@ paths:
           schema:
             $ref: '#/definitions/dto.Response'
       summary: Submit survey response
+      tags:
+      - surveys
+  /venues/{id}/surveys/{surveyID}/stats:
+    get:
+      description: Aggregated answer statistics per question (option counts, percentages,
+        free texts)
+      parameters:
+      - description: Venue ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Survey ID
+        in: path
+        name: surveyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SurveyStatsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Survey statistics
       tags:
       - surveys
   /venues/{id}/users:
