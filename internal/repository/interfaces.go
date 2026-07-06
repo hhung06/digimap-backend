@@ -424,6 +424,13 @@ type LanguageRepository interface {
 	Create(ctx context.Context, l *domain.Language) error
 	Update(ctx context.Context, l *domain.Language) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	// SetDefault marks langID as the sole default language for venueID,
+	// clearing is_default on every other language for that venue.
+	SetDefault(ctx context.Context, venueID, langID uuid.UUID) error
+	// ReplaceAll reconciles a venue's full language set against items in one
+	// transaction (insert new codes, update changed rows, soft-delete removed
+	// codes) and returns the resulting rows.
+	ReplaceAll(ctx context.Context, venueID uuid.UUID, items []*domain.Language) ([]*domain.Language, error)
 }
 
 // AppVersionRepository persists the force-sync version for each venue.

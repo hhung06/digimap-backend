@@ -1061,8 +1061,20 @@ func (m *LanguageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.Called(ctx, id).Error(0)
 }
 
+func (m *LanguageRepository) SetDefault(ctx context.Context, venueID, langID uuid.UUID) error {
+	return m.Called(ctx, venueID, langID).Error(0)
+}
+
 func (m *LanguageRepository) ListEnabled(ctx context.Context, venueID uuid.UUID) ([]*domain.Language, error) {
 	args := m.Called(ctx, venueID)
+	if v, ok := args.Get(0).([]*domain.Language); ok {
+		return v, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *LanguageRepository) ReplaceAll(ctx context.Context, venueID uuid.UUID, items []*domain.Language) ([]*domain.Language, error) {
+	args := m.Called(ctx, venueID, items)
 	if v, ok := args.Get(0).([]*domain.Language); ok {
 		return v, args.Error(1)
 	}

@@ -12,6 +12,7 @@ type Language struct {
 	Code      string
 	Name      string
 	IsDefault bool
+	Enabled   bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt *time.Time

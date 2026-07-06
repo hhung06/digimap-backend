@@ -48,11 +48,16 @@ func (h *languageHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.FailMessages(dto.CodeValidationError, bindingErrors(err)))
 		return
 	}
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
 	l := &domain.Language{
 		VenueID:   venueID,
 		Code:      req.Code,
 		Name:      req.Name,
 		IsDefault: req.IsDefault,
+		Enabled:   enabled,
 	}
 	if err := h.svc.Create(c.Request.Context(), l); err != nil {
 		respondError(c, err)
@@ -80,6 +85,9 @@ func (h *languageHandler) Update(c *gin.Context) {
 	l.Code = req.Code
 	l.Name = req.Name
 	l.IsDefault = req.IsDefault
+	if req.Enabled != nil {
+		l.Enabled = *req.Enabled
+	}
 	if err := h.svc.Update(c.Request.Context(), l); err != nil {
 		respondError(c, err)
 		return
