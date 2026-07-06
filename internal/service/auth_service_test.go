@@ -122,6 +122,65 @@ func TestAuthService_Login_InactiveUser(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrUnauthorized)
 }
 
+// ── RefreshToken ──────────────────────────────────────────────────────────────
+
+func TestAuthService_RefreshToken_RotatesOldToken(t *testing.T) {
+	userRepo := &mocks.UserRepository{}
+	tokenRepo := &mocks.TokenRepository{}
+	mailer := &mocks.EmailSender{}
+	svc := newTestAuthService(userRepo, tokenRepo, mailer)
+
+	ctx := context.Background()
+	user := &domain.User{
+		ID:       uuid.New(),
+		Email:    "alice@example.com",
+		IsActive: true,
+	}
+	stored := &domain.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+
+	tokenRepo.On("FindRefreshToken", ctx, mockAny).Return(stored, nil)
+	userRepo.On("FindByID", ctx, user.ID).Return(user, nil)
+	tokenRepo.On("RevokeRefreshToken", ctx, stored.ID).Return(nil)
+	tokenRepo.On("CreateRefreshToken", ctx, mockAny).Return(nil)
+
+	pair, err := svc.RefreshToken(ctx, "old-raw-refresh-token")
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, pair.AccessToken)
+	assert.NotEmpty(t, pair.RefreshToken)
+	assert.NotEqual(t, "old-raw-refresh-token", pair.RefreshToken)
+	tokenRepo.AssertExpectations(t)
+	userRepo.AssertExpectations(t)
+}
+
+func TestAuthService_RefreshToken_InactiveUser(t *testing.T) {
+	userRepo := &mocks.UserRepository{}
+	tokenRepo := &mocks.TokenRepository{}
+	mailer := &mocks.EmailSender{}
+	svc := newTestAuthService(userRepo, tokenRepo, mailer)
+
+	ctx := context.Background()
+	user := &domain.User{ID: uuid.New(), IsActive: false}
+	stored := &domain.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+
+	tokenRepo.On("FindRefreshToken", ctx, mockAny).Return(stored, nil)
+	userRepo.On("FindByID", ctx, user.ID).Return(user, nil)
+
+	_, err := svc.RefreshToken(ctx, "old-raw-refresh-token")
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrUnauthorized)
+	tokenRepo.AssertNotCalled(t, "RevokeRefreshToken", mock.Anything, mock.Anything)
+}
+
 // ── Register ──────────────────────────────────────────────────────────────────
 
 func TestAuthService_Register_Success(t *testing.T) {

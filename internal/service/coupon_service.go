@@ -20,8 +20,9 @@ type CouponService interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	// AssignToUser creates a coupon_users row linking a coupon to an app user.
 	AssignToUser(ctx context.Context, couponID, userID uuid.UUID, deviceID string) error
-	// RedeemCoupon marks the user's coupon_users row as used.
-	RedeemCoupon(ctx context.Context, couponID uuid.UUID, appUserID uuid.UUID) error
+	// RedeemCoupon marks the user's coupon_users row as used. venueID must match
+	// the coupon's owning venue — callers scope this to the caller's authenticated venue.
+	RedeemCoupon(ctx context.Context, venueID, couponID, appUserID uuid.UUID) error
 }
 
 type couponService struct {
@@ -67,15 +68,19 @@ func (s *couponService) AssignToUser(ctx context.Context, couponID, userID uuid.
 	return s.userRepo.Create(ctx, cu)
 }
 
-func (s *couponService) RedeemCoupon(ctx context.Context, couponID uuid.UUID, appUserID uuid.UUID) error {
+func (s *couponService) RedeemCoupon(ctx context.Context, venueID, couponID, appUserID uuid.UUID) error {
+	c, err := s.repo.FindByID(ctx, couponID)
+	if err != nil {
+		return err
+	}
+	if c.VenueID == nil || *c.VenueID != venueID {
+		return domain.NewNotFound("coupon not found")
+	}
+
 	cu, err := s.userRepo.FindByCouponAndUser(ctx, couponID, appUserID)
 	if err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
 			return err
-		}
-		c, findErr := s.repo.FindByID(ctx, couponID)
-		if findErr != nil {
-			return findErr
 		}
 		if c.RedeemedAt != nil {
 			return domain.NewConflict("coupon already redeemed")

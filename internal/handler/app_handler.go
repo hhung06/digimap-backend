@@ -163,6 +163,10 @@ func (h *appHandler) GetLocation(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	if l.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "location not found"))
+		return
+	}
 	c.JSON(http.StatusOK, dto.OK(dto.LocationToResponse(l)))
 }
 
@@ -205,6 +209,10 @@ func (h *appHandler) GetProduct(c *gin.Context) {
 	prod, err := h.products.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
+		return
+	}
+	if prod.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "product not found"))
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.ProductToResponse(prod)))
@@ -251,6 +259,10 @@ func (h *appHandler) GetArticle(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	if a.VenueID == nil || *a.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "article not found"))
+		return
+	}
 	c.JSON(http.StatusOK, dto.OK(localizedArticleResponse(a, middleware.GetLang(c))))
 }
 
@@ -281,6 +293,10 @@ func (h *appHandler) GetFeaturedZone(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	if cat.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "featured zone not found"))
+		return
+	}
 	c.JSON(http.StatusOK, dto.OK(dto.LocationCategoryToResponse(cat)))
 }
 
@@ -308,6 +324,10 @@ func (h *appHandler) GetNotification(c *gin.Context) {
 	n, err := h.notifications.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
+		return
+	}
+	if n.VenueID == nil || *n.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "notification not found"))
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.NotificationToResponse(n)))
@@ -354,6 +374,10 @@ func (h *appHandler) GetCoupon(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	if coupon.VenueID == nil || *coupon.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "coupon not found"))
+		return
+	}
 	c.JSON(http.StatusOK, dto.OK(dto.CouponToResponse(coupon)))
 }
 
@@ -375,7 +399,8 @@ func (h *appHandler) RedeemCoupon(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.Fail(1000, "invalid app_user_id"))
 		return
 	}
-	if err := h.coupons.RedeemCoupon(c.Request.Context(), id, appUserID); err != nil {
+	venueID := middleware.GetVenueID(c)
+	if err := h.coupons.RedeemCoupon(c.Request.Context(), venueID, id, appUserID); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -406,6 +431,10 @@ func (h *appHandler) GetSurvey(c *gin.Context) {
 	s, err := h.surveys.Get(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
+		return
+	}
+	if s.VenueID == nil || *s.VenueID != middleware.GetVenueID(c) {
+		c.JSON(http.StatusNotFound, dto.Fail(dto.CodeNotFound, "survey not found"))
 		return
 	}
 	c.JSON(http.StatusOK, dto.OK(dto.SurveyToResponse(s)))

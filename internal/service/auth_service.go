@@ -141,17 +141,13 @@ func (s *authService) RefreshToken(ctx context.Context, rawRefreshToken string) 
 		return TokenPair{}, domain.NewUnauthorized("account is disabled")
 	}
 
-	accessToken, err := s.issueAccessToken(u)
-	if err != nil {
-		return TokenPair{}, err
+	// Revoke the used token (rotation) before issuing a new pair, so a stolen
+	// refresh token can be replayed at most once.
+	if err := s.tokens.RevokeRefreshToken(ctx, stored.ID); err != nil {
+		return TokenPair{}, fmt.Errorf("revoke old refresh token: %w", err)
 	}
-	remaining := time.Until(stored.ExpiresAt)
-	return TokenPair{
-		AccessToken:      accessToken,
-		RefreshToken:     rawRefreshToken,
-		AccessExpiresIn:  int(s.cfg.AccessExpiry.Seconds()),
-		RefreshExpiresIn: int(remaining.Seconds()),
-	}, nil
+
+	return s.issuePair(ctx, u)
 }
 
 // ── Logout ────────────────────────────────────────────────────────────────────
