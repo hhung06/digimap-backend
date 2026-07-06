@@ -3,7 +3,9 @@ package cdn
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -29,6 +31,9 @@ type cfInvalidator struct {
 
 // NewCloudFrontInvalidator creates an Invalidator backed by AWS CloudFront.
 func NewCloudFrontInvalidator(cfg config.AWSConfig) (Invalidator, error) {
+	if cfg.CloudFrontDistributionID == "" {
+		return nil, fmt.Errorf("cloudfront distribution id is required (set AWS_CF_DISTRIBUTION_ID)")
+	}
 	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(),
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithCredentialsProvider(
@@ -55,7 +60,9 @@ func (c *cfInvalidator) Invalidate(ctx context.Context, paths []string) (string,
 		paths = paths[:3000]
 	}
 	items := make([]string, len(paths))
-	copy(items, paths)
+	for i, p := range paths {
+		items[i] = encodeInvalidationPath(p)
+	}
 	ref := strconv.FormatInt(time.Now().UnixNano(), 10)
 	out, err := c.client.CreateInvalidation(ctx, &cloudfront.CreateInvalidationInput{
 		DistributionId: aws.String(c.distributionID),
@@ -74,4 +81,16 @@ func (c *cfInvalidator) Invalidate(ctx context.Context, paths []string) (string,
 		return *out.Invalidation.Id, nil
 	}
 	return "", nil
+}
+
+// encodeInvalidationPath URL-encodes each path segment (spaces, unicode, and other
+// characters CloudFront rejects unencoded — e.g. from free-text theme names embedded
+// in S3 keys) while preserving "/" as the literal path separator, per AWS's
+// requirement to percent-encode non-ASCII/unsafe characters in invalidation paths.
+func encodeInvalidationPath(p string) string {
+	segments := strings.Split(p, "/")
+	for i, seg := range segments {
+		segments[i] = url.PathEscape(seg)
+	}
+	return strings.Join(segments, "/")
 }

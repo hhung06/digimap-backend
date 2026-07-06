@@ -104,7 +104,6 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 
 	var assetStorer, snapshotStorer, syncStorer storage.Storer
-	var invalidator cdn.Invalidator
 	if cfg.AWS.S3AssetsBucket != "" {
 		assetStorer, err = storage.NewS3Storer(cfg.AWS, cfg.AWS.S3AssetsBucket)
 		if err != nil {
@@ -118,17 +117,24 @@ func runServe(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("init s3 sync storer: %w", err)
 		}
-		invalidator, err = cdn.NewCloudFrontInvalidator(cfg.AWS)
-		if err != nil {
-			return fmt.Errorf("init cloudfront invalidator: %w", err)
-		}
-		logger.Info("S3 storers + CloudFront invalidator initialised")
+		logger.Info("S3 storers initialised")
 	} else {
 		assetStorer = storage.NewLogStorer()
 		snapshotStorer = storage.NewLogStorer()
 		syncStorer = storage.NewLogStorer()
+		logger.Info("storage: using log stubs (AWS_S3_ASSETS_BUCKET not set)")
+	}
+
+	var invalidator cdn.Invalidator
+	if cfg.AWS.CloudFrontDistributionID != "" {
+		invalidator, err = cdn.NewCloudFrontInvalidator(cfg.AWS)
+		if err != nil {
+			return fmt.Errorf("init cloudfront invalidator: %w", err)
+		}
+		logger.Info("CloudFront invalidator initialised")
+	} else {
 		invalidator = cdn.NewLogInvalidator()
-		logger.Info("storage/CDN: using log stubs (AWS_S3_ASSETS_BUCKET not set)")
+		logger.Info("CDN: using log stub (AWS_CF_DISTRIBUTION_ID not set)")
 	}
 
 	var pusher firebase.Pusher
