@@ -487,7 +487,7 @@ func NewRouter(cfg *config.Config, logger applog.Logger, deps Dependencies) *gin
 	visitorSurveySvc := service.NewVisitorSurveySubmissionService(deps.VenueRepo, deps.AppUserRepo, deps.VisitorPhoneEncryptor)
 	publicH := newPublicHandler(deps.VenueService, deps.SurveyService, deps.AppUserRepo, visitorSurveySvc, deps.SearchOptionsService)
 	public.GET("/venues/:venueId/search-options", publicH.SearchOptions)
-	publicAPI := r.Group("/public/v1")
+	publicAPI := r.Group("/public/v1", publicRL)
 	{
 		publicAPI.GET("/venues/:id/information", publicH.VenueInformation)
 		publicAPI.GET("/surveys/:id", publicH.GetSurvey)
