@@ -3,7 +3,10 @@ package log
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"time"
 
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -109,6 +112,19 @@ func NewLogger(cfg *config.Config) Logger {
 		encoder = zapcore.NewConsoleEncoder(encCfg)
 	}
 
-	core := zapcore.NewCore(encoder, zapcore.AddSync(os.Stderr), level)
+	writers := []zapcore.WriteSyncer{zapcore.AddSync(os.Stderr)}
+	if cfg.App.LogDir != "" {
+		rotator, err := rotatelogs.New(
+			filepath.Join(cfg.App.LogDir, "app-%Y-%m-%d.log"),
+			rotatelogs.WithMaxAge(30*24*time.Hour),
+			rotatelogs.WithRotationTime(24*time.Hour),
+		)
+		if err != nil {
+			panic(fmt.Sprintf("failed to init log rotation: %v", err))
+		}
+		writers = append(writers, zapcore.AddSync(rotator))
+	}
+
+	core := zapcore.NewCore(encoder, zapcore.NewMultiWriteSyncer(writers...), level)
 	return &zapLogger{s: zap.New(core).Sugar()}
 }

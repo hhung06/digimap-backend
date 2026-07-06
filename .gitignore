@@ -27,6 +27,7 @@ go.work.sum
 # Build output
 bin/
 tmp/
+logs/
 build-errors.log
 load-tests/reports/*
 !load-tests/reports/.gitkeep

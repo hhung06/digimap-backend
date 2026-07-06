@@ -26,6 +26,7 @@ type AppConfig struct {
 	Environment        string
 	LogLevel           string
 	LogFormat          string
+	LogDir             string
 	Debug              bool
 	DefaultPageSize    int
 	CORSAllowedOrigins []string
@@ -124,6 +125,7 @@ func Load() (*Config, error) {
 	v.SetDefault("APP_ENV", "local")
 	v.SetDefault("LOG_LEVEL", "debug")
 	v.SetDefault("LOG_FORMAT", "text")
+	v.SetDefault("LOG_DIR", "logs")
 	v.SetDefault("DEBUG", false)
 	v.SetDefault("DEFAULT_PAGE_SIZE", 20)
 	v.SetDefault("CORS_ALLOWED_ORIGINS", "*")
@@ -165,6 +167,7 @@ func Load() (*Config, error) {
 			Environment:        v.GetString("APP_ENV"),
 			LogLevel:           v.GetString("LOG_LEVEL"),
 			LogFormat:          v.GetString("LOG_FORMAT"),
+			LogDir:             v.GetString("LOG_DIR"),
 			Debug:              v.GetBool("DEBUG"),
 			DefaultPageSize:    v.GetInt("DEFAULT_PAGE_SIZE"),
 			CORSAllowedOrigins: strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ","),
